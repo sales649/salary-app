@@ -10,7 +10,7 @@ st.set_page_config(page_title='شركة ميم الخماسية للتصنيع -
 
 DATA_FILE = 'payroll_data.json'
 
-# قاعدة البيانات الأساسية المعمدة لـ 52 موظفاً
+# قاعدة البيانات الأساسية لـ 52 موظفاً
 initial_data = [
     # مصنع ميم الخماسية الخرج (35 موظف)
     {'م': 1, 'الاسم': 'مد ماجد', 'الوظيفة': 'عامل', 'الراتب الأساسي': 4000, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01', 'الدفعة 1': 2000, 'الدفعة 2': 2000, 'الدفعة المدفوعة': 4000, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
@@ -138,7 +138,6 @@ else:
         month_selected = st.selectbox('📅 اختر شهر العمليات:', st.session_state.months_list)
         
         st.markdown("---")
-        # إدارة واستيراد/تصدير النسخ الاحتياطية للبيانات
         st.markdown("### 💾 إدارة وتصدير النسخ الاحتياطية")
         if 'payroll_df' in st.session_state:
             json_str = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
@@ -270,7 +269,7 @@ else:
         return output
 
     if '🔍' in menu:
-        st.title('🔍 شاشة البحث الفوري وتعديل/حذف ملف موظف')
+        st.title('🔍 شاشة البحث الفوري المباشر والتعديل/الحذف')
         cnt_factory = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مصنع ميم الخماسية الخرج'])
         cnt_wh_kh = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مستودع ميم الخماسية الخرج'])
         cnt_wh_ry = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مستودع ميم الخماسية الرياض'])
@@ -291,14 +290,22 @@ else:
                 branch_emp_names = branch_df_search['الاسم'].tolist()
                 
                 if branch_emp_names:
-                    st.dataframe(branch_df_search[['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الدفعة المدفوعة', 'المتبقي']], use_container_width=True, hide_index=True)
-                    st.divider()
-                    selected_emp_in_b = st.selectbox(f"👤 اختر اسم الموظف من ({b_name}):", branch_emp_names, key=f"sb_search_{b_name}")
+                    st.write("💡 **اضغط على اسم الموظف أدناه لفتح ملفه المباشر والتعديل عليه فوراً:**")
+                    
+                    # عرض أزرار تفاعلية لكل موظف للضغط المباشر
+                    cols_emp = st.columns(3)
+                    for e_i, e_name in enumerate(branch_emp_names):
+                        col_target = cols_emp[e_i % 3]
+                        if col_target.button(f"👤 {e_name}", key=f"btn_emp_click_{b_name}_{e_i}"):
+                            st.session_state[f'selected_emp_{b_name}'] = e_name
+
+                    selected_emp_in_b = st.session_state.get(f'selected_emp_{b_name}', branch_emp_names[0])
                     
                     emp_idx = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'] == selected_emp_in_b].index[0]
                     emp_data = st.session_state.payroll_df.loc[emp_idx]
                     
-                    st.info(f"👤 **ملف الموظف:** {emp_data['الاسم']} (رقم مالي: #{emp_data['م']})")
+                    st.divider()
+                    st.info(f"👤 **ملف الموظف المحدد للتحرير المباشر:** {emp_data['الاسم']} (رقم مالي: #{emp_data['م']})")
                     
                     with st.form(f'edit_form_{b_name}_{emp_data["م"]}'):
                         col_e1, col_e2, col_e3 = st.columns(3)
