@@ -90,7 +90,7 @@ if 'payroll_df' not in st.session_state:
     df_init['الملاحظات'] = ''
     st.session_state.payroll_df = df_init
 
-# دالة توليد صفحة A4 الأنيقة بحجم دقيق وسندين بكل صفحة مع خط التنقيط والهيدر المعتمد
+# دالة توليد صفحة A4 لسندات صرف الرواتب بالشكل المعدل والأنيق
 def generate_pretty_html_pdf(df_subset, branch_name):
     output = io.BytesIO()
     
@@ -99,11 +99,11 @@ def generate_pretty_html_pdf(df_subset, branch_name):
     <html dir="rtl" lang="ar">
     <head>
     <meta charset="utf-8">
-    <title>سندات قبض الرواتب - شركة ميم الخماسية للتصنيع</title>
+    <title>سندات صرف الرواتب - شركة ميم الخماسية للتصنيع</title>
     <style>
         @page {{
             size: A4 portrait;
-            margin: 10mm;
+            margin: 8mm;
         }}
         body {{
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -113,7 +113,7 @@ def generate_pretty_html_pdf(df_subset, branch_name):
             padding: 0;
         }}
         .page {{
-            height: 270mm;
+            height: 275mm;
             page-break-after: always;
             display: flex;
             flex-direction: column;
@@ -124,7 +124,7 @@ def generate_pretty_html_pdf(df_subset, branch_name):
             border-radius: 8px;
             padding: 12px 18px;
             background: #fff;
-            height: 125mm;
+            height: 128mm;
             box-sizing: border-box;
             position: relative;
         }}
@@ -134,7 +134,7 @@ def generate_pretty_html_pdf(df_subset, branch_name):
             align-items: center;
             border-bottom: 2px solid #1E3A8A;
             padding-bottom: 6px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }}
         .header-en {{
             text-align: left;
@@ -148,7 +148,7 @@ def generate_pretty_html_pdf(df_subset, branch_name):
             width: 24%;
         }}
         .header-logo span {{
-            font-size: 42px;
+            font-size: 40px;
             font-weight: 900;
             color: #DC2626;
             letter-spacing: -2px;
@@ -163,44 +163,56 @@ def generate_pretty_html_pdf(df_subset, branch_name):
         }}
         .voucher-title {{
             text-align: center;
-            font-size: 15px;
+            font-size: 16px;
             font-weight: bold;
             color: #1E3A8A;
-            margin: 4px 0 8px 0;
+            margin: 6px 0;
             background: #f1f5f9;
-            padding: 4px;
+            padding: 6px;
             border-radius: 4px;
         }}
         .info-table {{
             width: 100%;
             border-collapse: collapse;
-            margin-top: 6px;
+            margin-top: 8px;
         }}
         .info-table td {{
-            padding: 6px 10px;
-            font-size: 13px;
+            padding: 8px 12px;
+            font-size: 14px;
             border: 1px solid #e0e0e0;
         }}
         .info-table th {{
             background-color: #f8fafc;
             color: #1E3A8A;
-            padding: 6px 10px;
-            font-size: 13px;
+            padding: 8px 12px;
+            font-size: 14px;
             border: 1px solid #cbd5e1;
             text-align: right;
+            width: 25%;
+        }}
+        .amount-box {{
+            background-color: #ecfdf5;
+            border: 2px solid #10b981;
+            color: #047857;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            padding: 6px 12px;
+            border-radius: 6px;
+            display: inline-block;
         }}
         .signatures {{
-            margin-top: 18px;
+            margin-top: 22px;
             display: flex;
             justify-content: space-between;
             font-weight: bold;
             font-size: 13px;
-            padding: 0 15px;
+            padding: 0 20px;
         }}
         .cut-line {{
             border-top: 2px dashed #94a3b8;
             text-align: center;
-            margin: 6mm 0;
+            margin: 4mm 0;
             position: relative;
         }}
         .cut-line span {{
@@ -250,31 +262,25 @@ def generate_pretty_html_pdf(df_subset, branch_name):
             </div>
             
             <div class="voucher-title">
-                سند تسليم راتب / دفعة - {branch_name} ({month_selected}) | رقم السند: #{v1['م']:03d}
+                سند صرف راتب شهر ({month_selected}) | رقم السند: #{v1['م']:03d}
             </div>
             
             <table class="info-table">
                 <tr>
                     <th>اسم الموظف</th>
                     <td><strong>{v1['الاسم']}</strong></td>
-                    <th>الوظيفة / الفرع</th>
-                    <td>{v1['الوظيفة']} ({v1['الفرع']})</td>
+                    <th>الفرع المحدد</th>
+                    <td><strong>{v1['الفرع']}</strong></td>
                 </tr>
                 <tr>
                     <th>الراتب الأساسي المستحق</th>
                     <td>{v1['الراتب الأساسي']:,.0f} ر.س</td>
-                    <th>الدفعة المصروفة فعلياً</th>
-                    <td style="color: #047857; font-weight: bold;">{v1['الدفعة المدفوعة']:,.0f} ر.س</td>
+                    <th>الدفعة المصروفة</th>
+                    <td><div class="amount-box">{v1['الدفعة المدفوعة']:,.0f} ر.س</div></td>
                 </tr>
                 <tr>
-                    <th>المتبقي بالرصيد</th>
-                    <td style="color: #b91c1c; font-weight: bold;">{v1['المتبقي']:,.0f} ر.س</td>
-                    <th>نوع الإجراء المعتمد</th>
-                    <td>{v1['نوع الإجراء']}</td>
-                </tr>
-                <tr>
-                    <th>الملاحظات والبيانات</th>
-                    <td colspan="3">{v1['الملاحظات'] if v1['الملاحظات'] else 'تم اعتماده وصرفه حسَب مسير الرواتب المعتمد.'}</td>
+                    <th>البيان والملاحظات</th>
+                    <td colspan="3">سداد دفعة من راتب شهر ({month_selected}) في المسير.</td>
                 </tr>
             </table>
             
@@ -314,31 +320,25 @@ def generate_pretty_html_pdf(df_subset, branch_name):
                 </div>
                 
                 <div class="voucher-title">
-                    سند تسليم راتب / دفعة - {branch_name} ({month_selected}) | رقم السند: #{v2['م']:03d}
+                    سند صرف راتب شهر ({month_selected}) | رقم السند: #{v2['م']:03d}
                 </div>
                 
                 <table class="info-table">
                     <tr>
                         <th>اسم الموظف</th>
                         <td><strong>{v2['الاسم']}</strong></td>
-                        <th>الوظيفة / الفرع</th>
-                        <td>{v2['الوظيفة']} ({v2['الفرع']})</td>
+                        <th>الفرع المحدد</th>
+                        <td><strong>{v2['الفرع']}</strong></td>
                     </tr>
                     <tr>
                         <th>الراتب الأساسي المستحق</th>
                         <td>{v2['الراتب الأساسي']:,.0f} ر.س</td>
-                        <th>الدفعة المصروفة فعلياً</th>
-                        <td style="color: #047857; font-weight: bold;">{v2['الدفعة المدفوعة']:,.0f} ر.س</td>
+                        <th>الدفعة المصروفة</th>
+                        <td><div class="amount-box">{v2['الدفعة المدفوعة']:,.0f} ر.س</div></td>
                     </tr>
                     <tr>
-                        <th>المتبقي بالرصيد</th>
-                        <td style="color: #b91c1c; font-weight: bold;">{v2['المتبقي']:,.0f} ر.س</td>
-                        <th>نوع الإجراء المعتمد</th>
-                        <td>{v2['نوع الإجراء']}</td>
-                    </tr>
-                    <tr>
-                        <th>الملاحظات والبيانات</th>
-                        <td colspan="3">{v2['الملاحظات'] if v2['الملاحظات'] else 'تم اعتماده وصرفه حسَب مسير الرواتب المعتمد.'}</td>
+                        <th>البيان والملاحظات</th>
+                        <td colspan="3">سداد دفعة من راتب شهر ({month_selected}) في المسير.</td>
                     </tr>
                 </table>
                 
@@ -427,7 +427,7 @@ elif '💼' in menu:
 
 elif '🖨️' in menu:
     st.title('🖨️ طباعة سندات القبض الرسمية (A4)')
-    st.write('قم باختيار الفرع واستعراض السندات المنظمة مع الهيدر الرسمي للشركة.')
+    st.write('قم باختيار الفرع واستعراض السندات المنظمة بالتصنيف والترويسة المعتمدة.')
     
     selected_b = st.selectbox('اختر الفرع للتصدير والطباعة:', ['جميع الفروع (52 موظف)', 'الخرج', 'المستودع', 'الملقة'])
     
@@ -439,9 +439,9 @@ elif '🖨️' in menu:
     pdf_bytes = generate_pretty_html_pdf(df_print, selected_b)
     
     st.download_button(
-        label=f"📄 فتح واستعراض سندات قبض {selected_b} بالهيدر الرسمي 🖨️",
+        label=f"📄 فتح واستعراض سندات صرف راتب {selected_b} للطباعة 🖨️",
         data=pdf_bytes,
-        file_name=f"سندات_قبض_{selected_b}.html",
+        file_name=f"سندات_صرف_راتب_{selected_b}.html",
         mime="text/html"
     )
 
