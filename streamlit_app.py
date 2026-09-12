@@ -13,8 +13,8 @@ with st.sidebar:
         st.image(logo, use_container_width=True)
     st.divider()
     menu = st.radio('📌 التنقل الرئيسي:', [
-        '📊 شاشة الدفعات والمطابقة (جدول مالي)',
-        '💼 سجل الموظفين (52 موظف)',
+        '📊 شاشة إدخال الدفعات (حسب الفرع)',
+        '💼 سجل الموظفين والإجماليات',
         '🖨️ طباعة سندات القبض (PDF A4)',
         '➕ إضافة نظام جديد'
     ])
@@ -59,7 +59,7 @@ initial_data = [
     {'م': 33, 'الاسم': 'علي إسماعيل', 'الوظيفة': 'معمل', 'الراتب الأساسي': 4500, 'الفرع': 'الخرج'},
     {'م': 34, 'الاسم': 'محمد حمدان عثمان', 'الوظيفة': 'مشرف', 'الراتب الأساسي': 4500, 'الفرع': 'الخرج'},
     {'م': 35, 'الاسم': 'عثمان عبدالله', 'الوظيفة': 'مشرف', 'الراتب الأساسي': 7000, 'الفرع': 'الخرج'},
-    
+
     # فرع المستودع (5 موظفين)
     {'م': 36, 'الاسم': 'ابون', 'الوظيفة': 'عامل', 'الراتب الأساسي': 3000, 'الفرع': 'المستودع'},
     {'م': 37, 'الاسم': 'محمد علي', 'الوظيفة': 'عامل', 'الراتب الأساسي': 0, 'الفرع': 'المستودع'},
@@ -82,87 +82,148 @@ initial_data = [
     {'م': 52, 'الاسم': 'عبد الرحمن محمد', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500, 'الفرع': 'الملقة'}
 ]
 
-# حفظ بيانات الجدول التفاعلي في Session State
 if 'payroll_df' not in st.session_state:
     df_init = pd.DataFrame(initial_data)
-    df_init['الدفعة المدفوعة'] = df_init['الراتب الأساسي']  # افتراضياً الراتب كامل
+    df_init['الدفعة المدفوعة'] = df_init['الراتب الأساسي']
     df_init['المتبقي'] = 0.0
     df_init['نوع الإجراء'] = 'صرف كامل'
     df_init['الملاحظات'] = ''
     st.session_state.payroll_df = df_init
 
-# 4. التبويبات الشاشات
+# دالة إنشاء ملف الـ PDF لسندات القبض بدون أخطاء
+def create_pdf_bytes(df_subset, branch_name):
+    output = io.BytesIO()
+    html_content = f"""
+    <html dir="rtl">
+    <head>
+    <meta charset="utf-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; padding: 20px; }}
+        .header {{ text-align: center; color: #1E3A8A; border-bottom: 2px solid #1E3A8A; padding-bottom: 10px; }}
+        .voucher {{ border: 2px solid #333; padding: 15px; margin-bottom: 20px; border-radius: 8px; page-break-inside: avoid; }}
+        .row {{ display: flex; justify-content: space-between; margin: 8px 0; }}
+        .footer {{ margin-top: 20px; display: flex; justify-content: space-between; font-weight: bold; }}
+    </style>
+    </head>
+    <body>
+        <div class="header">
+            <h2>شركة ميم الخماسية للتصنيع</h2>
+            <h3>سندات قبض الرواتب - {branch_name} ({month_selected})</h3>
+        </div>
+    """
+    for idx, row in df_subset.iterrows():
+        html_content += f"""
+        <div class="voucher">
+            <div class="row"><strong>رقم الموظف:</strong> {row['م']} <strong>الفرع:</strong> {row['الفرع']}</div>
+            <div class="row"><strong>اسم الموظف:</strong> {row['الاسم']} <strong>الوظيفة:</strong> {row['الوظيفة']}</div>
+            <hr>
+            <div class="row"><strong>الراتب المستحق:</strong> {row['الراتب الأساسي']} ر.س <strong>الدفعة المصروفة:</strong> {row['الدفعة المدفوعة']} ر.س</div>
+            <div class="row"><strong>المتبقي:</strong> {row['المتبقي']} ر.س <strong>نوع الإجراء:</strong> {row['نوع الإجراء']}</div>
+            <div class="row"><strong>الملاحظات:</strong> {row['الملاحظات'] if row['الملاحظات'] else 'لا يوجد'}</div>
+            <div class="footer">
+                <span>توقيع الموظف: _______________</span>
+                <span>توقيع المحاسب: _______________</span>
+            </div>
+        </div>
+        """
+    html_content += "</body></html>"
+    output.write(html_content.encode('utf-8'))
+    output.seek(0)
+    return output
+
+# 4. الشاشات
 if '📊' in menu:
-    st.title('📊 شاشة التدخيل والتعديل التفاعلي (إدارة الدفعات والرواتب)')
-    st.write('ادخل تعديلات الدفعات المالية من ورقة المسير اليدوي مباشرة في الجدول، وسيتم تحديث الإجماليات والسندات آلياً.')
+    st.title('📊 شاشة إدخال وتعديل الدفعات (مقسمة حسب الفرع)')
+    st.write('قم باختيار الفرع وتعديل مبالغ الدفعات، وسيتم تحديث المتبقي والسندات تلقائياً.')
     
-    # اختيار الفرع للعرض والتعديل
-    branch_filter = st.selectbox('🏢 اختر الفرع للعرض والتعديل:', ['جميع الفروع (52 موظف)', 'الخرج', 'المستودع', 'الملقة'])
+    t1, t2, t3 = st.tabs(['📍 فرع الخرج (35 موظف)', '📍 فرع المستودع (5 موظفين)', '📍 فرع الملقة (12 موظف)'])
     
-    df_current = st.session_state.payroll_df
-    if branch_filter != 'جميع الفروع (52 موظف)':
-        df_show = df_current[df_current['الفرع'] == branch_filter]
-    else:
-        df_show = df_current
-
-    # شاشة الإدخال التفاعلية كالـ Excel
-    edited_df = st.data_editor(
-        df_show,
-        column_config={
-            "م": st.column_config.NumberColumn("م", disabled=True),
-            "الاسم": st.column_config.TextColumn("اسم الموظف", disabled=True),
-            "الوظيفة": st.column_config.TextColumn("الوظيفة", disabled=True),
-            "الفرع": st.column_config.TextColumn("الفرع", disabled=True),
-            "الراتب الأساسي": st.column_config.NumberColumn("الراتب المستحق (ر.س)", disabled=True, format="%d ر.س"),
-            "الدفعة المدفوعة": st.column_config.NumberColumn("الدفعة المصروفة (ر.س)", min_value=0, format="%d ر.س"),
-            "نوع الإجراء": st.column_config.SelectboxColumn(
-                "نوع الإجراء / السبب",
-                options=["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف / مؤجل"]
-            ),
-            "الملاحظات": st.column_config.TextColumn("ملاحظات السند")
-        },
-        use_container_width=True,
-        num_rows="fixed",
-        key="data_editor"
-    )
-
-    # حساب المتبقي تلقائياً
-    edited_df['المتبقي'] = edited_df['الراتب الأساسي'] - edited_df['الدفعة المدفوعة']
-    st.session_state.payroll_df.update(edited_df)
-
-    # حساب الإجماليات والمؤشرات المالية
-    st.divider()
-    st.subheader('📈 الميزانية والإجمالي العام للرواتب:')
+    branches = [('الخرج', t1), ('المستودع', t2), ('الملقة', t3)]
     
-    total_required = edited_df['الراتب الأساسي'].sum()
-    total_paid = edited_df['الدفعة المدفوعة'].sum()
-    total_remaining = edited_df['المتبقي'].sum()
-    
-    col_m1, col_m2, col_m3 = st.columns(3)
-    col_m1.metric('إجمالي الرواتب المستحقة', f'{total_required:,.0f} ر.س')
-    col_m2.metric('إجمالي الدفعات المصروفة فعلياً', f'{total_paid:,.0f} ر.س')
-    col_m3.metric('إجمالي المتبقي / الفروقات', f'{total_remaining:,.0f} ر.س', delta_color="inverse")
+    for b_name, tab_obj in branches:
+        with tab_obj:
+            df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
+            
+            edited_b = st.data_editor(
+                df_b,
+                column_config={
+                    "م": st.column_config.NumberColumn("م", disabled=True),
+                    "الاسم": st.column_config.TextColumn("اسم الموظف", disabled=True),
+                    "الوظيفة": st.column_config.TextColumn("الوظيفة", disabled=True),
+                    "الفرع": st.column_config.TextColumn("الفرع", disabled=True),
+                    "الراتب الأساسي": st.column_config.NumberColumn("الراتب المستحق", disabled=True, format="%d ر.س"),
+                    "الدفعة المدفوعة": st.column_config.NumberColumn("الدفعة المصروفة (ر.س)", min_value=0, format="%d ر.س"),
+                    "نوع الإجراء": st.column_config.SelectboxColumn(
+                        "نوع الإجراء",
+                        options=["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"]
+                    ),
+                    "الملاحظات": st.column_config.TextColumn("الملاحظات")
+                },
+                use_container_width=True,
+                key=f"editor_{b_name}"
+            )
+            
+            edited_b['المتبقي'] = edited_b['الراتب الأساسي'] - edited_b['الدفعة المدفوعة']
+            st.session_state.payroll_df.update(edited_b)
+            
+            # ملخص فرعي لكل فرع
+            req = edited_b['الراتب الأساسي'].sum()
+            paid = edited_b['الدفعة المدفوعة'].sum()
+            rem = edited_b['المتبقي'].sum()
+            
+            c1, c2, c3 = st.columns(3)
+            c1.metric(f'مستحق فرع {b_name}', f'{req:,.0f} ر.س')
+            c2.metric(f'مصروف فرع {b_name}', f'{paid:,.0f} ر.س')
+            c3.metric(f'متبقي فرع {b_name}', f'{rem:,.0f} ر.س')
 
 elif '💼' in menu:
-    st.title('💼 سجل الموظفين لشركة ميم الخماسية (52 موظف)')
-    st.dataframe(st.session_state.payroll_df[['م', 'الاسم', 'الوظيفة', 'الفرع', 'الراتب الأساسي']], use_container_width=True)
+    st.title('💼 سجل الموظفين والإجماليات المالية الحالية')
+    
+    s1, s2, s3 = st.tabs(['سجل فرع الخرج', 'سجل فرع المستودع', 'سجل فرع الملقة'])
+    
+    for b_name, tab_obj in [('الخرج', s1), ('المستودع', s2), ('الملقة', s3)]:
+        with tab_obj:
+            df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name]
+            st.dataframe(df_b[['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة المدفوعة', 'المتبقي', 'نوع الإجراء', 'الملاحظات']], use_container_width=True)
+            
+            req = df_b['الراتب الأساسي'].sum()
+            paid = df_b['الدفعة المدفوعة'].sum()
+            rem = df_b['المتبقي'].sum()
+            
+            st.info(f"📊 **إجمالي فرع {b_name}:** المستحق: **{req:,.0f} ر.س** | المصروف: **{paid:,.0f} ر.س** | المتبقي: **{rem:,.0f} ر.س**")
+
+    st.divider()
+    st.subheader('🌐 الإجمالي العام للشركة (52 موظف)')
+    tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
+    tot_paid = st.session_state.payroll_df['الدفعة المدفوعة'].sum()
+    tot_rem = st.session_state.payroll_df['المتبقي'].sum()
+    
+    g1, g2, g3 = st.columns(3)
+    g1.metric('إجمالي رواتب الشركة', f'{tot_req:,.0f} ر.س')
+    g2.metric('إجمالي الدفعات المسلمة', f'{tot_paid:,.0f} ر.س')
+    g3.metric('إجمالي المتبقي الكلي', f'{tot_rem:,.0f} ر.س')
 
 elif '🖨️' in menu:
-    st.title('🖨️ طباعة سندات القبض الرسمية (PDF A4)')
-    st.info('السندات تولد آلياً بناءً على المبالغ والدفعات التي أدخلتها في الجدول.')
+    st.title('🖨️ طباعة وتصدير سندات القبض (A4)')
+    st.write('قم باختيار الفرع وتنزيل سندات القبض الجاهزة للطباعة بدون أخطاء.')
     
-    branch_pdf = st.selectbox('اختر الفرع لطباعة السندات:', ['جميع الفروع', 'الخرج', 'المستودع', 'الملقة'])
+    selected_b = st.selectbox('اختر الفرع للتصدير:', ['جميع الفروع (52 موظف)', 'الخرج', 'المستودع', 'الملقة'])
     
-    if st.button('🖨️ تصدير سندات القبض جاهزة للطباعة (PDF)'):
-        st.success(f'تم تجهيز سندات القبض لفرع {branch_pdf} بناءً على الدفعات المدفوعة!')
-        st.download_button(
-            label="📥 اضغط هنا لتنزيل ملف PDF للطباعة مباشرة",
-            data="محتوى السندات الرسمية لشركة ميم الخماسية للتصنيع",
-            file_name=f"سندات_قبض_{branch_pdf}.pdf",
-            mime="application/pdf"
-        )
+    if selected_b == 'جميع الفروع (52 موظف)':
+        df_print = st.session_state.payroll_df
+    else:
+        df_print = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == selected_b]
+        
+    pdf_data = create_pdf_bytes(df_print, selected_b)
+    
+    st.download_button(
+        label=f"📄 اضغط هنا لتحميل سندات قبض فرع {selected_b} (HTML/PDF)",
+        data=pdf_data,
+        file_name=f"سندات_قبض_{selected_b}.html",
+        mime="text/html"
+    )
 
 elif '➕' in menu:
-    st.title('🚀 إضافة نظام جديد')
-    st.selectbox('اختر الموديل:', ['نظام الحضور والانصراف والبصمة', 'نظام طلبات الإجازات', 'نظام نهاية الخدمة'])
+    st.title('🚀 إضافة نظام جديد مستقبلاً')
+    st.selectbox('اختر الموديل:', ['نظام الحضور والانصراف والبصمة', 'نظام إدارة طلبات الإجازات', 'نظام حساب مكافأة نهاية الخدمة'])
     st.button('تفعيل النظام')
