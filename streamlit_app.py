@@ -10,7 +10,7 @@ st.set_page_config(page_title='شركة ميم الخماسية للتصنيع -
 
 DATA_FILE = 'payroll_data.json'
 
-# قاعدة البيانات المحدثة بناءً على الملف المرفق الشامل لـ 54 موظفاً
+# قاعدة البيانات المحدثة بناءً على البيانات المعمدة لـ 54 موظفاً
 initial_data = [
     {'م': 1, 'الاسم': 'مد ساجد ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 4000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01', 'الدفعة 1': 2000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 4000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 2, 'الاسم': 'فيض الإسلام', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-09-20', 'تاريخ انتهاء العقد': '2026-12-31', 'الدفعة 1': 1250.0, 'الدفعة 2': 1250.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
@@ -111,8 +111,111 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-if 'app_started' not in st.session_state:
-    st.session_state.app_started = False
+# 2. النافذة المنبثقة التفاعلية لإضافة موظف جديد
+@st.dialog("➕ إضافة موظف جديد بالنظام")
+def add_employee_dialog(default_branch):
+    st.write(f"إدخال موظف جديد لفرع: **{default_branch}**")
+    with st.form("add_emp_modal_form"):
+        c1, c2 = st.columns(2)
+        with c1:
+            new_name = st.text_input("اسم الموظف الثلاثي:")
+            new_job = st.text_input("الوظيفة:", "عامل")
+            new_branch = st.selectbox("الفرع:", ['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'], index=['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'].index(default_branch))
+        with c2:
+            new_sal = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=2500.0)
+            new_start = st.date_input("تاريخ بداية العمل / العقد:", datetime(2024, 1, 1))
+            new_iq = st.date_input("تاريخ انتهاء الإقامة:", datetime(2027, 12, 31))
+            new_ct = st.date_input("تاريخ انتهاء العقد:", datetime(2027, 12, 31))
+            
+        sub_btn = st.form_submit_button("💾 حفظ وإضافة الموظف")
+        if sub_btn:
+            if new_name:
+                max_id = st.session_state.payroll_df['م'].max() + 1 if not st.session_state.payroll_df.empty else 1
+                new_dict = {
+                    'م': max_id,
+                    'الاسم': new_name,
+                    'الوظيفة': new_job,
+                    'الراتب الأساسي': new_sal,
+                    'الفرع': new_branch,
+                    'تاريخ بداية العمل': str(new_start),
+                    'تاريخ انتهاء الإقامة': str(new_iq),
+                    'تاريخ انتهاء العقد': str(new_ct),
+                    'الدفعة 1': new_sal / 2.0,
+                    'الدفعة 2': new_sal / 2.0,
+                    'الدفعة المدفوعة': new_sal,
+                    'المتبقي': 0.0,
+                    'نوع الإجراء': 'صرف كامل',
+                    'الملاحظات': ''
+                }
+                st.session_state.payroll_df = pd.concat([st.session_state.payroll_df, pd.DataFrame([new_dict])], ignore_index=True)
+                save_data(st.session_state.payroll_df)
+                st.success(f"تمت إضافة الموظف ({new_name}) بنجاح!")
+                st.rerun()
+
+# 3. النافذة المنبثقة التفاعلية لتعديل/حذف موظف
+@st.dialog("👤 الملف الشامل وتعديل الموظف")
+def edit_employee_dialog(emp_idx, month_selected):
+    emp_data = st.session_state.payroll_df.loc[emp_idx]
+    st.write(f"تعديل بيانات الموظف: **{emp_data['الاسم']}** (رقم مالي: #{emp_data['م']})")
+    
+    with st.form(f'edit_modal_{emp_data["م"]}'):
+        col_e1, col_e2, col_e3 = st.columns(3)
+        with col_e1:
+            st.markdown("### 👤 البيانات الإدارية")
+            up_name = st.text_input("اسم الموظف الثلاثي:", value=emp_data['الاسم'])
+            up_job = st.text_input("الوظيفة:", value=emp_data['الوظيفة'])
+            up_branch = st.selectbox("الفرع التابع له:", [
+                'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'
+            ], index=['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'].index(emp_data['الفرع']))
+            
+        with col_e2:
+            st.markdown("### 💰 المالية (" + month_selected + ")")
+            up_salary = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=float(emp_data['الراتب الأساسي']))
+            up_pay1 = st.number_input("الدفعة 1 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 1', 0)))
+            up_pay2 = st.number_input("الدفعة 2 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 2', 0)))
+            up_action = st.selectbox("نوع الإجراء:", ["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"], index=["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"].index(emp_data['نوع الإجراء']))
+            up_notes = st.text_input("الملاحظات:", value=emp_data['الملاحظات'])
+            
+        with col_e3:
+            st.markdown("### 📄 التواريخ والوثائق")
+            st_val = datetime.strptime(str(emp_data.get('تاريخ بداية العمل', '2024-01-01')), '%Y-%m-%d')
+            iq_val = datetime.strptime(str(emp_data['تاريخ انتهاء الإقامة']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء الإقامة']) else datetime(2027, 12, 31)
+            ct_val = datetime.strptime(str(emp_data['تاريخ انتهاء العقد']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء العقد']) else datetime(2027, 12, 31)
+            
+            up_start_date = st.date_input("تاريخ بداية العمل / العقد:", st_val)
+            up_iqama_date = st.date_input("تاريخ انتهاء الإقامة:", iq_val)
+            up_contract_date = st.date_input("تاريخ انتهاء العقد:", ct_val)
+            
+        st.divider()
+        save_btn = st.form_submit_button('💾 حفظ وتحديث ملف الموظف والتعديلات المالية')
+        
+        if save_btn:
+            tot_paid_emp = up_pay1 + up_pay2
+            st.session_state.payroll_df.loc[emp_idx, 'الاسم'] = up_name
+            st.session_state.payroll_df.loc[emp_idx, 'الوظيفة'] = up_job
+            st.session_state.payroll_df.loc[emp_idx, 'الفرع'] = up_branch
+            st.session_state.payroll_df.loc[emp_idx, 'الراتب الأساسي'] = up_salary
+            st.session_state.payroll_df.loc[emp_idx, 'الدفعة 1'] = up_pay1
+            st.session_state.payroll_df.loc[emp_idx, 'الدفعة 2'] = up_pay2
+            st.session_state.payroll_df.loc[emp_idx, 'الدفعة المدفوعة'] = tot_paid_emp
+            st.session_state.payroll_df.loc[emp_idx, 'المتبقي'] = up_salary - tot_paid_emp
+            st.session_state.payroll_df.loc[emp_idx, 'نوع الإجراء'] = up_action
+            st.session_state.payroll_df.loc[emp_idx, 'الملاحظات'] = up_notes
+            st.session_state.payroll_df.loc[emp_idx, 'تاريخ بداية العمل'] = str(up_start_date)
+            st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء الإقامة'] = str(up_iqama_date)
+            st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء العقد'] = str(up_contract_date)
+            
+            save_data(st.session_state.payroll_df)
+            st.success(f"تم حفظ ملف الموظف ({up_name}) بنجاح!")
+            st.rerun()
+
+    with st.expander(f"⚠️ حذف الموظف ({emp_data['الاسم']}) نهائياً"):
+        st.warning("⚠️ مسح الموظف سيحذفه نهائياً من كافة السجلات والتقارير والسندات.")
+        if st.button(f"🗑️ تأكيد مسح الموظف نهائياً", key=f"del_modal_{emp_data['م']}"):
+            st.session_state.payroll_df = st.session_state.payroll_df.drop(emp_idx).reset_index(drop=True)
+            save_data(st.session_state.payroll_df)
+            st.success(f"تم حذف الموظف ({emp_data['الاسم']}) نهائياً!")
+            st.rerun()
 
 if not st.session_state.app_started:
     st.markdown("""
@@ -142,10 +245,9 @@ else:
         st.markdown('<h2 style="text-align: center; color: #1E3A8A;">🏢 شركة ميم الخماسية</h2>', unsafe_allow_html=True)
         st.divider()
         menu = st.radio('📌 التنقل الرئيسي:', [
-            '🔍 إدارة وتعديل الموظفين (مع إضافة موظف)',
+            '🔍 إدارة وتعديل الموظفين',
             '📊 شاشة إدخال الدفعات (حسب الفرع)',
-            '💼 سجل الموظفين وتدقيق الوثائق',
-            '📈 شاشة التقارير وإدارة التجديدات والمستحقات',
+            '📈 مركز الموارد البشرية والتقارير المدمجة',
             '📑 مسير الرواتب الشهري (معاينة وطباعة)',
             '🖨️ طباعة سندات القبض (PDF A4)'
         ])
@@ -288,7 +390,7 @@ else:
         return output
 
     if '🔍' in menu:
-        st.title('🔍 الشاشة المدمجة: إدارة الموظفين، البحث الفوري، والتعديل')
+        st.title('🔍 الشاشة الاحترافية لإدارة الموظفين والبحث والتعديل')
         
         cnt_factory = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مصنع ميم الخماسية الخرج'])
         cnt_wh_kh = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مستودع ميم الخماسية الخرج'])
@@ -306,124 +408,28 @@ else:
         
         for idx_st, (s_title, b_name) in enumerate(tab_search_list):
             with search_tabs[idx_st]:
-                # زر إضافة موظف جديد مدمج بالفرع
-                with st.expander(f"➕ إضافة موظف جديد لـ ({b_name})"):
-                    with st.form(f"add_emp_inline_{b_name}"):
-                        c_a1, c_a2, c_a3 = st.columns(3)
-                        with c_a1:
-                            new_name = st.text_input("اسم الموظف الجديد:")
-                            new_job = st.text_input("الوظيفة:", "عامل")
-                        with c_a2:
-                            new_sal = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=2500.0)
-                            new_start = st.date_input("تاريخ بداية العمل / العقد:", datetime(2024, 1, 1))
-                        with c_a3:
-                            new_iq = st.date_input("تاريخ انتهاء الإقامة:", datetime(2027, 12, 31))
-                            new_ct = st.date_input("تاريخ انتهاء العقد:", datetime(2027, 12, 31))
-                        
-                        sub_new_emp = st.form_submit_button("💾 حفظ وإضافة الموظف فوراً")
-                        if sub_new_emp:
-                            if new_name:
-                                max_id = st.session_state.payroll_df['م'].max() + 1 if not st.session_state.payroll_df.empty else 1
-                                new_dict = {
-                                    'م': max_id,
-                                    'الاسم': new_name,
-                                    'الوظيفة': new_job,
-                                    'الراتب الأساسي': new_sal,
-                                    'الفرع': b_name,
-                                    'تاريخ بداية العمل': str(new_start),
-                                    'تاريخ انتهاء الإقامة': str(new_iq),
-                                    'تاريخ انتهاء العقد': str(new_ct),
-                                    'الدفعة 1': new_sal / 2.0,
-                                    'الدفعة 2': new_sal / 2.0,
-                                    'الدفعة المدفوعة': new_sal,
-                                    'المتبقي': 0.0,
-                                    'نوع الإجراء': 'صرف كامل',
-                                    'الملاحظات': ''
-                                }
-                                st.session_state.payroll_df = pd.concat([st.session_state.payroll_df, pd.DataFrame([new_dict])], ignore_index=True)
-                                save_data(st.session_state.payroll_df)
-                                st.success(f"تمت إضافة الموظف ({new_name}) بنجاح!")
-                                st.rerun()
+                col_h1, col_h2 = st.columns([3, 1])
+                with col_h1:
+                    st.write(f"قائمة عمالة وإداريي **{b_name}**:")
+                with col_h2:
+                    if st.button(f"➕ إضافة موظف جديد لـ {b_name}", key=f"btn_modal_add_{b_name}"):
+                        add_employee_dialog(b_name)
 
-                st.divider()
                 branch_df_search = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name]
-                branch_emp_names = branch_df_search['الاسم'].tolist()
                 
-                if branch_emp_names:
-                    st.write("💡 **اضغط على اسم الموظف أدناه لفتح ملفه المباشر والتعديل عليه فوراً:**")
-                    cols_emp = st.columns(3)
-                    for e_i, e_name in enumerate(branch_emp_names):
-                        col_target = cols_emp[e_i % 3]
-                        if col_target.button(f"👤 {e_name}", key=f"btn_emp_click_{b_name}_{e_i}"):
-                            st.session_state[f'selected_emp_{b_name}'] = e_name
-
-                    selected_emp_in_b = st.session_state.get(f'selected_emp_{b_name}', branch_emp_names[0])
-                    
-                    emp_search_res = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'] == selected_emp_in_b]
-                    if not emp_search_res.empty:
-                        emp_idx = emp_search_res.index[0]
-                        emp_data = st.session_state.payroll_df.loc[emp_idx]
+                if not branch_df_search.empty:
+                    # جدول تفاعلي أنيق يحتوي زر تعديل لكل موظف
+                    for e_idx, e_row in branch_df_search.iterrows():
+                        c_card1, c_card2, c_card3, c_card4 = st.columns([2, 1.5, 1.5, 1])
+                        c_card1.write(f"👤 **{e_row['الاسم']}** ({e_row['الوظيفة']})")
+                        c_card2.write(f"💵 الراتب: **{e_row['الراتب الأساسي']:,.0f} ر.س**")
+                        c_card3.write(f"📅 بداية العمل: {e_row.get('تاريخ بداية العمل', '2024-01-01')}")
                         
-                        st.info(f"👤 **ملف الموظف المحدد للتحرير المباشر:** {emp_data['الاسم']} (رقم مالي: #{emp_data['م']})")
-                        
-                        with st.form(f'edit_form_{b_name}_{emp_data["م"]}'):
-                            col_e1, col_e2, col_e3 = st.columns(3)
-                            with col_e1:
-                                st.markdown("### 👤 البيانات الإدارية")
-                                up_name = st.text_input("اسم الموظف الثلاثي:", value=emp_data['الاسم'])
-                                up_job = st.text_input("الوظيفة:", value=emp_data['الوظيفة'])
-                                up_branch = st.selectbox("الفرع التابع له:", [
-                                    'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'
-                                ], index=['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'].index(emp_data['الفرع']))
-                                
-                            with col_e2:
-                                st.markdown("### 💰 الدفعات والمالية (" + month_selected + ")")
-                                up_salary = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=float(emp_data['الراتب الأساسي']))
-                                up_pay1 = st.number_input("الدفعة 1 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 1', 0)))
-                                up_pay2 = st.number_input("الدفعة 2 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 2', 0)))
-                                up_action = st.selectbox("نوع الإجراء:", ["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"], index=["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"].index(emp_data['نوع الإجراء']))
-                                up_notes = st.text_input("الملاحظات:", value=emp_data['الملاحظات'])
-                                
-                            with col_e3:
-                                st.markdown("### 📄 تواريخ العمل والوثائق")
-                                st_val = datetime.strptime(str(emp_data.get('تاريخ بداية العمل', '2024-01-01')), '%Y-%m-%d')
-                                iq_val = datetime.strptime(str(emp_data['تاريخ انتهاء الإقامة']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء الإقامة']) else datetime(2027, 12, 31)
-                                ct_val = datetime.strptime(str(emp_data['تاريخ انتهاء العقد']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء العقد']) else datetime(2027, 12, 31)
-                                
-                                up_start_date = st.date_input("تاريخ بداية العمل / العقد:", st_val)
-                                up_iqama_date = st.date_input("تاريخ انتهاء الإقامة:", iq_val)
-                                up_contract_date = st.date_input("تاريخ انتهاء العقد:", ct_val)
-                                
-                            st.divider()
-                            save_btn = st.form_submit_button('💾 حفظ وتحديث ملف الموظف والتعديلات المالية')
-                            
-                            if save_btn:
-                                tot_paid_emp = up_pay1 + up_pay2
-                                st.session_state.payroll_df.loc[emp_idx, 'الاسم'] = up_name
-                                st.session_state.payroll_df.loc[emp_idx, 'الوظيفة'] = up_job
-                                st.session_state.payroll_df.loc[emp_idx, 'الفرع'] = up_branch
-                                st.session_state.payroll_df.loc[emp_idx, 'الراتب الأساسي'] = up_salary
-                                st.session_state.payroll_df.loc[emp_idx, 'الدفعة 1'] = up_pay1
-                                st.session_state.payroll_df.loc[emp_idx, 'الدفعة 2'] = up_pay2
-                                st.session_state.payroll_df.loc[emp_idx, 'الدفعة المدفوعة'] = tot_paid_emp
-                                st.session_state.payroll_df.loc[emp_idx, 'المتبقي'] = up_salary - tot_paid_emp
-                                st.session_state.payroll_df.loc[emp_idx, 'نوع الإجراء'] = up_action
-                                st.session_state.payroll_df.loc[emp_idx, 'الملاحظات'] = up_notes
-                                st.session_state.payroll_df.loc[emp_idx, 'تاريخ بداية العمل'] = str(up_start_date)
-                                st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء الإقامة'] = str(up_iqama_date)
-                                st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء العقد'] = str(up_contract_date)
-                                
-                                save_data(st.session_state.payroll_df)
-                                st.success(f"تم حفظ وتعديل بيانات الموظف ({up_name}) دائماً بنجاح!")
-                                st.rerun()
-
-                        with st.expander(f"⚠️ حذف الموظف ({emp_data['الاسم']}) نهائياً من النظام"):
-                            st.warning("⚠️ تنبيه: مسح الموظف سيحذفه نهائياً من كشوفات السندات والمسير والتقارير.")
-                            if st.button(f"🗑️ تأكيد مسح الموظف ({emp_data['الاسم']}) نهائياً", key=f"del_confirm_{emp_data['م']}"):
-                                st.session_state.payroll_df = st.session_state.payroll_df.drop(emp_idx).reset_index(drop=True)
-                                save_data(st.session_state.payroll_df)
-                                st.success(f"تم حذف الموظف ({emp_data['الاسم']}) نهائياً من جميع سجلات الشركة!")
-                                st.rerun()
+                        if c_card4.button("✏️ تعديل / الملف", key=f"btn_edit_m_{e_row['م']}"):
+                            edit_employee_dialog(e_idx, month_selected)
+                        st.divider()
+                else:
+                    st.info(f"لا يوجد موظفين مسجلين حالياً في {b_name}.")
 
     elif '📊' in menu:
         st.title(f'📊 شاشة إدخال وتعديل الدفعات - ({month_selected})')
@@ -496,72 +502,83 @@ else:
                 c3.metric('إجمالي الدفعة 2', f"{tot_p2:,.0f} ر.س")
                 c4.metric('إجمالي المتبقي الكلي', f"{(tot_req - tot_all_p):,.0f} ر.س")
 
-    elif '💼' in menu:
-        st.title('💼 سجل الموظفين وتدقيق الوثائق (مقسم بحسب الفرع)')
-        tab_list = [
-            ('🏢 مصنع ميم الخماسية الخرج', 'مصنع ميم الخماسية الخرج'),
-            ('📦 مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج'),
-            ('🏙️ مستودع ميم الخماسية الرياض', 'مستودع ميم الخماسية الرياض'),
-            ('📋 رواتب متنوعة', 'رواتب متنوعة')
-        ]
-        tabs = st.tabs([t[0] for t in tab_list])
-        for idx_t, (tab_title, b_name) in enumerate(tab_list):
-            with tabs[idx_t]:
-                df_branch_emp = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name]
-                st.dataframe(df_branch_emp[['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'تاريخ بداية العمل', 'تاريخ انتهاء الإقامة', 'تاريخ انتهاء العقد']], use_container_width=True, hide_index=True)
-
     elif '📈' in menu:
-        st.title('📈 شاشة التقارير الشاملة، المستحقات الإدارية وتنبيهات التجديد')
-        tot_emp = len(st.session_state.payroll_df)
-        tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
-        tot_paid = st.session_state.payroll_df['الدفعة المدفوعة'].sum()
-        tot_rem = st.session_state.payroll_df['المتبقي'].sum()
+        st.title('📈 مركز الموارد البشرية، المستحقات الإدارية والتقارير الشاملة')
         
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric('إجمالي عدد العمالة الحالي', f'{tot_emp} موظف')
-        m2.metric('إجمالي الرواتب الكلية', f'{tot_req:,.0f} ر.س')
-        m3.metric('إجمالي المصروف فعلياً', f'{tot_paid:,.0f} ر.س')
-        m4.metric('إجمالي المتبقي الكلي', f'{tot_rem:,.0f} ر.س')
+        tab_hr1, tab_hr2, tab_hr3, tab_hr4 = st.tabs([
+            '🇸🇦 حاسبة مكافأة نهاية الخدمة والإجازات',
+            '💼 سجل الموظفين والوثائق الرسمية',
+            '🔔 مركز تنبيهات الانتهاء والتجديد',
+            '📊 المؤشرات الإدارية العامة'
+        ])
         
-        st.divider()
-        st.subheader('🇸🇦 حاسبة مستحقات نهاية الخدمة وبدل الإجازات (وفقاً لنظام العمل السعودي):')
-        
-        saudi_reports = []
-        for _, r in st.session_state.payroll_df.iterrows():
-            yrs, grat, leave_allow = calculate_saudi_gratuity_and_leave(r['الراتب الأساسي'], r.get('تاريخ بداية العمل', '2024-01-01'))
-            saudi_reports.append({
-                'م': r['م'],
-                'اسم الموظف': r['الاسم'],
-                'الفرع': r['الفرع'],
-                'تاريخ بداية العمل': r.get('تاريخ بداية العمل', '2024-01-01'),
-                'مدة الخدمة (سنة)': yrs,
-                'مكافأة نهاية الخدمة (تقديري)': f"{grat:,.2f} ر.س",
-                'بدل الإجازة السنوية (المستحق)': f"{leave_allow:,.2f} ر.س",
-                'إجمالي المستحقات التقديرية': f"{(grat + leave_allow):,.2f} ر.س"
-            })
+        with tab_hr1:
+            st.subheader('🇸🇦 مستحقات عمالة الشركة المربوطة بنظام العمل السعودي:')
+            st.write('تعتمد الحاسبة التلقائية على تاريخ بداية العمل والراتب الأساسي الحالي لكل موظف:')
             
-        df_saudi = pd.DataFrame(saudi_reports)
-        st.dataframe(df_saudi, use_container_width=True, hide_index=True)
-        
-        st.divider()
-        st.subheader('🔔 مركز تنبيهات انتهاء الإقامات والعقود:')
-        today = datetime.now().date()
-        alerts = []
-        for _, r in st.session_state.payroll_df.iterrows():
-            try:
-                iq_d = datetime.strptime(str(r.get('تاريخ انتهاء الإقامة')), '%Y-%m-%d').date()
-                ct_d = datetime.strptime(str(r.get('تاريخ انتهاء العقد')), '%Y-%m-%d').date()
-                if iq_d < today:
-                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': '🆔 إقامة', 'تاريخ الانتهاء': iq_d, 'الحالة': '🔴 منتهية (تحتاج تجديد)'})
-                elif (iq_d - today).days <= 30:
-                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': '🆔 إقامة', 'تاريخ الانتهاء': iq_d, 'الحالة': '🟡 تنتهي خلال أقل من شهر'})
-                if ct_d < today:
-                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': '📄 عقد عمل', 'تاريخ الانتهاء': ct_d, 'الحالة': '🔴 منتهي (تحتاج تجديد)'})
-                elif (ct_d - today).days <= 30:
-                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': '📄 عقد عمل', 'تاريخ الانتهاء': ct_d, 'الحالة': '🟡 ينتهي خلال أقل من شهر'})
-            except: pass
-        if alerts: st.dataframe(pd.DataFrame(alerts), use_container_width=True, hide_index=True)
-        else: st.success('جميع الإقامات والعقود سارية ولا يوجد وثائق منتهية حالياً!')
+            saudi_reports = []
+            for _, r in st.session_state.payroll_df.iterrows():
+                yrs, grat, leave_allow = calculate_saudi_gratuity_and_leave(r['الراتب الأساسي'], r.get('تاريخ بداية العمل', '2024-01-01'))
+                saudi_reports.append({
+                    'م': r['م'],
+                    'اسم الموظف': r['الاسم'],
+                    'الفرع': r['الفرع'],
+                    'تاريخ بداية العمل': r.get('تاريخ بداية العمل', '2024-01-01'),
+                    'مدة الخدمة (سنة)': yrs,
+                    'مكافأة نهاية الخدمة (تقديري)': f"{grat:,.2f} ر.س",
+                    'بدل الإجازة السنوية (المستحق)': f"{leave_allow:,.2f} ر.س",
+                    'إجمالي المستحقات التقديرية': f"{(grat + leave_allow):,.2f} ر.س"
+                })
+                
+            df_saudi = pd.DataFrame(saudi_reports)
+            st.dataframe(df_saudi, use_container_width=True, hide_index=True)
+
+        with tab_hr2:
+            st.subheader('💼 سجل وثائق الموظفين (المقسّم بالكامل حسب الفرع):')
+            tab_list_b = [
+                ('🏢 مصنع ميم الخماسية الخرج', 'مصنع ميم الخماسية الخرج'),
+                ('📦 مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج'),
+                ('🏙️ مستودع ميم الخماسية الرياض', 'مستودع ميم الخماسية الرياض'),
+                ('📋 رواتب متنوعة', 'رواتب متنوعة')
+            ]
+            tabs_sub_hr = st.tabs([t[0] for t in tab_list_b])
+            for idx_t, (tab_title, b_name) in enumerate(tab_list_b):
+                with tabs_sub_hr[idx_t]:
+                    df_branch_emp = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name]
+                    st.dataframe(df_branch_emp[['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'تاريخ بداية العمل', 'تاريخ انتهاء الإقامة', 'تاريخ انتهاء العقد']], use_container_width=True, hide_index=True)
+
+        with tab_hr3:
+            st.subheader('🔔 مركز تنبيهات انتهاء الإقامات والعقود:')
+            today = datetime.now().date()
+            alerts = []
+            for _, r in st.session_state.payroll_df.iterrows():
+                try:
+                    iq_d = datetime.strptime(str(r.get('تاريخ انتهاء الإقامة')), '%Y-%m-%d').date()
+                    ct_d = datetime.strptime(str(r.get('تاريخ انتهاء العقد')), '%Y-%m-%d').date()
+                    if iq_d < today:
+                        alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': '🆔 إقامة', 'تاريخ الانتهاء': iq_d, 'الحالة': '🔴 منتهية (تحتاج تجديد)'})
+                    elif (iq_d - today).days <= 30:
+                        alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': '🆔 إقامة', 'تاريخ الانتهاء': iq_d, 'الحالة': '🟡 تنتهي خلال أقل من شهر'})
+                    if ct_d < today:
+                        alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': '📄 عقد عمل', 'تاريخ الانتهاء': ct_d, 'الحالة': '🔴 منتهي (تحتاج تجديد)'})
+                    elif (ct_d - today).days <= 30:
+                        alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': '📄 عقد عمل', 'تاريخ الانتهاء': ct_d, 'الحالة': '🟡 ينتهي خلال أقل من شهر'})
+                except: pass
+            if alerts: st.dataframe(pd.DataFrame(alerts), use_container_width=True, hide_index=True)
+            else: st.success('جميع الإقامات والعقود سارية ولا يوجد وثائق منتهية حالياً!')
+
+        with tab_hr4:
+            st.subheader('📊 ملخص الميزانية الكلية للشركة:')
+            tot_emp = len(st.session_state.payroll_df)
+            tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
+            tot_paid = st.session_state.payroll_df['الدفعة المدفوعة'].sum()
+            tot_rem = st.session_state.payroll_df['المتبقي'].sum()
+            
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric('إجمالي عدد العمالة الحالي', f'{tot_emp} موظف')
+            m2.metric('إجمالي الرواتب الكلية', f'{tot_req:,.0f} ر.س')
+            m3.metric('إجمالي المصروف فعلياً', f'{tot_paid:,.0f} ر.س')
+            m4.metric('إجمالي المتبقي الكلي', f'{tot_rem:,.0f} ر.س')
 
     elif '📑' in menu:
         st.title(f'📑 كشوفات مسير الرواتب الرسمية - ({month_selected})')
