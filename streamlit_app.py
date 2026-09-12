@@ -207,13 +207,19 @@ else:
     # 4. الشاشات
     if '🔍' in menu:
         st.title('🔍 شاشة البحث الفوري وتعديل ملف موظف (مقسمة بحسب الفرع)')
-        st.write('افتح تبويب الفرع لمشاهدة أسماء عمالته فقط، واختر اسم الموظف لتعديل كافة بياناته المالية والوظيفية والوثائق:')
+        st.write('افتح تبويب الفرع لمشاهدة عدد عمالته وأسمائهم فوراً، واختر الموظف لتعديل بياناته الشاملة:')
+        
+        # حساب أعداد العمالة بكل فرع
+        cnt_factory = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مصنع ميم الخماسية الخرج'])
+        cnt_wh_kh = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مستودع ميم الخماسية الخرج'])
+        cnt_wh_ry = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مستودع ميم الخماسية الرياض'])
+        cnt_misc = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'رواتب متنوعة'])
         
         tab_search_list = [
-            ('🏭 مصنع ميم الخماسية الخرج', 'مصنع ميم الخماسية الخرج'),
-            ('📦 مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج'),
-            ('🏙️ مستودع ميم الخماسية الرياض', 'مستودع ميم الخماسية الرياض'),
-            ('📋 رواتب متنوعة', 'رواتب متنوعة')
+            (f'🏭 مصنع ميم الخماسية الخرج ({cnt_factory} موظف)', 'مصنع ميم الخماسية الخرج'),
+            (f'📦 مستودع ميم الخماسية الخرج ({cnt_wh_kh} موظف)', 'مستودع ميم الخماسية الخرج'),
+            (f'🏙️ مستودع ميم الخماسية الرياض ({cnt_wh_ry} موظف)', 'مستودع ميم الخماسية الرياض'),
+            (f'📋 رواتب متنوعة ({cnt_misc} موظف)', 'رواتب متنوعة')
         ]
         
         search_tabs = st.tabs([t[0] for t in tab_search_list])
@@ -224,13 +230,16 @@ else:
                 branch_emp_names = branch_df_search['الاسم'].tolist()
                 
                 if branch_emp_names:
-                    selected_emp_in_b = st.selectbox(f"👤 اختر الموظف للتعديل من ({b_name}):", branch_emp_names, key=f"sb_search_{b_name}")
+                    # عرض الجدول السريع لموظفي الفرع لمشاهدتهم فوراً
+                    st.dataframe(branch_df_search[['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'تاريخ انتهاء الإقامة', 'تاريخ انتهاء العقد']], use_container_width=True, hide_index=True)
+                    
+                    st.divider()
+                    selected_emp_in_b = st.selectbox(f"👤 اختر اسم الموظف للتعديل الشامل من ({b_name}):", branch_emp_names, key=f"sb_search_{b_name}")
                     
                     emp_idx = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'] == selected_emp_in_b].index[0]
                     emp_data = st.session_state.payroll_df.loc[emp_idx]
                     
-                    st.divider()
-                    st.info(f"👤 **ملف الموظف:** {emp_data['الاسم']} (رقم مالي: #{emp_data['م']})")
+                    st.info(f"👤 **تعديل بيانات الموظف:** {emp_data['الاسم']} (رقم مالي: #{emp_data['م']})")
                     
                     with st.form(f'edit_form_{b_name}_{emp_data["م"]}'):
                         col_e1, col_e2, col_e3 = st.columns(3)
