@@ -5,20 +5,55 @@ import json
 import os
 from datetime import datetime
 
-# 1. إعداد الصفحة وتطبيق ستايل دفترة
-st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام الإداري والمالي', layout='wide', page_icon='🏢')
+# 1. إعداد الصفحة وتطبيق التنسيق العربي الكامل بالكامل على اليمين (RTL)
+st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
 
+# تطبيق تنسيق RTL وجعل القائمة الجانبية على اليمين
 st.markdown("""
     <style>
-        .stApp { background-color: #F8FAFC; color: #1E293B; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        /* ضبط اتجاه الصفحة بالكامل من اليمين إلى اليسار */
+        .stApp {
+            direction: rtl;
+            text-align: right;
+            background-color: #F8FAFC;
+            color: #1E293B;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        /* تعديل اتجاه القائمة الجانبية لتصبح على اليمين */
+        [data-testid="stSidebar"] {
+            right: 0 !important;
+            left: auto !important;
+            border-left: 1px solid #E2E8F0;
+            border-right: none;
+            background-color: #FFFFFF;
+        }
+        
+        /* ضبط محتوى الهامش الأيمن ليتناسب مع القائمة الجانبية اليمنى */
+        [data-testid="stSidebarContent"] {
+            direction: rtl;
+            text-align: right;
+        }
+
+        /* الهيدر العلوي بنمط البرامج المحاسبية */
         .daftra-header {
             background: linear-gradient(90deg, #1E3A8A 0%, #2563EB 100%);
-            padding: 18px 24px;
+            padding: 20px 24px;
             border-radius: 12px;
             color: white;
             margin-bottom: 20px;
             box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.15);
         }
+        
+        .metric-card {
+            background: #FFFFFF;
+            border-radius: 10px;
+            padding: 15px 20px;
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            text-align: center;
+        }
+        
         .stButton>button { border-radius: 8px; font-weight: 600; }
     </style>
 """, unsafe_allow_html=True)
@@ -125,7 +160,6 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# 2. النوافذ المنبثقة التفصيلية للكروت الإحصائية (Interactive Modals)
 @st.dialog("📊 ملخص توزيع الموظفين حسب الفروع")
 def modal_emp_summary():
     st.write("### 🏢 توزيع العمالة والمتوسطات المالية:")
@@ -280,6 +314,7 @@ if not st.session_state.get('app_started', False):
             st.rerun()
 
 else:
+    # القائمة الجانبية المحدثة على اليمين
     with st.sidebar:
         st.markdown('<h2 style="text-align: center; color: #1E3A8A;">🏢 شركة ميم الخماسية</h2>', unsafe_allow_html=True)
         st.divider()
@@ -345,7 +380,7 @@ else:
         </div>
     """, unsafe_allow_html=True)
 
-    # الأزرار والكروت الإحصائية التفاعلية الجديدة
+    # الكروت الإحصائية التفاعلية
     mc1, mc2, mc3, mc4 = st.columns(4)
     with mc1:
         if st.button(f"👥 إجمالي العمالة: {tot_emp} موظف", use_container_width=True):
