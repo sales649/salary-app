@@ -292,7 +292,6 @@ else:
                 if branch_emp_names:
                     st.write("💡 **اضغط على اسم الموظف أدناه لفتح ملفه المباشر والتعديل عليه فوراً:**")
                     
-                    # عرض أزرار تفاعلية لكل موظف للضغط المباشر
                     cols_emp = st.columns(3)
                     for e_i, e_name in enumerate(branch_emp_names):
                         col_target = cols_emp[e_i % 3]
@@ -301,66 +300,69 @@ else:
 
                     selected_emp_in_b = st.session_state.get(f'selected_emp_{b_name}', branch_emp_names[0])
                     
-                    emp_idx = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'] == selected_emp_in_b].index[0]
-                    emp_data = st.session_state.payroll_df.loc[emp_idx]
-                    
-                    st.divider()
-                    st.info(f"👤 **ملف الموظف المحدد للتحرير المباشر:** {emp_data['الاسم']} (رقم مالي: #{emp_data['م']})")
-                    
-                    with st.form(f'edit_form_{b_name}_{emp_data["م"]}'):
-                        col_e1, col_e2, col_e3 = st.columns(3)
-                        with col_e1:
-                            st.markdown("### 👤 البيانات الإدارية")
-                            up_name = st.text_input("اسم الموظف الثلاثي:", value=emp_data['الاسم'])
-                            up_job = st.text_input("الوظيفة:", value=emp_data['الوظيفة'])
-                            up_branch = st.selectbox("الفرع التابع له:", [
-                                'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'
-                            ], index=['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'].index(emp_data['الفرع']))
-                            
-                        with col_e2:
-                            st.markdown("### 💰 الدفعات والمالية (" + month_selected + ")")
-                            up_salary = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=float(emp_data['الراتب الأساسي']))
-                            up_pay1 = st.number_input("الدفعة 1 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 1', 0)))
-                            up_pay2 = st.number_input("الدفعة 2 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 2', 0)))
-                            up_action = st.selectbox("نوع الإجراء:", ["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"], index=["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"].index(emp_data['نوع الإجراء']))
-                            up_notes = st.text_input("الملاحظات:", value=emp_data['الملاحظات'])
-                            
-                        with col_e3:
-                            st.markdown("### 📄 الإقامات والعقود")
-                            iq_val = datetime.strptime(str(emp_data['تاريخ انتهاء الإقامة']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء الإقامة']) else datetime(2027, 12, 31)
-                            ct_val = datetime.strptime(str(emp_data['تاريخ انتهاء العقد']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء العقد']) else datetime(2027, 12, 31)
-                            up_iqama_date = st.date_input("تاريخ انتهاء الإقامة:", iq_val)
-                            up_contract_date = st.date_input("تاريخ انتهاء العقد:", ct_val)
-                            
-                        st.divider()
-                        save_btn = st.form_submit_button('💾 حفظ وتحديث ملف الموظف والتعديلات المالية')
+                    # حماية برمجية ضد أي خطأ Index error
+                    emp_search_res = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'] == selected_emp_in_b]
+                    if not emp_search_res.empty:
+                        emp_idx = emp_search_res.index[0]
+                        emp_data = st.session_state.payroll_df.loc[emp_idx]
                         
-                        if save_btn:
-                            tot_paid_emp = up_pay1 + up_pay2
-                            st.session_state.payroll_df.loc[emp_idx, 'الاسم'] = up_name
-                            st.session_state.payroll_df.loc[emp_idx, 'الوظيفة'] = up_job
-                            st.session_state.payroll_df.loc[emp_idx, 'الفرع'] = up_branch
-                            st.session_state.payroll_df.loc[emp_idx, 'الراتب الأساسي'] = up_salary
-                            st.session_state.payroll_df.loc[emp_idx, 'الدفعة 1'] = up_pay1
-                            st.session_state.payroll_df.loc[emp_idx, 'الدفعة 2'] = up_pay2
-                            st.session_state.payroll_df.loc[emp_idx, 'الدفعة المدفوعة'] = tot_paid_emp
-                            st.session_state.payroll_df.loc[emp_idx, 'المتبقي'] = up_salary - tot_paid_emp
-                            st.session_state.payroll_df.loc[emp_idx, 'نوع الإجراء'] = up_action
-                            st.session_state.payroll_df.loc[emp_idx, 'الملاحظات'] = up_notes
-                            st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء الإقامة'] = str(up_iqama_date)
-                            st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء العقد'] = str(up_contract_date)
+                        st.divider()
+                        st.info(f"👤 **ملف الموظف المحدد للتحرير المباشر:** {emp_data['الاسم']} (رقم مالي: #{emp_data['م']})")
+                        
+                        with st.form(f'edit_form_{b_name}_{emp_data["م"]}'):
+                            col_e1, col_e2, col_e3 = st.columns(3)
+                            with col_e1:
+                                st.markdown("### 👤 البيانات الإدارية")
+                                up_name = st.text_input("اسم الموظف الثلاثي:", value=emp_data['الاسم'])
+                                up_job = st.text_input("الوظيفة:", value=emp_data['الوظيفة'])
+                                up_branch = st.selectbox("الفرع التابع له:", [
+                                    'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'
+                                ], index=['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'].index(emp_data['الفرع']))
+                                
+                            with col_e2:
+                                st.markdown("### 💰 الدفعات والمالية (" + month_selected + ")")
+                                up_salary = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=float(emp_data['الراتب الأساسي']))
+                                up_pay1 = st.number_input("الدفعة 1 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 1', 0)))
+                                up_pay2 = st.number_input("الدفعة 2 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 2', 0)))
+                                up_action = st.selectbox("نوع الإجراء:", ["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"], index=["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"].index(emp_data['نوع الإجراء']))
+                                up_notes = st.text_input("الملاحظات:", value=emp_data['الملاحظات'])
+                                
+                            with col_e3:
+                                st.markdown("### 📄 الإقامات والعقود")
+                                iq_val = datetime.strptime(str(emp_data['تاريخ انتهاء الإقامة']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء الإقامة']) else datetime(2027, 12, 31)
+                                ct_val = datetime.strptime(str(emp_data['تاريخ انتهاء العقد']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء العقد']) else datetime(2027, 12, 31)
+                                up_iqama_date = st.date_input("تاريخ انتهاء الإقامة:", iq_val)
+                                up_contract_date = st.date_input("تاريخ انتهاء العقد:", ct_val)
+                                
+                            st.divider()
+                            save_btn = st.form_submit_button('💾 حفظ وتحديث ملف الموظف والتعديلات المالية')
                             
-                            save_data(st.session_state.payroll_df)
-                            st.success(f"تم حفظ وتعديل المتبقي ودفعات الموظف ({up_name}) دائماً بنجاح!")
-                            st.rerun()
+                            if save_btn:
+                                tot_paid_emp = up_pay1 + up_pay2
+                                st.session_state.payroll_df.loc[emp_idx, 'الاسم'] = up_name
+                                st.session_state.payroll_df.loc[emp_idx, 'الوظيفة'] = up_job
+                                st.session_state.payroll_df.loc[emp_idx, 'الفرع'] = up_branch
+                                st.session_state.payroll_df.loc[emp_idx, 'الراتب الأساسي'] = up_salary
+                                st.session_state.payroll_df.loc[emp_idx, 'الدفعة 1'] = up_pay1
+                                st.session_state.payroll_df.loc[emp_idx, 'الدفعة 2'] = up_pay2
+                                st.session_state.payroll_df.loc[emp_idx, 'الدفعة المدفوعة'] = tot_paid_emp
+                                st.session_state.payroll_df.loc[emp_idx, 'المتبقي'] = up_salary - tot_paid_emp
+                                st.session_state.payroll_df.loc[emp_idx, 'نوع الإجراء'] = up_action
+                                st.session_state.payroll_df.loc[emp_idx, 'الملاحظات'] = up_notes
+                                st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء الإقامة'] = str(up_iqama_date)
+                                st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء العقد'] = str(up_contract_date)
+                                
+                                save_data(st.session_state.payroll_df)
+                                st.success(f"تم حفظ وتعديل المتبقي ودفعات الموظف ({up_name}) دائماً بنجاح!")
+                                st.rerun()
 
-                    with st.expander(f"⚠️ حذف الموظف ({emp_data['الاسم']}) نهائياً من النظام"):
-                        st.warning("⚠️ تنبيه: مسح الموظف سيحذفه نهائياً من كشوفات السندات والمسير والتقارير.")
-                        if st.button(f"🗑️ تأكيد مسح الموظف ({emp_data['الاسم']}) نهائياً", key=f"del_confirm_{emp_data['م']}"):
-                            st.session_state.payroll_df = st.session_state.payroll_df.drop(emp_idx).reset_index(drop=True)
-                            save_data(st.session_state.payroll_df)
-                            st.success(f"تم حذف الموظف ({emp_data['الاسم']}) نهائياً من جميع سجلات الشركة!")
-                            st.rerun()
+                        with st.expander(f"⚠️ حذف الموظف ({emp_data['الاسم']}) نهائياً من النظام"):
+                            st.warning("⚠️ تنبيه: مسح الموظف سيحذفه نهائياً من كشوفات السندات والمسير والتقارير.")
+                            if st.button(f"🗑️ تأكيد مسح الموظف ({emp_data['الاسم']}) نهائياً", key=f"del_confirm_{emp_data['م']}"):
+                                st.session_state.payroll_df = st.session_state.payroll_df.drop(emp_idx).reset_index(drop=True)
+                                save_data(st.session_state.payroll_df)
+                                st.success(f"تم حذف الموظف ({emp_data['الاسم']}) نهائياً من جميع سجلات الشركة!")
+                                st.rerun()
 
     elif '📊' in menu:
         st.title(f'📊 شاشة إدخال وتعديل الدفعات - ({month_selected})')
