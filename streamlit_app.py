@@ -5,28 +5,57 @@ import json
 import os
 from datetime import datetime
 
-# 1. إعداد الصفحة وتطبيق التنسيق العربي الكامل (RTL)
-st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام الإداري والمالي', layout='wide', page_icon='🏢')
+# 1. إعداد الصفحة وتطبيق التنسيق العربي الكامل بالكامل على اليمين (RTL الشامل)
+st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
 
+# تطبيق تنسيق RTL شامل لكافة عناصر Streamlit والنوافذ المنبثقة والجداول
 st.markdown("""
     <style>
-        .stApp {
-            direction: rtl;
-            text-align: right;
+        /* ضبط اتجاه الصفحة والجسم بالكامل من اليمين إلى اليسار */
+        html, body, .stApp, [data-testid="stAppViewContainer"] {
+            direction: rtl !important;
+            text-align: right !important;
             background-color: #F8FAFC;
             color: #1E293B;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+        
+        /* تعديل اتجاه القائمة الجانبية لتصبح على اليمين بالكامل */
         [data-testid="stSidebar"] {
             right: 0 !important;
             left: auto !important;
-            border-left: 1px solid #E2E8F0;
-            background-color: #FFFFFF;
+            border-left: 1px solid #E2E8F0 !important;
+            border-right: none !important;
+            background-color: #FFFFFF !important;
         }
+        
         [data-testid="stSidebarContent"] {
-            direction: rtl;
-            text-align: right;
+            direction: rtl !important;
+            text-align: right !important;
         }
+
+        /* تعديل اتجاه النوافذ المنبثقة (Modals / Dialogs) لتفتح بالكامل من اليمين */
+        [data-testid="stDialog"] div[role="dialog"] {
+            direction: rtl !important;
+            text-align: right !important;
+        }
+
+        /* تعديل الجداول التفاعلية (Data Editors & Tables) لليمين */
+        .stDataFrame, [data-testid="stDataEditor"] {
+            direction: rtl !important;
+            text-align: right !important;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #E2E8F0;
+        }
+
+        /* تعديل حقول الإدخال والنصوص */
+        input, textarea, select, .stSelectbox, .stTextInput, .stNumberInput {
+            direction: rtl !important;
+            text-align: right !important;
+        }
+
+        /* الهيدر العلوي بنمط البرامج المحاسبية */
         .daftra-header {
             background: linear-gradient(90deg, #1E3A8A 0%, #2563EB 100%);
             padding: 20px 24px;
@@ -35,6 +64,7 @@ st.markdown("""
             margin-bottom: 20px;
             box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.15);
         }
+        
         .metric-card {
             background: #FFFFFF;
             border-radius: 10px;
@@ -43,6 +73,7 @@ st.markdown("""
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             text-align: center;
         }
+        
         .stButton>button { border-radius: 8px; font-weight: 600; }
     </style>
 """, unsafe_allow_html=True)
@@ -543,7 +574,6 @@ else:
     elif '👤' in menu:
         st.subheader('👤 دليل الموظفين والملفات الإدارية')
         
-        # إضافة تصفية حسب الوظيفة وعرض جداول منظمة للعمالة
         search_kw = st.text_input("🔍 استعلام سريع باسم الموظف أو الوظيفة في جميع الفروع:", placeholder="اكتب جزءاً من الاسم...")
         if search_kw:
             search_df = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'].str.contains(search_kw, case=False, na=False) | st.session_state.payroll_df['الوظيفة'].str.contains(search_kw, case=False, na=False)]
@@ -583,7 +613,6 @@ else:
                     branch_df_search = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name]
                     
                     if not branch_df_search.empty:
-                        # عرض منظم وجداول سريعة مع خيار الفلترة والتعديل المباشر
                         for e_idx, e_row in branch_df_search.iterrows():
                             c_card1, c_card2, c_card3, c_card4 = st.columns([2, 1.5, 1.5, 1])
                             c_card1.write(f"👤 **{e_row['الاسم']}** ({e_row['الوظيفة']})")
