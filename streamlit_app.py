@@ -90,54 +90,278 @@ if 'payroll_df' not in st.session_state:
     df_init['الملاحظات'] = ''
     st.session_state.payroll_df = df_init
 
-# دالة إنشاء ملف الـ PDF لسندات القبض بدون أخطاء
-def create_pdf_bytes(df_subset, branch_name):
+# دالة توليد صفحة A4 الأنيقة بحجم دقيق وسندين بكل صفحة مع خط التنقيط والهيدر المعتمد
+def generate_pretty_html_pdf(df_subset, branch_name):
     output = io.BytesIO()
-    html_content = f"""
-    <html dir="rtl">
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html dir="rtl" lang="ar">
     <head>
     <meta charset="utf-8">
+    <title>سندات قبض الرواتب - شركة ميم الخماسية للتصنيع</title>
     <style>
-        body {{ font-family: Arial, sans-serif; padding: 20px; }}
-        .header {{ text-align: center; color: #1E3A8A; border-bottom: 2px solid #1E3A8A; padding-bottom: 10px; }}
-        .voucher {{ border: 2px solid #333; padding: 15px; margin-bottom: 20px; border-radius: 8px; page-break-inside: avoid; }}
-        .row {{ display: flex; justify-content: space-between; margin: 8px 0; }}
-        .footer {{ margin-top: 20px; display: flex; justify-content: space-between; font-weight: bold; }}
+        @page {{
+            size: A4 portrait;
+            margin: 10mm;
+        }}
+        body {{
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #ffffff;
+            color: #111;
+            margin: 0;
+            padding: 0;
+        }}
+        .page {{
+            height: 270mm;
+            page-break-after: always;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }}
+        .voucher-box {{
+            border: 2px solid #1E3A8A;
+            border-radius: 8px;
+            padding: 12px 18px;
+            background: #fff;
+            height: 125mm;
+            box-sizing: border-box;
+            position: relative;
+        }}
+        .header-logo-container {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #1E3A8A;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
+        }}
+        .header-en {{
+            text-align: left;
+            font-size: 11px;
+            color: #1E3A8A;
+            font-weight: bold;
+            width: 38%;
+        }}
+        .header-logo {{
+            text-align: center;
+            width: 24%;
+        }}
+        .header-logo span {{
+            font-size: 42px;
+            font-weight: 900;
+            color: #DC2626;
+            letter-spacing: -2px;
+            font-family: Arial, sans-serif;
+        }}
+        .header-ar {{
+            text-align: right;
+            font-size: 12px;
+            color: #1E3A8A;
+            font-weight: bold;
+            width: 38%;
+        }}
+        .voucher-title {{
+            text-align: center;
+            font-size: 15px;
+            font-weight: bold;
+            color: #1E3A8A;
+            margin: 4px 0 8px 0;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 4px;
+        }}
+        .info-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+        }}
+        .info-table td {{
+            padding: 6px 10px;
+            font-size: 13px;
+            border: 1px solid #e0e0e0;
+        }}
+        .info-table th {{
+            background-color: #f8fafc;
+            color: #1E3A8A;
+            padding: 6px 10px;
+            font-size: 13px;
+            border: 1px solid #cbd5e1;
+            text-align: right;
+        }}
+        .signatures {{
+            margin-top: 18px;
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 13px;
+            padding: 0 15px;
+        }}
+        .cut-line {{
+            border-top: 2px dashed #94a3b8;
+            text-align: center;
+            margin: 6mm 0;
+            position: relative;
+        }}
+        .cut-line span {{
+            background: #fff;
+            padding: 0 10px;
+            position: relative;
+            top: -12px;
+            color: #64748b;
+            font-size: 11px;
+        }}
+        @media print {{
+            .no-print {{ display: none; }}
+        }}
     </style>
     </head>
     <body>
-        <div class="header">
-            <h2>شركة ميم الخماسية للتصنيع</h2>
-            <h3>سندات قبض الرواتب - {branch_name} ({month_selected})</h3>
+        <div class="no-print" style="text-align:center; padding: 12px; background: #f8fafc; border-bottom: 1px solid #ddd;">
+            <button onclick="window.print()" style="background: #1E3A8A; color: white; border: none; padding: 10px 25px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer;">🖨️ اضغط هنا لطباعة السندات الرسمية أو الحفظ كـ PDF</button>
         </div>
     """
-    for idx, row in df_subset.iterrows():
-        html_content += f"""
-        <div class="voucher">
-            <div class="row"><strong>رقم الموظف:</strong> {row['م']} <strong>الفرع:</strong> {row['الفرع']}</div>
-            <div class="row"><strong>اسم الموظف:</strong> {row['الاسم']} <strong>الوظيفة:</strong> {row['الوظيفة']}</div>
-            <hr>
-            <div class="row"><strong>الراتب المستحق:</strong> {row['الراتب الأساسي']} ر.س <strong>الدفعة المصروفة:</strong> {row['الدفعة المدفوعة']} ر.س</div>
-            <div class="row"><strong>المتبقي:</strong> {row['المتبقي']} ر.س <strong>نوع الإجراء:</strong> {row['نوع الإجراء']}</div>
-            <div class="row"><strong>الملاحظات:</strong> {row['الملاحظات'] if row['الملاحظات'] else 'لا يوجد'}</div>
-            <div class="footer">
-                <span>توقيع الموظف: _______________</span>
-                <span>توقيع المحاسب: _______________</span>
+    
+    rows = [row for _, row in df_subset.iterrows()]
+    
+    for i in range(0, len(rows), 2):
+        html += '<div class="page">'
+        
+        # السند الأول
+        v1 = rows[i]
+        html += f"""
+        <div class="voucher-box">
+            <div class="header-logo-container">
+                <div class="header-en">
+                    Five-M Company For Industry<br>
+                    A limited liability company<br>
+                    C. R. : 1011145035<br>
+                    Investment R. : 99376
+                </div>
+                <div class="header-logo">
+                    <span>5M</span>
+                </div>
+                <div class="header-ar">
+                    شركة ميم الخماسية للتصنيع<br>
+                    شركة ذات مسئولية محدودة<br>
+                    سجل تجاري : ١٠١١١٤٥٠٣٥<br>
+                    سجل استثماري : ٩٩٣٧٦
+                </div>
+            </div>
+            
+            <div class="voucher-title">
+                سند تسليم راتب / دفعة - {branch_name} ({month_selected}) | رقم السند: #{v1['م']:03d}
+            </div>
+            
+            <table class="info-table">
+                <tr>
+                    <th>اسم الموظف</th>
+                    <td><strong>{v1['الاسم']}</strong></td>
+                    <th>الوظيفة / الفرع</th>
+                    <td>{v1['الوظيفة']} ({v1['الفرع']})</td>
+                </tr>
+                <tr>
+                    <th>الراتب الأساسي المستحق</th>
+                    <td>{v1['الراتب الأساسي']:,.0f} ر.س</td>
+                    <th>الدفعة المصروفة فعلياً</th>
+                    <td style="color: #047857; font-weight: bold;">{v1['الدفعة المدفوعة']:,.0f} ر.س</td>
+                </tr>
+                <tr>
+                    <th>المتبقي بالرصيد</th>
+                    <td style="color: #b91c1c; font-weight: bold;">{v1['المتبقي']:,.0f} ر.س</td>
+                    <th>نوع الإجراء المعتمد</th>
+                    <td>{v1['نوع الإجراء']}</td>
+                </tr>
+                <tr>
+                    <th>الملاحظات والبيانات</th>
+                    <td colspan="3">{v1['الملاحظات'] if v1['الملاحظات'] else 'تم اعتماده وصرفه حسَب مسير الرواتب المعتمد.'}</td>
+                </tr>
+            </table>
+            
+            <div class="signatures">
+                <div>توقيع واستلام الموظف: __________________</div>
+                <div>اعتماد المحاسب / الإدارة: __________________</div>
             </div>
         </div>
         """
-    html_content += "</body></html>"
-    output.write(html_content.encode('utf-8'))
+        
+        # السند الثاني بالصفحة
+        if i + 1 < len(rows):
+            v2 = rows[i + 1]
+            html += """
+            <div class="cut-line">
+                <span>✂️ خط القص المخصص بين السندين ✂️</span>
+            </div>
+            """
+            html += f"""
+            <div class="voucher-box">
+                <div class="header-logo-container">
+                    <div class="header-en">
+                        Five-M Company For Industry<br>
+                        A limited liability company<br>
+                        C. R. : 1011145035<br>
+                        Investment R. : 99376
+                    </div>
+                    <div class="header-logo">
+                        <span>5M</span>
+                    </div>
+                    <div class="header-ar">
+                        شركة ميم الخماسية للتصنيع<br>
+                        شركة ذات مسئولية محدودة<br>
+                        سجل تجاري : ١٠١١١٤٥٠٣٥<br>
+                        سجل استثماري : ٩٩٣٧٦
+                    </div>
+                </div>
+                
+                <div class="voucher-title">
+                    سند تسليم راتب / دفعة - {branch_name} ({month_selected}) | رقم السند: #{v2['م']:03d}
+                </div>
+                
+                <table class="info-table">
+                    <tr>
+                        <th>اسم الموظف</th>
+                        <td><strong>{v2['الاسم']}</strong></td>
+                        <th>الوظيفة / الفرع</th>
+                        <td>{v2['الوظيفة']} ({v2['الفرع']})</td>
+                    </tr>
+                    <tr>
+                        <th>الراتب الأساسي المستحق</th>
+                        <td>{v2['الراتب الأساسي']:,.0f} ر.س</td>
+                        <th>الدفعة المصروفة فعلياً</th>
+                        <td style="color: #047857; font-weight: bold;">{v2['الدفعة المدفوعة']:,.0f} ر.س</td>
+                    </tr>
+                    <tr>
+                        <th>المتبقي بالرصيد</th>
+                        <td style="color: #b91c1c; font-weight: bold;">{v2['المتبقي']:,.0f} ر.س</td>
+                        <th>نوع الإجراء المعتمد</th>
+                        <td>{v2['نوع الإجراء']}</td>
+                    </tr>
+                    <tr>
+                        <th>الملاحظات والبيانات</th>
+                        <td colspan="3">{v2['الملاحظات'] if v2['الملاحظات'] else 'تم اعتماده وصرفه حسَب مسير الرواتب المعتمد.'}</td>
+                    </tr>
+                </table>
+                
+                <div class="signatures">
+                    <div>توقيع واستلام الموظف: __________________</div>
+                    <div>اعتماد المحاسب / الإدارة: __________________</div>
+                </div>
+            </div>
+            """
+            
+        html += '</div>'
+        
+    html += "</body></html>"
+    output.write(html.encode('utf-8'))
     output.seek(0)
     return output
 
 # 4. الشاشات
 if '📊' in menu:
-    st.title('📊 شاشة إدخال وتعديل الدفعات (مقسمة حسب الفرع)')
-    st.write('قم باختيار الفرع وتعديل مبالغ الدفعات، وسيتم تحديث المتبقي والسندات تلقائياً.')
+    st.title('📊 شاشة إدخال وتعديل الدفعات (حسب الفرع)')
+    st.write('قم بتسجيل الدفعات والملاحظات لكل فرع، وستتحدث الحسابات وسندات القبض تلقائياً.')
     
     t1, t2, t3 = st.tabs(['📍 فرع الخرج (35 موظف)', '📍 فرع المستودع (5 موظفين)', '📍 فرع الملقة (12 موظف)'])
-    
     branches = [('الخرج', t1), ('المستودع', t2), ('الملقة', t3)]
     
     for b_name, tab_obj in branches:
@@ -166,7 +390,6 @@ if '📊' in menu:
             edited_b['المتبقي'] = edited_b['الراتب الأساسي'] - edited_b['الدفعة المدفوعة']
             st.session_state.payroll_df.update(edited_b)
             
-            # ملخص فرعي لكل فرع
             req = edited_b['الراتب الأساسي'].sum()
             paid = edited_b['الدفعة المدفوعة'].sum()
             rem = edited_b['المتبقي'].sum()
@@ -178,7 +401,6 @@ if '📊' in menu:
 
 elif '💼' in menu:
     st.title('💼 سجل الموظفين والإجماليات المالية الحالية')
-    
     s1, s2, s3 = st.tabs(['سجل فرع الخرج', 'سجل فرع المستودع', 'سجل فرع الملقة'])
     
     for b_name, tab_obj in [('الخرج', s1), ('المستودع', s2), ('الملقة', s3)]:
@@ -204,21 +426,21 @@ elif '💼' in menu:
     g3.metric('إجمالي المتبقي الكلي', f'{tot_rem:,.0f} ر.س')
 
 elif '🖨️' in menu:
-    st.title('🖨️ طباعة وتصدير سندات القبض (A4)')
-    st.write('قم باختيار الفرع وتنزيل سندات القبض الجاهزة للطباعة بدون أخطاء.')
+    st.title('🖨️ طباعة سندات القبض الرسمية (A4)')
+    st.write('قم باختيار الفرع واستعراض السندات المنظمة مع الهيدر الرسمي للشركة.')
     
-    selected_b = st.selectbox('اختر الفرع للتصدير:', ['جميع الفروع (52 موظف)', 'الخرج', 'المستودع', 'الملقة'])
+    selected_b = st.selectbox('اختر الفرع للتصدير والطباعة:', ['جميع الفروع (52 موظف)', 'الخرج', 'المستودع', 'الملقة'])
     
     if selected_b == 'جميع الفروع (52 موظف)':
         df_print = st.session_state.payroll_df
     else:
         df_print = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == selected_b]
         
-    pdf_data = create_pdf_bytes(df_print, selected_b)
+    pdf_bytes = generate_pretty_html_pdf(df_print, selected_b)
     
     st.download_button(
-        label=f"📄 اضغط هنا لتحميل سندات قبض فرع {selected_b} (HTML/PDF)",
-        data=pdf_data,
+        label=f"📄 فتح واستعراض سندات قبض {selected_b} بالهيدر الرسمي 🖨️",
+        data=pdf_bytes,
         file_name=f"سندات_قبض_{selected_b}.html",
         mime="text/html"
     )
