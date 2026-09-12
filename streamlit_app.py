@@ -5,13 +5,11 @@ import json
 import os
 from datetime import datetime
 
-# 1. إعداد الصفحة وتطبيق التنسيق العربي الكامل بالكامل على اليمين (RTL)
-st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
+# 1. إعداد الصفحة وتطبيق التنسيق العربي الكامل (RTL)
+st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام الإداري والمالي', layout='wide', page_icon='🏢')
 
-# تطبيق تنسيق RTL وجعل القائمة الجانبية على اليمين
 st.markdown("""
     <style>
-        /* ضبط اتجاه الصفحة بالكامل من اليمين إلى اليسار */
         .stApp {
             direction: rtl;
             text-align: right;
@@ -19,23 +17,16 @@ st.markdown("""
             color: #1E293B;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
-        /* تعديل اتجاه القائمة الجانبية لتصبح على اليمين */
         [data-testid="stSidebar"] {
             right: 0 !important;
             left: auto !important;
             border-left: 1px solid #E2E8F0;
-            border-right: none;
             background-color: #FFFFFF;
         }
-        
-        /* ضبط محتوى الهامش الأيمن ليتناسب مع القائمة الجانبية اليمنى */
         [data-testid="stSidebarContent"] {
             direction: rtl;
             text-align: right;
         }
-
-        /* الهيدر العلوي بنمط البرامج المحاسبية */
         .daftra-header {
             background: linear-gradient(90deg, #1E3A8A 0%, #2563EB 100%);
             padding: 20px 24px;
@@ -44,7 +35,6 @@ st.markdown("""
             margin-bottom: 20px;
             box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.15);
         }
-        
         .metric-card {
             background: #FFFFFF;
             border-radius: 10px;
@@ -53,7 +43,6 @@ st.markdown("""
             box-shadow: 0 2px 4px rgba(0,0,0,0.02);
             text-align: center;
         }
-        
         .stButton>button { border-radius: 8px; font-weight: 600; }
     </style>
 """, unsafe_allow_html=True)
@@ -314,16 +303,15 @@ if not st.session_state.get('app_started', False):
             st.rerun()
 
 else:
-    # القائمة الجانبية المحدثة على اليمين
+    # القائمة الجانبية الموحدة والمبسطة على اليمين
     with st.sidebar:
         st.markdown('<h2 style="text-align: center; color: #1E3A8A;">🏢 شركة ميم الخماسية</h2>', unsafe_allow_html=True)
         st.divider()
-        menu = st.radio('📌 القائمة الرئيسية:', [
-            '📊 شاشة إدخال وتعديل الدفعات (سريعة)',
-            '🔍 دليل الموظفين والملفات الإدارية',
-            '📈 مركز الموارد البشرية والتقارير',
-            '📑 مسير الرواتب الشهري',
-            '🖨️ طباعة سندات الصرف والقبض'
+        menu = st.radio('📌 الأقسام الرئيسية للنظام:', [
+            '📊 العمليات المالية الشهيرة (الدفعات والرواتب)',
+            '👤 دليل الموظفين والملفات الإدارية',
+            '📑 التقارير، الموارد البشرية، والسندات',
+            '🏁 الإغلاق السنوي وفتح سنة جديدة'
         ])
         st.divider()
         
@@ -367,7 +355,7 @@ else:
         st.session_state.current_month = month_selected
         st.session_state.payroll_df = load_data()
 
-    # الهيدر العلوي بنمط دفترة
+    # الهيدر العلوي بنمط البرامج المحاسبية
     tot_emp = len(st.session_state.payroll_df)
     tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
     tot_paid = st.session_state.payroll_df['الدفعة المدفوعة'].sum()
@@ -375,8 +363,8 @@ else:
 
     st.markdown(f"""
         <div class="daftra-header">
-            <h2 style="margin:0; color: white;">🏢 شركة ميم الخماسية للتصنيع - لوحة التحكم المالية ({month_selected})</h2>
-            <p style="margin:5px 0 0 0; opacity: 0.9;">نظام إدارة المستحقات، مسير الرواتب، وسندات القبض الموحد</p>
+            <h2 style="margin:0; color: white;">🏢 شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد ({month_selected})</h2>
+            <p style="margin:5px 0 0 0; opacity: 0.9;">لوحة تحكم إدارة المستحقات، مسير الرواتب، والسندات</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -552,9 +540,10 @@ else:
                 
                 save_data(st.session_state.payroll_df)
 
-    elif '🔍' in menu:
-        st.subheader('🔍 دليل الموظفين والملفات الإدارية')
+    elif '👤' in menu:
+        st.subheader('👤 دليل الموظفين والملفات الإدارية')
         
+        # إضافة تصفية حسب الوظيفة وعرض جداول منظمة للعمالة
         search_kw = st.text_input("🔍 استعلام سريع باسم الموظف أو الوظيفة في جميع الفروع:", placeholder="اكتب جزءاً من الاسم...")
         if search_kw:
             search_df = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'].str.contains(search_kw, case=False, na=False) | st.session_state.payroll_df['الوظيفة'].str.contains(search_kw, case=False, na=False)]
@@ -586,7 +575,7 @@ else:
                 with search_tabs[idx_st]:
                     col_h1, col_h2 = st.columns([3, 1])
                     with col_h1:
-                        st.write(f"قائمة عمالة وإداريي **{b_name}**:")
+                        st.write(f"دليل موظفي **{b_name}**:")
                     with col_h2:
                         if st.button(f"➕ إضافة موظف لـ {b_name}", key=f"btn_modal_add_{b_name}"):
                             add_employee_dialog(b_name)
@@ -594,6 +583,7 @@ else:
                     branch_df_search = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name]
                     
                     if not branch_df_search.empty:
+                        # عرض منظم وجداول سريعة مع خيار الفلترة والتعديل المباشر
                         for e_idx, e_row in branch_df_search.iterrows():
                             c_card1, c_card2, c_card3, c_card4 = st.columns([2, 1.5, 1.5, 1])
                             c_card1.write(f"👤 **{e_row['الاسم']}** ({e_row['الوظيفة']})")
@@ -606,16 +596,123 @@ else:
                     else:
                         st.info(f"لا يوجد موظفين مسجلين حالياً في {b_name}.")
 
-    elif '📈' in menu:
-        st.subheader('📈 مركز الموارد البشرية، المستحقات الإدارية والتقارير الشاملة')
+    elif '📑' in menu:
+        st.subheader('📑 مركز الموارد البشرية، المسيرات الشهيرة وسندات الصرف')
         
-        tab_hr1, tab_hr2, tab_hr3 = st.tabs([
+        tab_hr1, tab_hr2, tab_hr3, tab_hr4 = st.tabs([
+            '📋 مسير الرواتب الشهري',
+            '🖨️ طباعة سندات القبض (A4)',
             '🇸🇦 حاسبة مكافأة نهاية الخدمة والإجازات',
-            '💼 سجل الموظفين والوثائق الرسمية',
-            '🔔 مركز تنبيهات الانتهاء والتجديد'
+            '🔔 مركز تنبيهات انتهاء الإقامات والعقود'
         ])
         
         with tab_hr1:
+            filter_sheet = st.selectbox('اختر الفرع للكشف والطباعة:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
+            df_sheet = st.session_state.payroll_df if 'جميع الفروع' in filter_sheet else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == filter_sheet]
+            
+            sheet_html = f"""
+            <!DOCTYPE html>
+            <html dir="rtl" lang="ar">
+            <head>
+            <meta charset="utf-8">
+            <title>كشف مسير رواتب - شركة ميم الخماسية للتصنيع</title>
+            <style>
+                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 10px; background: #fff; color: #111; }}
+                .header {{ text-align: center; color: #1E3A8A; border-bottom: 2px solid #1E3A8A; padding-bottom: 10px; margin-bottom: 15px; }}
+                .header h2 {{ margin: 0; font-size: 24px; }}
+                .header h3 {{ margin: 5px 0 0 0; font-size: 18px; color: #475569; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
+                th, td {{ border: 1px solid #334155; padding: 6px 8px; text-align: center; font-size: 13px; }}
+                th {{ background-color: #1E3A8A; color: white; font-weight: bold; }}
+                tr:nth-child(even) {{ background-color: #f8fafc; }}
+                .totals-box {{ margin-top: 15px; padding: 10px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 5px; font-weight: bold; display: flex; justify-content: space-around; font-size: 14px; }}
+                .signatures {{ margin-top: 30px; display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; padding: 0 30px; }}
+                @media print {{ .no-print {{ display: none; }} }}
+            </style>
+            </head>
+            <body>
+                <div class="no-print" style="text-align:center; padding: 10px; margin-bottom: 15px;">
+                    <button onclick="window.print()" style="background: #1E3A8A; color: white; border: none; padding: 10px 25px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer;">🖨️ اضغط هنا للطباعة المباشرة أو الحفظ كـ PDF</button>
+                </div>
+                <div class="header">
+                    <h2>🏢 شركة ميم الخماسية للتصنيع</h2>
+                    <h3>كشف مسير الرواتب والدفعات - {filter_sheet} ({month_selected})</h3>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>م</th>
+                            <th>اسم الموظف</th>
+                            <th>الوظيفة</th>
+                            <th>الفرع</th>
+                            <th>الراتب المستحق</th>
+                            <th>الدفعة 1</th>
+                            <th>الدفعة 2</th>
+                            <th>إجمالي المصروف</th>
+                            <th>المتبقي</th>
+                            <th>التوقيع / الاستلام</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            """
+            for idx, r in df_sheet.iterrows():
+                sheet_html += f"""
+                    <tr>
+                        <td>{r['م']}</td>
+                        <td><strong>{r['الاسم']}</strong></td>
+                        <td>{r['الوظيفة']}</td>
+                        <td>{r['الفرع']}</td>
+                        <td>{r['الراتب الأساسي']:,.0f} ر.س</td>
+                        <td>{r.get('الدفعة 1', 0):,.0f} ر.س</td>
+                        <td>{r.get('الدفعة 2', 0):,.0f} ر.س</td>
+                        <td style="color:#047857; font-weight:bold;">{r['الدفعة المدفوعة']:,.0f} ر.س</td>
+                        <td style="color:#b91c1c; font-weight:bold;">{r['المتبقي']:,.0f} ر.س</td>
+                        <td style="width: 120px;"></td>
+                    </tr>
+                """
+            sheet_html += f"""
+                    </tbody>
+                </table>
+                <div class="totals-box">
+                    <span>إجمالي الرواتب المستحقة: {df_sheet['الراتب الأساسي'].sum():,.0f} ر.س</span>
+                    <span>إجمالي الدفعات المصروفة: {df_sheet['الدفعة المدفوعة'].sum():,.0f} ر.س</span>
+                    <span>إجمالي المتبقي: {df_sheet['المتبقي'].sum():,.0f} ر.س</span>
+                </div>
+                <div class="signatures">
+                    <div>إعداد المحاسب: __________________</div>
+                    <div>مراجعة الموارد البشرية: __________________</div>
+                    <div>اعتماد المدير العام: __________________</div>
+                </div>
+            </body>
+            </html>
+            """
+            st.components.v1.html(sheet_html, height=450, scrolling=True)
+            st.download_button(
+                label=f"📄 فتح وتحميل ملف كشف مسير {filter_sheet} (HTML / PDF) 🖨️",
+                data=sheet_html.encode('utf-8'),
+                file_name=f"مسير_رواتب_{filter_sheet}_{month_selected}.html",
+                mime="text/html"
+            )
+
+        with tab_hr2:
+            col_p1, col_p2 = st.columns(2)
+            with col_p1:
+                selected_b = st.selectbox('اختر الفرع للتصدير والطباعة:', ['جميع الفروع', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'], key="sb_v_b")
+            with col_p2:
+                pay_type_select = st.selectbox('اختر نوع الدفعة المراد طباعة سنداتها:', ['جميع الدفعات (السند الشامل)', 'الدفعة الأولى فقط', 'الدفعة الثانية فقط'], key="sb_v_type")
+                
+            df_print = st.session_state.payroll_df if selected_b == 'جميع الفروع' else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == selected_b]
+            
+            pdf_bytes = generate_pretty_html_pdf(df_print, selected_b, pay_type_select)
+            st.components.v1.html(pdf_bytes.getvalue().decode('utf-8'), height=450, scrolling=True)
+            st.download_button(
+                label=f"📄 فتح وتنزيل ملف سندات ({pay_type_select}) - {selected_b} للطباعة 🖨️",
+                data=pdf_bytes,
+                file_name=f"سندات_{pay_type_select}_{selected_b}_{month_selected}.html",
+                mime="text/html"
+            )
+
+        with tab_hr3:
             st.write('🇸🇦 **حاسبة مستحقات نهاية الخدمة وبدل الإجازات (نظام العمل السعودي):**')
             saudi_reports = []
             for _, r in st.session_state.payroll_df.iterrows():
@@ -634,21 +731,7 @@ else:
             df_saudi = pd.DataFrame(saudi_reports)
             st.dataframe(df_saudi, use_container_width=True, hide_index=True)
 
-        with tab_hr2:
-            st.write('💼 **سجل وثائق الموظفين المقسم بحسب الفرع:**')
-            tab_list_b = [
-                ('🏢 مصنع ميم الخماسية الخرج', 'مصنع ميم الخماسية الخرج'),
-                ('📦 مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج'),
-                ('🏙️ مستودع ميم الخماسية الرياض', 'مستودع ميم الخماسية الرياض'),
-                ('📋 رواتب متنوعة', 'رواتب متنوعة')
-            ]
-            tabs_sub_hr = st.tabs([t[0] for t in tab_list_b])
-            for idx_t, (tab_title, b_name) in enumerate(tab_list_b):
-                with tabs_sub_hr[idx_t]:
-                    df_branch_emp = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name]
-                    st.dataframe(df_branch_emp[['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'تاريخ بداية العمل', 'تاريخ انتهاء الإقامة', 'تاريخ انتهاء العقد']], use_container_width=True, hide_index=True)
-
-        with tab_hr3:
+        with tab_hr4:
             st.write('🔔 **تنبيهات قرب انتهاء الإقامات وعقود العمل:**')
             today = datetime.now().date()
             alerts = []
@@ -668,112 +751,29 @@ else:
             if alerts: st.dataframe(pd.DataFrame(alerts), use_container_width=True, hide_index=True)
             else: st.success('جميع الإقامات والعقود سارية ولا يوجد وثائق منتهية حالياً!')
 
-    elif '📑' in menu:
-        st.subheader(f'📑 كشوفات مسير الرواتب الرسمية - ({month_selected})')
-        filter_sheet = st.selectbox('اختر الفرع للتقرير والطباعة:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
-        df_sheet = st.session_state.payroll_df if 'جميع الفروع' in filter_sheet else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == filter_sheet]
+    elif '🏁' in menu:
+        st.subheader('🏁 شاشة الإغلاق المالي السنوي وفتح سنة جديدة')
+        st.info('💡 تتيح لك هذه الشاشة أرشفة كافة سجلات ودفعات السنة الحالية وافتتاح سنة مالية جديدة مع تصفير الدفعات تلقائياً والحفاظ الكامل على الموظفين ووثائقهم.')
         
-        sheet_html = f"""
-        <!DOCTYPE html>
-        <html dir="rtl" lang="ar">
-        <head>
-        <meta charset="utf-8">
-        <title>كشف مسير رواتب - شركة ميم الخماسية للتصنيع</title>
-        <style>
-            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 10px; background: #fff; color: #111; }}
-            .header {{ text-align: center; color: #1E3A8A; border-bottom: 2px solid #1E3A8A; padding-bottom: 10px; margin-bottom: 15px; }}
-            .header h2 {{ margin: 0; font-size: 24px; }}
-            .header h3 {{ margin: 5px 0 0 0; font-size: 18px; color: #475569; }}
-            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
-            th, td {{ border: 1px solid #334155; padding: 6px 8px; text-align: center; font-size: 13px; }}
-            th {{ background-color: #1E3A8A; color: white; font-weight: bold; }}
-            tr:nth-child(even) {{ background-color: #f8fafc; }}
-            .totals-box {{ margin-top: 15px; padding: 10px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 5px; font-weight: bold; display: flex; justify-content: space-around; font-size: 14px; }}
-            .signatures {{ margin-top: 30px; display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; padding: 0 30px; }}
-            @media print {{ .no-print {{ display: none; }} }}
-        </style>
-        </head>
-        <body>
-            <div class="no-print" style="text-align:center; padding: 10px; margin-bottom: 15px;">
-                <button onclick="window.print()" style="background: #1E3A8A; color: white; border: none; padding: 10px 25px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer;">🖨️ اضغط هنا للطباعة المباشرة أو الحفظ كـ PDF</button>
-            </div>
-            <div class="header">
-                <h2>🏢 شركة ميم الخماسية للتصنيع</h2>
-                <h3>كشف مسير الرواتب والدفعات - {filter_sheet} ({month_selected})</h3>
-            </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>م</th>
-                        <th>اسم الموظف</th>
-                        <th>الوظيفة</th>
-                        <th>الفرع</th>
-                        <th>الراتب المستحق</th>
-                        <th>الدفعة 1</th>
-                        <th>الدفعة 2</th>
-                        <th>إجمالي المصروف</th>
-                        <th>المتبقي</th>
-                        <th>التوقيع / الاستلام</th>
-                    </tr>
-                </thead>
-                <tbody>
-        """
-        for idx, r in df_sheet.iterrows():
-            sheet_html += f"""
-                <tr>
-                    <td>{r['م']}</td>
-                    <td><strong>{r['الاسم']}</strong></td>
-                    <td>{r['الوظيفة']}</td>
-                    <td>{r['الفرع']}</td>
-                    <td>{r['الراتب الأساسي']:,.0f} ر.س</td>
-                    <td>{r.get('الدفعة 1', 0):,.0f} ر.س</td>
-                    <td>{r.get('الدفعة 2', 0):,.0f} ر.س</td>
-                    <td style="color:#047857; font-weight:bold;">{r['الدفعة المدفوعة']:,.0f} ر.س</td>
-                    <td style="color:#b91c1c; font-weight:bold;">{r['المتبقي']:,.0f} ر.س</td>
-                    <td style="width: 120px;"></td>
-                </tr>
-            """
-        sheet_html += f"""
-                </tbody>
-            </table>
-            <div class="totals-box">
-                <span>إجمالي الرواتب المستحقة: {df_sheet['الراتب الأساسي'].sum():,.0f} ر.س</span>
-                <span>إجمالي الدفعات المصروفة: {df_sheet['الدفعة المدفوعة'].sum():,.0f} ر.س</span>
-                <span>إجمالي المتبقي: {df_sheet['المتبقي'].sum():,.0f} ر.س</span>
-            </div>
-            <div class="signatures">
-                <div>إعداد المحاسب: __________________</div>
-                <div>مراجعة الموارد البشرية: __________________</div>
-                <div>اعتماد المدير العام: __________________</div>
-            </div>
-        </body>
-        </html>
-        """
-        st.subheader("👁️ معاينة شكل كشف المسير المحدث قبل الطباعة:")
-        st.components.v1.html(sheet_html, height=450, scrolling=True)
-        st.download_button(
-            label=f"📄 فتح وتحميل ملف كشف مسير {filter_sheet} (HTML / PDF) 🖨️",
-            data=sheet_html.encode('utf-8'),
-            file_name=f"مسير_رواتب_{filter_sheet}_{month_selected}.html",
-            mime="text/html"
-        )
-
-    elif '🖨️' in menu:
-        st.subheader(f'🖨️ طباعة سندات القبض المحدثة - ({month_selected})')
-        col_p1, col_p2 = st.columns(2)
-        with col_p1:
-            selected_b = st.selectbox('اختر الفرع للتصدير والطباعة:', ['جميع الفروع', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
-        with col_p2:
-            pay_type_select = st.selectbox('اختر نوع الدفعة المراد طباعة سنداتها:', ['جميع الدفعات (السند الشامل)', 'الدفعة الأولى فقط', 'الدفعة الثانية فقط'])
-            
-        df_print = st.session_state.payroll_df if selected_b == 'جميع الفروع' else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == selected_b]
+        st.markdown("### 📊 ملخص الرواتب والدفعات الكلية بالسجلات:")
+        st.dataframe(st.session_state.payroll_df[['م', 'الاسم', 'الوظيفة', 'الفرع', 'الراتب الأساسي', 'الدفعة المدفوعة', 'المتبقي']], use_container_width=True, hide_index=True)
         
-        pdf_bytes = generate_pretty_html_pdf(df_print, selected_b, pay_type_select)
-        st.subheader(f"👁️ معاينة شكل سندات ({pay_type_select}) قبل الطباعة:")
-        st.components.v1.html(pdf_bytes.getvalue().decode('utf-8'), height=500, scrolling=True)
-        st.download_button(
-            label=f"📄 فتح وتنزيل ملف سندات ({pay_type_select}) - {selected_b} للطباعة 🖨️",
-            data=pdf_bytes,
-            file_name=f"سندات_{pay_type_select}_{selected_b}_{month_selected}.html",
-            mime="text/html"
-        )
+        st.divider()
+        st.markdown("### ⚙️ إجراءات فتح سنة جديدة:")
+        col_y1, col_y2 = st.columns(2)
+        with col_y1:
+            next_year_name = st.text_input("السنة المالية الجديدة المراد افتتاحها:", "2027")
+        with col_y2:
+            st.write("")
+            st.write("")
+            if st.button(f"🏁 إغلاق السنة المالية الحالية وفتح سنة ({next_year_name})"):
+                st.session_state.payroll_df['الدفعة 1'] = 0.0
+                st.session_state.payroll_df['الدفعة 2'] = 0.0
+                st.session_state.payroll_df['الدفعة المدفوعة'] = 0.0
+                st.session_state.payroll_df['المتبقي'] = st.session_state.payroll_df['الراتب الأساسي']
+                st.session_state.payroll_df['نوع الإجراء'] = 'لم يُصرف'
+                
+                st.session_state.months_list = [f'يناير {next_year_name}', f'فبراير {next_year_name}', f'مارس {next_year_name}', f'أبريل {next_year_name}']
+                save_data(st.session_state.payroll_df)
+                st.success(f"تم إغلاق السنة الحالية وافتتاح سنة ({next_year_name}) بنجاح!")
+                st.rerun()
