@@ -39,7 +39,7 @@ else:
         st.markdown('<h2 style="text-align: center; color: #1E3A8A;">🏢 شركة ميم الخماسية</h2>', unsafe_allow_html=True)
         st.divider()
         menu = st.radio('📌 التنقل الرئيسي:', [
-            '🔍 بحث وتعديل ملف موظف',
+            '🔍 بحث وتعديل الموظفين (حسب الفرع)',
             '📊 شاشة إدخال الدفعات (حسب الفرع)',
             '💼 سجل الموظفين وتدقيق الوثائق',
             '➕ إضافة موظف جديد للنظام',
@@ -206,65 +206,81 @@ else:
 
     # 4. الشاشات
     if '🔍' in menu:
-        st.title('🔍 شاشة البحث الفوري وتعديل ملف موظف')
-        st.write('اكتب اسم الموظف أو جزء منه للوصول السريع إلى ملفه الكامل وتعديل كافة بياناته المالية والوظيفية والوثائق:')
+        st.title('🔍 شاشة البحث الفوري وتعديل ملف موظف (مقسمة بحسب الفرع)')
+        st.write('افتح تبويب الفرع لمشاهدة أسماء عمالته فقط، واختر اسم الموظف لتعديل كافة بياناته المالية والوظيفية والوثائق:')
         
-        all_emp_names = st.session_state.payroll_df['الاسم'].tolist()
-        search_query = st.selectbox('🔍 اختر أو ابحث عن اسم الموظف:', all_emp_names)
+        tab_search_list = [
+            ('🏭 مصنع ميم الخماسية الخرج', 'مصنع ميم الخماسية الخرج'),
+            ('📦 مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج'),
+            ('🏙️ مستودع ميم الخماسية الرياض', 'مستودع ميم الخماسية الرياض'),
+            ('📋 رواتب متنوعة', 'رواتب متنوعة')
+        ]
         
-        if search_query:
-            emp_idx = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'] == search_query].index[0]
-            emp_data = st.session_state.payroll_df.loc[emp_idx]
-            
-            st.info(f"👤 **ملف الموظف الحالي:** {emp_data['الاسم']} (رقم مالي: #{emp_data['م']})")
-            
-            with st.form('edit_employee_form'):
-                col_e1, col_e2, col_e3 = st.columns(3)
+        search_tabs = st.tabs([t[0] for t in tab_search_list])
+        
+        for idx_st, (s_title, b_name) in enumerate(tab_search_list):
+            with search_tabs[idx_st]:
+                branch_df_search = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name]
+                branch_emp_names = branch_df_search['الاسم'].tolist()
                 
-                with col_e1:
-                    st.markdown("### 👤 البيانات الإدارية")
-                    up_name = st.text_input("اسم الموظف الثلاثي:", value=emp_data['الاسم'])
-                    up_job = st.text_input("الوظيفة:", value=emp_data['الوظيفة'])
-                    up_branch = st.selectbox("الفرع التابع له:", [
-                        'مصنع ميم الخماسية الخرج',
-                        'مستودع ميم الخماسية الخرج',
-                        'مستودع ميم الخماسية الرياض',
-                        'رواتب متنوعة'
-                    ], index=['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'].index(emp_data['الفرع']))
+                if branch_emp_names:
+                    selected_emp_in_b = st.selectbox(f"👤 اختر الموظف للتعديل من ({b_name}):", branch_emp_names, key=f"sb_search_{b_name}")
                     
-                with col_e2:
-                    st.markdown("### 💰 البيانات المالية لشهر (" + month_selected + ")")
-                    up_salary = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=float(emp_data['الراتب الأساسي']))
-                    up_paid = st.number_input("الدفعة المصروفة (ر.س):", min_value=0.0, value=float(emp_data['الدفعة المدفوعة']))
-                    up_action = st.selectbox("نوع الإجراء:", ["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"], index=["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"].index(emp_data['نوع الإجراء']))
-                    up_notes = st.text_input("الملاحظات:", value=emp_data['الملاحظات'])
+                    emp_idx = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'] == selected_emp_in_b].index[0]
+                    emp_data = st.session_state.payroll_df.loc[emp_idx]
                     
-                with col_e3:
-                    st.markdown("### 📄 الإقامات والعقود")
-                    iq_val = datetime.strptime(str(emp_data['تاريخ انتهاء الإقامة']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء الإقامة']) else datetime(2027, 12, 31)
-                    ct_val = datetime.strptime(str(emp_data['تاريخ انتهاء العقد']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء العقد']) else datetime(2027, 12, 31)
+                    st.divider()
+                    st.info(f"👤 **ملف الموظف:** {emp_data['الاسم']} (رقم مالي: #{emp_data['م']})")
                     
-                    up_iqama_date = st.date_input("تاريخ انتهاء الإقامة:", iq_val)
-                    up_contract_date = st.date_input("تاريخ انتهاء العقد:", ct_val)
-                    st.file_uploader("تحديث صورة الإقامة (PNG/PDF):", type=['png', 'jpg', 'pdf'], key="up_iq_file")
-                    st.file_uploader("تحديث صورة عقد العمل (PNG/PDF):", type=['png', 'jpg', 'pdf'], key="up_ct_file")
-                    
-                st.divider()
-                save_btn = st.form_submit_button('💾 حفظ والتحديث الشامل لبيانات الموظف في النظام')
-                
-                if save_btn:
-                    st.session_state.payroll_df.loc[emp_idx, 'الاسم'] = up_name
-                    st.session_state.payroll_df.loc[emp_idx, 'الوظيفة'] = up_job
-                    st.session_state.payroll_df.loc[emp_idx, 'الفرع'] = up_branch
-                    st.session_state.payroll_df.loc[emp_idx, 'الراتب الأساسي'] = up_salary
-                    st.session_state.payroll_df.loc[emp_idx, 'الدفعة المدفوعة'] = up_paid
-                    st.session_state.payroll_df.loc[emp_idx, 'المتبقي'] = up_salary - up_paid
-                    st.session_state.payroll_df.loc[emp_idx, 'نوع الإجراء'] = up_action
-                    st.session_state.payroll_df.loc[emp_idx, 'الملاحظات'] = up_notes
-                    st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء الإقامة'] = str(up_iqama_date)
-                    st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء العقد'] = str(up_contract_date)
-                    
-                    st.success(f"تم حفظ وتحديث ملف الموظف ({up_name}) بنجاح في السجلات والسندات والمسير!")
+                    with st.form(f'edit_form_{b_name}_{emp_data["م"]}'):
+                        col_e1, col_e2, col_e3 = st.columns(3)
+                        
+                        with col_e1:
+                            st.markdown("### 👤 البيانات الإدارية")
+                            up_name = st.text_input("اسم الموظف الثلاثي:", value=emp_data['الاسم'])
+                            up_job = st.text_input("الوظيفة:", value=emp_data['الوظيفة'])
+                            up_branch = st.selectbox("الفرع التابع له:", [
+                                'مصنع ميم الخماسية الخرج',
+                                'مستودع ميم الخماسية الخرج',
+                                'مستودع ميم الخماسية الرياض',
+                                'رواتب متنوعة'
+                            ], index=['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'].index(emp_data['الفرع']))
+                            
+                        with col_e2:
+                            st.markdown("### 💰 البيانات المالية لشهر (" + month_selected + ")")
+                            up_salary = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=float(emp_data['الراتب الأساسي']))
+                            up_paid = st.number_input("الدفعة المصروفة (ر.س):", min_value=0.0, value=float(emp_data['الدفعة المدفوعة']))
+                            up_action = st.selectbox("نوع الإجراء:", ["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"], index=["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"].index(emp_data['نوع الإجراء']))
+                            up_notes = st.text_input("الملاحظات:", value=emp_data['الملاحظات'])
+                            
+                        with col_e3:
+                            st.markdown("### 📄 الإقامات والعقود")
+                            iq_val = datetime.strptime(str(emp_data['تاريخ انتهاء الإقامة']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء الإقامة']) else datetime(2027, 12, 31)
+                            ct_val = datetime.strptime(str(emp_data['تاريخ انتهاء العقد']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء العقد']) else datetime(2027, 12, 31)
+                            
+                            up_iqama_date = st.date_input("تاريخ انتهاء الإقامة:", iq_val)
+                            up_contract_date = st.date_input("تاريخ انتهاء العقد:", ct_val)
+                            st.file_uploader("تحديث صورة الإقامة (PNG/PDF):", type=['png', 'jpg', 'pdf'], key=f"up_iq_file_{emp_data['م']}")
+                            st.file_uploader("تحديث صورة عقد العمل (PNG/PDF):", type=['png', 'jpg', 'pdf'], key=f"up_ct_file_{emp_data['م']}")
+                            
+                        st.divider()
+                        save_btn = st.form_submit_button('💾 حفظ والتحديث الشامل لبيانات الموظف في النظام')
+                        
+                        if save_btn:
+                            st.session_state.payroll_df.loc[emp_idx, 'الاسم'] = up_name
+                            st.session_state.payroll_df.loc[emp_idx, 'الوظيفة'] = up_job
+                            st.session_state.payroll_df.loc[emp_idx, 'الفرع'] = up_branch
+                            st.session_state.payroll_df.loc[emp_idx, 'الراتب الأساسي'] = up_salary
+                            st.session_state.payroll_df.loc[emp_idx, 'الدفعة المدفوعة'] = up_paid
+                            st.session_state.payroll_df.loc[emp_idx, 'المتبقي'] = up_salary - up_paid
+                            st.session_state.payroll_df.loc[emp_idx, 'نوع الإجراء'] = up_action
+                            st.session_state.payroll_df.loc[emp_idx, 'الملاحظات'] = up_notes
+                            st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء الإقامة'] = str(up_iqama_date)
+                            st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء العقد'] = str(up_contract_date)
+                            
+                            st.success(f"تم حفظ وتحديث ملف الموظف ({up_name}) بنجاح في السجلات والسندات والمسير!")
+                else:
+                    st.info(f"لا يوجد موظفين مسجلين حالياً في {b_name}.")
 
     elif '📊' in menu:
         st.title(f'📊 شاشة إدخال وتعديل الدفعات والأسماء - ({month_selected})')
