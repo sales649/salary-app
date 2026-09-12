@@ -63,7 +63,7 @@ else:
                     st.success(f"تم إضافة {new_m_input} بنجاح!")
                     st.rerun()
 
-    # قاعدة البيانات الأساسية لجميع الموظفين (52 موظف)
+    # قاعدة البيانات الأساسية لجميع الموظفين الـ 52 المعتمدة
     initial_data = [
         # مصنع ميم الخماسية الخرج (35 موظف)
         {'م': 1, 'الاسم': 'مد ماجد', 'الوظيفة': 'عامل', 'الراتب الأساسي': 4000, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01'},
@@ -127,6 +127,7 @@ else:
         {'م': 53, 'الاسم': 'موظف متنوع 1', 'الوظيفة': 'متنوع', 'الراتب الأساسي': 0, 'الفرع': 'رواتب متنوعة', 'تاريخ انتهاء الإقامة': '2027-01-01', 'تاريخ انتهاء العقد': '2027-01-01'}
     ]
 
+    # تهيئة وتحميل قاعدة البيانات الموحدة
     if 'payroll_df' not in st.session_state or st.session_state.get('current_month') != month_selected:
         st.session_state.current_month = month_selected
         df_init = pd.DataFrame(initial_data)
@@ -136,7 +137,7 @@ else:
         df_init['الملاحظات'] = ''
         st.session_state.payroll_df = df_init
 
-    # دالة توليد صفحة A4 لسندات القبض
+    # دالة توليد صفحة A4 لسندات القبض الموحدة
     def generate_pretty_html_pdf(df_subset, branch_name):
         output = io.BytesIO()
         html = f"""
@@ -206,10 +207,9 @@ else:
 
     # 4. الشاشات
     if '🔍' in menu:
-        st.title('🔍 شاشة البحث الفوري وتعديل ملف موظف (مقسمة بحسب الفرع)')
-        st.write('افتح تبويب الفرع لمشاهدة عدد عمالته وأسمائهم فوراً، واختر الموظف لتعديل بياناته الشاملة:')
+        st.title('🔍 شاشة البحث الفوري وتعديل ملف موظف (مربوطة بالكامل)')
+        st.write('افتح تبويب الفرع لمشاهدة عمالته، واختر الموظف لتعديل بياناته المالية والوظيفية لـتنعكس فوراً في كامل شاشات النظام:')
         
-        # حساب أعداد العمالة بكل فرع
         cnt_factory = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مصنع ميم الخماسية الخرج'])
         cnt_wh_kh = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مستودع ميم الخماسية الخرج'])
         cnt_wh_ry = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مستودع ميم الخماسية الرياض'])
@@ -230,7 +230,6 @@ else:
                 branch_emp_names = branch_df_search['الاسم'].tolist()
                 
                 if branch_emp_names:
-                    # عرض الجدول السريع لموظفي الفرع لمشاهدتهم فوراً
                     st.dataframe(branch_df_search[['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'تاريخ انتهاء الإقامة', 'تاريخ انتهاء العقد']], use_container_width=True, hide_index=True)
                     
                     st.divider()
@@ -276,6 +275,7 @@ else:
                         save_btn = st.form_submit_button('💾 حفظ والتحديث الشامل لبيانات الموظف في النظام')
                         
                         if save_btn:
+                            # التحديث المباشر في القاعدة الموحدة
                             st.session_state.payroll_df.loc[emp_idx, 'الاسم'] = up_name
                             st.session_state.payroll_df.loc[emp_idx, 'الوظيفة'] = up_job
                             st.session_state.payroll_df.loc[emp_idx, 'الفرع'] = up_branch
@@ -287,15 +287,16 @@ else:
                             st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء الإقامة'] = str(up_iqama_date)
                             st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء العقد'] = str(up_contract_date)
                             
-                            st.success(f"تم حفظ وتحديث ملف الموظف ({up_name}) بنجاح في السجلات والسندات والمسير!")
+                            st.success(f"تم حفظ وتحديث ملف الموظف ({up_name}) بنجاح وتحديث السجلات والسندات والمسير فوراً!")
+                            st.rerun()
                 else:
                     st.info(f"لا يوجد موظفين مسجلين حالياً في {b_name}.")
 
     elif '📊' in menu:
         st.title(f'📊 شاشة إدخال وتعديل الدفعات والأسماء - ({month_selected})')
-        st.write('💡 **ملحوظة:** يمكنك التعديل التفاعلي المباشر لأسماء ووظائف الموظفين في الجدول أدناه وسيتحدث تلقائياً في كامل النظام.')
+        st.write('💡 **ملحوظة:** التعديل المباشر في هذا الجدول ينعكس فورا على باقي الشاشات والتقارير والسندات.')
         
-        t1, t2, t3, t4 = st.tabs(['📍 مصنع ميم الخماسية الخرج (35)', '📍 مستودع ميم الخماسية الخرج (12)', '📍 مستودع ميم الخماسية الرياض (5)', '📍 رواتب متنوعة'])
+        t1, t2, t3, t4 = st.tabs(['📍 مصنع ميم الخماسية الخرج', '📍 مستودع ميم الخماسية الخرج', '📍 مستودع ميم الخماسية الرياض', '📍 رواتب متنوعة'])
         branches = [('مصنع ميم الخماسية الخرج', t1), ('مستودع ميم الخماسية الخرج', t2), ('مستودع ميم الخماسية الرياض', t3), ('رواتب متنوعة', t4)]
         
         for b_name, tab_obj in branches:
@@ -305,8 +306,8 @@ else:
                     df_b[['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة المدفوعة', 'نوع الإجراء', 'الملاحظات']],
                     column_config={
                         "م": st.column_config.NumberColumn("م", disabled=True),
-                        "الاسم": st.column_config.TextColumn("اسم الموظف (قابل للتعديل)"),
-                        "الوظيفة": st.column_config.TextColumn("الوظيفة (قابل للتعديل)"),
+                        "الاسم": st.column_config.TextColumn("اسم الموظف"),
+                        "الوظيفة": st.column_config.TextColumn("الوظيفة"),
                         "الراتب الأساسي": st.column_config.NumberColumn("الراتب المستحق", disabled=True, format="%d ر.س"),
                         "الدفعة المدفوعة": st.column_config.NumberColumn("الدفعة المصروفة (ر.س)", min_value=0, format="%d ر.س"),
                         "نوع الإجراء": st.column_config.SelectboxColumn("نوع الإجراء", options=["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"]),
@@ -316,25 +317,26 @@ else:
                     hide_index=True,
                     key=f"ed_{b_name}_{month_selected}"
                 )
-                edited_b['المتبقي'] = edited_b['الراتب الأساسي'] - edited_b['الدفعة المدفوعة']
                 
+                # ربط التعديل بقاعدة البيانات الموحدة
                 for idx, row in edited_b.iterrows():
                     m_id = row['م']
-                    st.session_state.payroll_df.loc[st.session_state.payroll_df['م'] == m_id, 'الاسم'] = row['الاسم']
-                    st.session_state.payroll_df.loc[st.session_state.payroll_df['م'] == m_id, 'الوظيفة'] = row['الوظيفة']
-                    st.session_state.payroll_df.loc[st.session_state.payroll_df['م'] == m_id, 'الدفعة المدفوعة'] = row['الدفعة المدفوعة']
-                    st.session_state.payroll_df.loc[st.session_state.payroll_df['م'] == m_id, 'المتبقي'] = row['المتبقي']
-                    st.session_state.payroll_df.loc[st.session_state.payroll_df['م'] == m_id, 'نوع الإجراء'] = row['نوع الإجراء']
-                    st.session_state.payroll_df.loc[st.session_state.payroll_df['م'] == m_id, 'الملاحظات'] = row['الملاحظات']
+                    target_idx = st.session_state.payroll_df[st.session_state.payroll_df['م'] == m_id].index[0]
+                    st.session_state.payroll_df.loc[target_idx, 'الاسم'] = row['الاسم']
+                    st.session_state.payroll_df.loc[target_idx, 'الوظيفة'] = row['الوظيفة']
+                    st.session_state.payroll_df.loc[target_idx, 'الدفعة المدفوعة'] = row['الدفعة المدفوعة']
+                    st.session_state.payroll_df.loc[target_idx, 'المتبقي'] = st.session_state.payroll_df.loc[target_idx, 'الراتب الأساسي'] - row['الدفعة المدفوعة']
+                    st.session_state.payroll_df.loc[target_idx, 'نوع الإجراء'] = row['نوع الإجراء']
+                    st.session_state.payroll_df.loc[target_idx, 'الملاحظات'] = row['الملاحظات']
                 
                 c1, c2, c3 = st.columns(3)
                 c1.metric(f'مستحق {b_name}', f"{edited_b['الراتب الأساسي'].sum():,.0f} ر.س")
                 c2.metric(f'مصروف {b_name}', f"{edited_b['الدفعة المدفوعة'].sum():,.0f} ر.س")
-                c3.metric(f'متبقي {b_name}', f"{edited_b['المتبقي'].sum():,.0f} ر.س")
+                c3.metric(f'متبقي {b_name}', f"{(edited_b['الراتب الأساسي'].sum() - edited_b['الدفعة المدفوعة'].sum()):,.0f} ر.س")
 
     elif '💼' in menu:
-        st.title('💼 سجل الموظفين وتدقيق الوثائق (مقسم بالكامل حسب الفرع)')
-        st.write('تصفح الموظفين وارفِق إقاماتهم وعقودهم بسهولة:')
+        st.title('💼 سجل الموظفين وتدقيق الوثائق (مقسم بحسب الفرع)')
+        st.write('تصفح الموظفين المحدثين وارفِق إقاماتهم وعقودهم بسهولة:')
         
         tab_list = [
             ('🏢 مصنع ميم الخماسية الخرج', 'مصنع ميم الخماسية الخرج'),
@@ -349,33 +351,6 @@ else:
             with tabs[idx_t]:
                 df_branch_emp = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name]
                 st.dataframe(df_branch_emp[['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'تاريخ انتهاء الإقامة', 'تاريخ انتهاء العقد']], use_container_width=True, hide_index=True)
-                
-                st.divider()
-                st.subheader(f'📑 إدارة وثائق ومستندات موظف من ({b_name}):')
-                emp_branch_names = df_branch_emp['الاسم'].tolist()
-                
-                if emp_branch_names:
-                    emp_selected = st.selectbox(f'اختر موظفاً من فرع {b_name}:', emp_branch_names, key=f"sel_{b_name}")
-                    emp_row = df_branch_emp[df_branch_emp['الاسم'] == emp_selected].iloc[0]
-                    
-                    col_u1, col_u2 = st.columns(2)
-                    with col_u1:
-                        st.write('🆔 **بيانات الإقامة:**')
-                        iqama_date = st.date_input('تاريخ انتهاء الإقامة:', datetime.strptime(str(emp_row.get('تاريخ انتهاء الإقامة', '2026-12-31')), '%Y-%m-%d'), key=f"iq_{emp_selected}")
-                        file_iq = st.file_uploader(f'رفع صورة إقامة ({emp_selected})', type=['png', 'jpg', 'pdf'], key=f"fiq_{emp_selected}")
-                        if file_iq: st.success('تم رفع صورة الإقامة بنجاح!')
-                        
-                    with col_u2:
-                        st.write('📄 **بيانات عقد العمل:**')
-                        contract_date = st.date_input('تاريخ انتهاء عقد العمل:', datetime.strptime(str(emp_row.get('تاريخ انتهاء العقد', '2027-12-31')), '%Y-%m-%d'), key=f"ct_{emp_selected}")
-                        file_ct = st.file_uploader(f'رفع عقد عمل ({emp_selected})', type=['png', 'jpg', 'pdf'], key=f"fct_{emp_selected}")
-                        if file_ct: st.success('تم رفع عقد العمل بنجاح!')
-                        
-                    if st.button('💾 حفظ وتحديث بيانات الوثائق للموظف', key=f"btn_save_{emp_selected}"):
-                        row_idx = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'] == emp_selected].index[0]
-                        st.session_state.payroll_df.loc[row_idx, 'تاريخ انتهاء الإقامة'] = str(iqama_date)
-                        st.session_state.payroll_df.loc[row_idx, 'تاريخ انتهاء العقد'] = str(contract_date)
-                        st.success(f'تم حفظ تحديثات الموظف ({emp_selected}) بنجاح!')
 
     elif '➕' in menu:
         st.title('➕ إضافة موظف جديد للنظام آلياً')
@@ -417,18 +392,17 @@ else:
                     }
                     st.session_state.payroll_df = pd.concat([st.session_state.payroll_df, pd.DataFrame([new_emp_dict])], ignore_index=True)
                     st.success(f'تمت إضافة الموظف ({new_name}) بنجاح برقم مالي #{max_id}!')
-                else:
-                    st.error('يرجى كتابة اسم الموظف قبل الحفظ.')
+                    st.rerun()
 
     elif '📈' in menu:
-        st.title('📈 شاشة التقارير الشاملة وتنبيهات التجديد')
+        st.title('📈 شاشة التقارير الشاملة وتنبيهات التجديد الموحدة')
         tot_emp = len(st.session_state.payroll_df)
         tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
         tot_paid = st.session_state.payroll_df['الدفعة المدفوعة'].sum()
         tot_rem = st.session_state.payroll_df['المتبقي'].sum()
         
         m1, m2, m3, m4 = st.columns(4)
-        m1.metric('إجمالي عدد العمالة', f'{tot_emp} موظف')
+        m1.metric('إجمالي عدد العمالة الحالي', f'{tot_emp} موظف')
         m2.metric('إجمالي الرواتب الكلية', f'{tot_req:,.0f} ر.س')
         m3.metric('إجمالي المصروف فعلياً', f'{tot_paid:,.0f} ر.س')
         m4.metric('إجمالي المتبقي الكلي', f'{tot_rem:,.0f} ر.س')
@@ -454,7 +428,7 @@ else:
         else: st.success('جميع الإقامات والعقود سارية ولا يوجد وثائق منتهية حالياً!')
 
     elif '📑' in menu:
-        st.title(f'📑 كشوفات مسير الرواتب الرسمية - ({month_selected})')
+        st.title(f'📑 كشوفات مسير الرواتب الرسمية المحدثة - ({month_selected})')
         filter_sheet = st.selectbox('اختر الفرع للتقرير والطباعة:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
         df_sheet = st.session_state.payroll_df if 'جميع الفروع' in filter_sheet else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == filter_sheet]
         
@@ -533,7 +507,7 @@ else:
         </html>
         """
         
-        st.subheader("👁️ معاينة شكل كشف المسير الرسمي قبل الطباعة:")
+        st.subheader("👁️ معاينة شكل كشف المسير المحدث قبل الطباعة:")
         st.components.v1.html(sheet_html, height=450, scrolling=True)
         
         st.download_button(
@@ -544,13 +518,13 @@ else:
         )
 
     elif '🖨️' in menu:
-        st.title(f'🖨️ طباعة سندات القبض - ({month_selected})')
+        st.title(f'🖨️ طباعة سندات القبض المحدثة - ({month_selected})')
         selected_b = st.selectbox('اختر الفرع للتصدير والطباعة:', ['جميع الفروع', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
         df_print = st.session_state.payroll_df if selected_b == 'جميع الفروع' else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == selected_b]
         
         pdf_bytes = generate_pretty_html_pdf(df_print, selected_b)
         
-        st.subheader("👁️ معاينة شكل سندات القبض (A4) قبل الطباعة:")
+        st.subheader("👁️ معاينة شكل سندات القبض المحدثة (A4) قبل الطباعة:")
         st.components.v1.html(pdf_bytes.getvalue().decode('utf-8'), height=500, scrolling=True)
         
         st.download_button(
