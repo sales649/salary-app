@@ -150,7 +150,8 @@ else:
         st.session_state.current_month = month_selected
         st.session_state.payroll_df = load_data()
 
-    def generate_pretty_html_pdf(df_subset, branch_name):
+    # دالة توليد سندات القبض مع إمكانية خيار نوع الدفعة
+    def generate_pretty_html_pdf(df_subset, branch_name, payment_type="جميع الدفعات"):
         output = io.BytesIO()
         html = f"""
         <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
@@ -176,6 +177,21 @@ else:
         for i in range(0, len(rows), 2):
             html += '<div class="page">'
             v1 = rows[i]
+            
+            # تحديد تفاصيل المبلغ المطبوع حسب النوع
+            if payment_type == "الدفعة الأولى فقط":
+                amt_str = f"{v1.get('الدفعة 1', 0):,.0f} ر.س"
+                rem_str = f"{(v1['الراتب الأساسي'] - v1.get('الدفعة 1', 0)):,.0f} ر.س"
+                note_str = f"سداد الدفعة الأولى من راتب شهر ({month_selected})"
+            elif payment_type == "الدفعة الثانية فقط":
+                amt_str = f"{v1.get('الدفعة 2', 0):,.0f} ر.س"
+                rem_str = f"{(v1['الراتب الأساسي'] - (v1.get('الدفعة 1', 0) + v1.get('الدفعة 2', 0))):,.0f} ر.س"
+                note_str = f"سداد الدفعة الثانية والنهائية من راتب شهر ({month_selected})"
+            else:
+                amt_str = f"{v1['الدفعة المدفوعة']:,.0f} ر.س"
+                rem_str = f"{v1['المتبقي']:,.0f} ر.س"
+                note_str = f"سداد إجمالي دفعات راتب شهر ({month_selected})"
+
             html += f"""
             <div class="voucher-box">
                 <div class="header-logo-container">
@@ -183,18 +199,31 @@ else:
                     <div class="header-logo">5M</div>
                     <div class="header-ar">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
                 </div>
-                <div class="voucher-title">سند صرف راتب شهر ({month_selected}) | رقم السند: #{v1['م']:03d}</div>
+                <div class="voucher-title">سند صرف {payment_type} - شهر ({month_selected}) | رقم السند: #{v1['م']:03d}</div>
                 <table class="info-table">
                     <tr><th>اسم الموظف</th><td><strong>{v1['الاسم']}</strong></td><th>الفرع المحدد</th><td><strong>{v1['الفرع']}</strong></td></tr>
-                    <tr><th>الراتب الأساسي</th><td>{v1['الراتب الأساسي']:,.0f} ر.س</td><th>تفاصيل الدفعات</th><td>دفعة (1): {v1['الدفعة 1']:,.0f} ر.س | دفعة (2): {v1['الدفعة 2']:,.0f} ر.س</td></tr>
-                    <tr><th>إجمالي الدفعات المصروفة</th><td><div class="amount-box">{v1['الدفعة المدفوعة']:,.0f} ر.س</div></td><th>المتبقي بالرصيد</th><td style="color:red; font-weight:bold;">{v1['المتبقي']:,.0f} ر.س</td></tr>
-                    <tr><th>البيان والملاحظات</th><td colspan="3">سداد دفعات راتب شهر ({month_selected}) بالمسير.</td></tr>
+                    <tr><th>الراتب الأساسي</th><td>{v1['الراتب الأساسي']:,.0f} ر.س</td><th>تفاصيل الدفعات المسجلة</th><td>دفعة (1): {v1['الدفعة 1']:,.0f} ر.س | دفعة (2): {v1['الدفعة 2']:,.0f} ر.س</td></tr>
+                    <tr><th>المبلغ المصروف بهذا السند</th><td><div class="amount-box">{amt_str}</div></td><th>المتبقي بالرصيد</th><td style="color:red; font-weight:bold;">{rem_str}</td></tr>
+                    <tr><th>البيان والملاحظات</th><td colspan="3">{note_str}</td></tr>
                 </table>
                 <div class="signatures"><div>توقيع واستلام الموظف: __________________</div><div>اعتماد المحاسب / الإدارة: __________________</div></div>
             </div>
             """
             if i + 1 < len(rows):
                 v2 = rows[i + 1]
+                if payment_type == "الدفعة الأولى فقط":
+                    amt_str2 = f"{v2.get('الدفعة 1', 0):,.0f} ر.س"
+                    rem_str2 = f"{(v2['الراتب الأساسي'] - v2.get('الدفعة 1', 0)):,.0f} ر.س"
+                    note_str2 = f"سداد الدفعة الأولى من راتب شهر ({month_selected})"
+                elif payment_type == "الدفعة الثانية فقط":
+                    amt_str2 = f"{v2.get('الدفعة 2', 0):,.0f} ر.س"
+                    rem_str2 = f"{(v2['الراتب الأساسي'] - (v2.get('الدفعة 1', 0) + v2.get('الدفعة 2', 0))):,.0f} ر.س"
+                    note_str2 = f"سداد الدفعة الثانية والنهائية من راتب شهر ({month_selected})"
+                else:
+                    amt_str2 = f"{v2['الدفعة المدفوعة']:,.0f} ر.س"
+                    rem_str2 = f"{v2['المتبقي']:,.0f} ر.س"
+                    note_str2 = f"سداد إجمالي دفعات راتب شهر ({month_selected})"
+
                 html += '<div class="cut-line"><span>✂️ خط القص المخصص بين السندين ✂️</span></div>'
                 html += f"""
                 <div class="voucher-box">
@@ -203,12 +232,12 @@ else:
                         <div class="header-logo">5M</div>
                         <div class="header-ar">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
                     </div>
-                    <div class="voucher-title">سند صرف راتب شهر ({month_selected}) | رقم السند: #{v2['م']:03d}</div>
+                    <div class="voucher-title">سند صرف {payment_type} - شهر ({month_selected}) | رقم السند: #{v2['م']:03d}</div>
                     <table class="info-table">
                         <tr><th>اسم الموظف</th><td><strong>{v2['الاسم']}</strong></td><th>الفرع المحدد</th><td><strong>{v2['الفرع']}</strong></td></tr>
-                        <tr><th>الراتب الأساسي</th><td>{v2['الراتب الأساسي']:,.0f} ر.س</td><th>تفاصيل الدفعات</th><td>دفعة (1): {v2['الدفعة 1']:,.0f} ر.س | دفعة (2): {v2['الدفعة 2']:,.0f} ر.س</td></tr>
-                        <tr><th>إجمالي الدفعات المصروفة</th><td><div class="amount-box">{v2['الدفعة المدفوعة']:,.0f} ر.س</div></td><th>المتبقي بالرصيد</th><td style="color:red; font-weight:bold;">{v2['المتبقي']:,.0f} ر.س</td></tr>
-                        <tr><th>البيان والملاحظات</th><td colspan="3">سداد دفعات راتب شهر ({month_selected}) بالمسير.</td></tr>
+                        <tr><th>الراتب الأساسي</th><td>{v2['الراتب الأساسي']:,.0f} ر.س</td><th>تفاصيل الدفعات المسجلة</th><td>دفعة (1): {v2['الدفعة 1']:,.0f} ر.س | دفعة (2): {v2['الدفعة 2']:,.0f} ر.س</td></tr>
+                        <tr><th>المبلغ المصروف بهذا السند</th><td><div class="amount-box">{amt_str2}</div></td><th>المتبقي بالرصيد</th><td style="color:red; font-weight:bold;">{rem_str2}</td></tr>
+                        <tr><th>البيان والملاحظات</th><td colspan="3">{note_str2}</td></tr>
                     </table>
                     <div class="signatures"><div>توقيع واستلام الموظف: __________________</div><div>اعتماد المحاسب / الإدارة: __________________</div></div>
                 </div>
@@ -276,9 +305,7 @@ else:
                             up_contract_date = st.date_input("تاريخ انتهاء العقد:", ct_val)
                             
                         st.divider()
-                        col_btn_save, col_btn_del = st.columns([3, 1])
-                        with col_btn_save:
-                            save_btn = st.form_submit_button('💾 حفظ وتحديث ملف الموظف والتعديلات المالية')
+                        save_btn = st.form_submit_button('💾 حفظ وتحديث ملف الموظف والتعديلات المالية')
                         
                         if save_btn:
                             tot_paid_emp = up_pay1 + up_pay2
@@ -299,7 +326,6 @@ else:
                             st.success(f"تم حفظ وتعديل المتبقي ودفعات الموظف ({up_name}) دائماً بنجاح!")
                             st.rerun()
 
-                    # زر مسح وحذف الموظف نهائياً خارج النموذج لعدم التضارب
                     with st.expander(f"⚠️ حذف الموظف ({emp_data['الاسم']}) نهائياً من النظام"):
                         st.warning("⚠️ تنبيه: مسح الموظف سيحذفه نهائياً من كشوفات السندات والمسير والتقارير.")
                         if st.button(f"🗑️ تأكيد مسح الموظف ({emp_data['الاسم']}) نهائياً", key=f"del_confirm_{emp_data['م']}"):
@@ -557,15 +583,20 @@ else:
 
     elif '🖨️' in menu:
         st.title(f'🖨️ طباعة سندات القبض المحدثة - ({month_selected})')
-        selected_b = st.selectbox('اختر الفرع للتصدير والطباعة:', ['جميع الفروع', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
+        col_p1, col_p2 = st.columns(2)
+        with col_p1:
+            selected_b = st.selectbox('اختر الفرع للتصدير والطباعة:', ['جميع الفروع', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
+        with col_p2:
+            pay_type_select = st.selectbox('اختر نوع الدفعة المراد طباعة سنداتها:', ['جميع الدفعات (السند الشامل)', 'الدفعة الأولى فقط', 'الدفعة الثانية فقط'])
+            
         df_print = st.session_state.payroll_df if selected_b == 'جميع الفروع' else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == selected_b]
         
-        pdf_bytes = generate_pretty_html_pdf(df_print, selected_b)
-        st.subheader("👁️ معاينة شكل سندات القبض المحدثة (A4) قبل الطباعة:")
+        pdf_bytes = generate_pretty_html_pdf(df_print, selected_b, pay_type_select)
+        st.subheader(f"👁️ معاينة شكل سندات ({pay_type_select}) قبل الطباعة:")
         st.components.v1.html(pdf_bytes.getvalue().decode('utf-8'), height=500, scrolling=True)
         st.download_button(
-            label=f"📄 فتح وتنزيل ملف سندات صرف {selected_b} للطباعة 🖨️",
+            label=f"📄 فتح وتنزيل ملف سندات ({pay_type_select}) - {selected_b} للطباعة 🖨️",
             data=pdf_bytes,
-            file_name=f"سندات_صرف_راتب_{selected_b}_{month_selected}.html",
+            file_name=f"سندات_{pay_type_select}_{selected_b}_{month_selected}.html",
             mime="text/html"
         )
