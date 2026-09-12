@@ -5,8 +5,11 @@ import json
 import os
 from datetime import datetime
 
-# 1. إعداد الصفحة
+# 1. تهيئة حالة الجلسة والإعدادات الأساسية فوراً في البداية
 st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - إدارة الرواتب والـ HR', layout='wide', page_icon='🏢')
+
+if 'app_started' not in st.session_state:
+    st.session_state['app_started'] = False
 
 DATA_FILE = 'payroll_data.json'
 
@@ -96,13 +99,11 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
         diff_days = (today - start_d).days
         years = diff_days / 365.25
         
-        # 1. مكافأة نهاية الخدمة (المادة 84): نصف شهر لكل سنة من الخمس الأولى + شهر كامل عن كل سنة إضافية
         if years <= 5:
             gratuity = years * (salary / 2.0)
         else:
             gratuity = (5 * (salary / 2.0)) + ((years - 5) * salary)
             
-        # 2. بدل الإجازة السنوية (المادة 109): 21 يوماً للسنوات الـ 5 الأولى، و 30 يوماً لمن يتجاوز 5 سنوات
         annual_leave_days = 21 if years <= 5 else 30
         daily_rate = salary / 30.0
         leave_allowance = annual_leave_days * daily_rate
@@ -217,7 +218,7 @@ def edit_employee_dialog(emp_idx, month_selected):
             st.success(f"تم حذف الموظف ({emp_data['الاسم']}) نهائياً!")
             st.rerun()
 
-if not st.session_state.app_started:
+if not st.session_state.get('app_started', False):
     st.markdown("""
         <style>
             .stApp { background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%); color: white; }
@@ -418,7 +419,6 @@ else:
                 branch_df_search = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name]
                 
                 if not branch_df_search.empty:
-                    # جدول تفاعلي أنيق يحتوي زر تعديل لكل موظف
                     for e_idx, e_row in branch_df_search.iterrows():
                         c_card1, c_card2, c_card3, c_card4 = st.columns([2, 1.5, 1.5, 1])
                         c_card1.write(f"👤 **{e_row['الاسم']}** ({e_row['الوظيفة']})")
