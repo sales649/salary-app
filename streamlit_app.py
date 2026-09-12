@@ -220,7 +220,7 @@ else:
         return output
 
     if '🔍' in menu:
-        st.title('🔍 شاشة البحث الفوري وتعديل ملف موظف (نظام الدفعتين)')
+        st.title('🔍 شاشة البحث الفوري وتعديل/حذف ملف موظف')
         cnt_factory = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مصنع ميم الخماسية الخرج'])
         cnt_wh_kh = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مستودع ميم الخماسية الخرج'])
         cnt_wh_ry = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مستودع ميم الخماسية الرياض'])
@@ -243,12 +243,12 @@ else:
                 if branch_emp_names:
                     st.dataframe(branch_df_search[['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الدفعة المدفوعة', 'المتبقي']], use_container_width=True, hide_index=True)
                     st.divider()
-                    selected_emp_in_b = st.selectbox(f"👤 اختر اسم الموظف للتعديل الشامل من ({b_name}):", branch_emp_names, key=f"sb_search_{b_name}")
+                    selected_emp_in_b = st.selectbox(f"👤 اختر اسم الموظف من ({b_name}):", branch_emp_names, key=f"sb_search_{b_name}")
                     
                     emp_idx = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'] == selected_emp_in_b].index[0]
                     emp_data = st.session_state.payroll_df.loc[emp_idx]
                     
-                    st.info(f"👤 **تعديل بيانات الموظف:** {emp_data['الاسم']} (رقم مالي: #{emp_data['م']})")
+                    st.info(f"👤 **ملف الموظف:** {emp_data['الاسم']} (رقم مالي: #{emp_data['م']})")
                     
                     with st.form(f'edit_form_{b_name}_{emp_data["م"]}'):
                         col_e1, col_e2, col_e3 = st.columns(3)
@@ -276,7 +276,9 @@ else:
                             up_contract_date = st.date_input("تاريخ انتهاء العقد:", ct_val)
                             
                         st.divider()
-                        save_btn = st.form_submit_button('💾 حفظ وتثبيت الدفعات والبيانات دائماً')
+                        col_btn_save, col_btn_del = st.columns([3, 1])
+                        with col_btn_save:
+                            save_btn = st.form_submit_button('💾 حفظ وتحديث ملف الموظف والتعديلات المالية')
                         
                         if save_btn:
                             tot_paid_emp = up_pay1 + up_pay2
@@ -294,19 +296,27 @@ else:
                             st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء العقد'] = str(up_contract_date)
                             
                             save_data(st.session_state.payroll_df)
-                            st.success(f"تم حفظ وتثبيت دفعات الموظف ({up_name}) دائماً بنجاح!")
+                            st.success(f"تم حفظ وتعديل المتبقي ودفعات الموظف ({up_name}) دائماً بنجاح!")
+                            st.rerun()
+
+                    # زر مسح وحذف الموظف نهائياً خارج النموذج لعدم التضارب
+                    with st.expander(f"⚠️ حذف الموظف ({emp_data['الاسم']}) نهائياً من النظام"):
+                        st.warning("⚠️ تنبيه: مسح الموظف سيحذفه نهائياً من كشوفات السندات والمسير والتقارير.")
+                        if st.button(f"🗑️ تأكيد مسح الموظف ({emp_data['الاسم']}) نهائياً", key=f"del_confirm_{emp_data['م']}"):
+                            st.session_state.payroll_df = st.session_state.payroll_df.drop(emp_idx).reset_index(drop=True)
+                            save_data(st.session_state.payroll_df)
+                            st.success(f"تم حذف الموظف ({emp_data['الاسم']}) نهائياً من جميع سجلات الشركة!")
                             st.rerun()
 
     elif '📊' in menu:
         st.title(f'📊 شاشة إدخال وتعديل الدفعات - ({month_selected})')
-        st.write('💡 **زر التوزيع التلقائي:** اضغط على زر التوزيع التلقائي ليقوم النظام بحساب المتبقي وتعبئته كـ "دفعة 2" لجميع عمال الفرع دفعة واحدة!')
+        st.write('💡 **التحديث التلقائي:** عند تغيير الراتب الأساسي يحسب المتبقي آلياً = [الراتب الأساسي - (الدفعة 1 + الدفعة 2)].')
         
         t1, t2, t3, t4 = st.tabs(['📍 مصنع ميم الخماسية الخرج', '📍 مستودع ميم الخماسية الخرج', '📍 مستودع ميم الخماسية الرياض', '📍 رواتب متنوعة'])
         branches = [('مصنع ميم الخماسية الخرج', t1), ('مستودع ميم الخماسية الخرج', t2), ('مستودع ميم الخماسية الرياض', t3), ('رواتب متنوعة', t4)]
         
         for b_name, tab_obj in branches:
             with tab_obj:
-                # زر توزيع الدفعة الثانية تلقائياً لجميع موظفي الفرع
                 col_auto1, col_auto2 = st.columns([2, 1])
                 with col_auto1:
                     if st.button(f'⚡ توزيع المتبقي كـ "دفعة 2" تلقائياً لجميع عمال ({b_name})', key=f"auto_btn_{b_name}"):
@@ -318,7 +328,7 @@ else:
                             st.session_state.payroll_df.loc[idx, 'الدفعة المدفوعة'] = p1 + rem_needed
                             st.session_state.payroll_df.loc[idx, 'المتبقي'] = 0.0
                         save_data(st.session_state.payroll_df)
-                        st.success(f'تم توزيع الدفعة الثانية تلقائياً لجميع عمال {b_name} وصرف كامل الراتب!')
+                        st.success(f'تم توزيع الدفعة الثانية تلقائياً وتصفير المتبقي لجميع عمال {b_name}!')
                         st.rerun()
 
                 df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
@@ -328,7 +338,7 @@ else:
                         "م": st.column_config.NumberColumn("م", disabled=True),
                         "الاسم": st.column_config.TextColumn("اسم الموظف"),
                         "الوظيفة": st.column_config.TextColumn("الوظيفة"),
-                        "الراتب الأساسي": st.column_config.NumberColumn("الراتب المستحق", disabled=True, format="%d ر.س"),
+                        "الراتب الأساسي": st.column_config.NumberColumn("الراتب المستحق (قابل للتعديل)", min_value=0, format="%d ر.س"),
                         "الدفعة 1": st.column_config.NumberColumn("الدفعة 1 (ر.س)", min_value=0, format="%d ر.س"),
                         "الدفعة 2": st.column_config.NumberColumn("الدفعة 2 (ر.س)", min_value=0, format="%d ر.س"),
                         "نوع الإجراء": st.column_config.SelectboxColumn("نوع الإجراء", options=["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"]),
@@ -344,13 +354,15 @@ else:
                     target_idx = st.session_state.payroll_df[st.session_state.payroll_df['م'] == m_id].index[0]
                     p1 = row['الدفعة 1']
                     p2 = row['الدفعة 2']
+                    sal = row['الراتب الأساسي']
                     tot_p = p1 + p2
                     st.session_state.payroll_df.loc[target_idx, 'الاسم'] = row['الاسم']
                     st.session_state.payroll_df.loc[target_idx, 'الوظيفة'] = row['الوظيفة']
+                    st.session_state.payroll_df.loc[target_idx, 'الراتب الأساسي'] = sal
                     st.session_state.payroll_df.loc[target_idx, 'الدفعة 1'] = p1
                     st.session_state.payroll_df.loc[target_idx, 'الدفعة 2'] = p2
                     st.session_state.payroll_df.loc[target_idx, 'الدفعة المدفوعة'] = tot_p
-                    st.session_state.payroll_df.loc[target_idx, 'المتبقي'] = st.session_state.payroll_df.loc[target_idx, 'الراتب الأساسي'] - tot_p
+                    st.session_state.payroll_df.loc[target_idx, 'المتبقي'] = sal - tot_p
                     st.session_state.payroll_df.loc[target_idx, 'نوع الإجراء'] = row['نوع الإجراء']
                     st.session_state.payroll_df.loc[target_idx, 'الملاحظات'] = row['الملاحظات']
                 
@@ -362,10 +374,10 @@ else:
                 tot_all_p = tot_p1 + tot_p2
                 
                 c1, c2, c3, c4 = st.columns(4)
-                c1.metric(f'مستحق {b_name}', f"{tot_req:,.0f} ر.س")
+                c1.metric(f'إجمالي مستحق {b_name}', f"{tot_req:,.0f} ر.س")
                 c2.metric('إجمالي الدفعة 1', f"{tot_p1:,.0f} ر.س")
                 c3.metric('إجمالي الدفعة 2', f"{tot_p2:,.0f} ر.س")
-                c4.metric('إجمالي المتبقي', f"{(tot_req - tot_all_p):,.0f} ر.س")
+                c4.metric('إجمالي المتبقي الكلي', f"{(tot_req - tot_all_p):,.0f} ر.س")
 
     elif '💼' in menu:
         st.title('💼 سجل الموظفين وتدقيق الوثائق (مقسم بحسب الفرع)')
