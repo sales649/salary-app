@@ -5,8 +5,52 @@ import json
 import os
 from datetime import datetime
 
-# 1. تهيئة حالة الجلسة والإعدادات الأساسية فوراً في البداية
-st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - إدارة الرواتب والـ HR', layout='wide', page_icon='🏢')
+# 1. إعداد الصفحة وتطبيق تنسيقات CSS احترافية شبيهة بنظام دفترة
+st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام الإداري والمالي', layout='wide', page_icon='🏢')
+
+# تطبيق ستايل دفترة (Daftra Theme CSS)
+st.markdown("""
+    <style>
+        /* التنسيق العام والعمق البصري */
+        .stApp { background-color: #F8FAFC; color: #1E293B; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* البطاقات الإحصائية - Daftra Metric Cards */
+        .metric-card {
+            background: #FFFFFF;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .metric-card:hover { transform: translateY(-3px); border-color: #3B82F6; }
+        .metric-title { font-size: 14px; color: #64748B; font-weight: 600; margin-bottom: 8px; }
+        .metric-value { font-size: 24px; color: #0F172A; font-weight: 800; }
+        .metric-sub { font-size: 12px; color: #10B981; font-weight: 600; margin-top: 4px; }
+        
+        /* الهيدر العلوي */
+        .daftra-header {
+            background: linear-gradient(90deg, #1E3A8A 0%, #2563EB 100%);
+            padding: 24px;
+            border-radius: 16px;
+            color: white;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.2);
+        }
+        
+        /* الجداول الأنيقة */
+        .stDataFrame { border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; }
+        
+        /* الأزرار الرئيسية */
+        .stButton>button {
+            border-radius: 8px;
+            font-weight: 600;
+            border: none;
+            transition: all 0.2s;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 if 'app_started' not in st.session_state:
     st.session_state['app_started'] = False
@@ -91,7 +135,6 @@ def save_data(df):
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data_dict, f, ensure_ascii=False, indent=4)
 
-# دالة حساب المستحقات وفقاً لنظام العمل السعودي
 def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     try:
         start_d = datetime.strptime(str(start_date_str), '%Y-%m-%d').date()
@@ -112,7 +155,6 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# 2. النافذة المنبثقة التفاعلية لإضافة موظف جديد
 @st.dialog("➕ إضافة موظف جديد بالنظام")
 def add_employee_dialog(default_branch):
     st.write(f"إدخال موظف جديد لفرع: **{default_branch}**")
@@ -153,7 +195,6 @@ def add_employee_dialog(default_branch):
                 st.success(f"تمت إضافة الموظف ({new_name}) بنجاح!")
                 st.rerun()
 
-# 3. النافذة المنبثقة التفاعلية لتعديل/حذف موظف
 @st.dialog("👤 الملف الشامل وتعديل الموظف")
 def edit_employee_dialog(emp_idx, month_selected):
     emp_data = st.session_state.payroll_df.loc[emp_idx]
@@ -220,24 +261,17 @@ def edit_employee_dialog(emp_idx, month_selected):
 
 if not st.session_state.get('app_started', False):
     st.markdown("""
-        <style>
-            .stApp { background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%); color: white; }
-            .welcome-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 40px; text-align: center; margin-top: 50px; }
-            .logo-header { font-size: 70px; font-weight: 900; color: #EF4444; letter-spacing: -2px; font-family: Arial, sans-serif; }
-            .title-ar { font-size: 32px; font-weight: bold; color: #FFFFFF; margin-top: 10px; }
-            .subtitle-ar { font-size: 18px; color: #94A3B8; margin-bottom: 30px; }
-        </style>
         <div class="welcome-card">
             <div class="logo-header">5M</div>
             <div class="title-ar">🏢 شركة ميم الخماسية للتصنيع</div>
-            <div class="subtitle-ar">النظام المحاسبي والإداري الشامل للرواتب وإدارة وثائق الموظفين</div>
+            <div class="subtitle-ar">نظام دفترة المحاسبي والإداري لإدارة الرواتب والـ HR</div>
         </div>
     """, unsafe_allow_html=True)
     
     col_b1, col_b2, col_b3 = st.columns([1, 1.2, 1])
     with col_b2:
         st.write("")
-        if st.button('🚀 الدخول للنظام الإداري والمالي', use_container_width=True):
+        if st.button('🚀 الدخول للنظام المالي والإداري', use_container_width=True):
             st.session_state.app_started = True
             st.rerun()
 
@@ -245,22 +279,22 @@ else:
     with st.sidebar:
         st.markdown('<h2 style="text-align: center; color: #1E3A8A;">🏢 شركة ميم الخماسية</h2>', unsafe_allow_html=True)
         st.divider()
-        menu = st.radio('📌 التنقل الرئيسي:', [
-            '🔍 إدارة وتعديل الموظفين',
-            '📊 شاشة إدخال الدفعات (حسب الفرع)',
-            '📈 مركز الموارد البشرية والتقارير المدمجة',
-            '📑 مسير الرواتب الشهري (معاينة وطباعة)',
-            '🖨️ طباعة سندات القبض (PDF A4)'
+        menu = st.radio('📌 القائمة الرئيسية:', [
+            '🔍 دليل الموظفين والملفات',
+            '📊 شاشة إدخال وتعديل الدفعات',
+            '📈 مركز الموارد البشرية والتقارير',
+            '📑 مسير الرواتب الشهري',
+            '🖨️ طباعة سندات الصرف والقبض'
         ])
         st.divider()
         
         if 'months_list' not in st.session_state:
             st.session_state.months_list = ['أغسطس 2026', 'سبتمبر 2026', 'أكتوبر 2026', 'نوفمبر 2026']
             
-        month_selected = st.selectbox('📅 اختر شهر العمليات:', st.session_state.months_list)
+        month_selected = st.selectbox('📅 شهر العمليات الحالي:', st.session_state.months_list)
         
         st.markdown("---")
-        st.markdown("### 💾 النسخ الاحتياطي والأرشيف")
+        st.markdown("### 💾 الأرشيف والنسخ الاحتياطي")
         if 'payroll_df' in st.session_state:
             json_str = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
             st.download_button(
@@ -293,6 +327,32 @@ else:
     if 'payroll_df' not in st.session_state or st.session_state.get('current_month') != month_selected:
         st.session_state.current_month = month_selected
         st.session_state.payroll_df = load_data()
+
+    # الهيدر العلوي بنمط دفترة
+    tot_emp = len(st.session_state.payroll_df)
+    tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
+    tot_paid = st.session_state.payroll_df['الدفعة المدفوعة'].sum()
+    tot_rem = st.session_state.payroll_df['المتبقي'].sum()
+
+    st.markdown(f"""
+        <div class="daftra-header">
+            <h2 style="margin:0; color: white;">🏢 شركة ميم الخماسية للتصنيع - لوحة التحكم المالية ({month_selected})</h2>
+            <p style="margin:5px 0 0 0; opacity: 0.9;">نظام إدارة المستحقات، مسير الرواتب، وسندات القبض الموحد</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # الكروت الإحصائية الأنيقة
+    mc1, mc2, mc3, mc4 = st.columns(4)
+    with mc1:
+        st.markdown(f'<div class="metric-card"><div class="metric-title">👥 إجمالي العمالة</div><div class="metric-value">{tot_emp} موظف</div><div class="metric-sub">نشط بالنظام</div></div>', unsafe_allow_html=True)
+    with mc2:
+        st.markdown(f'<div class="metric-card"><div class="metric-title">💰 إجمالي الرواتب</div><div class="metric-value">{tot_req:,.0f} ر.س</div><div class="metric-sub">استحقاق الشهر</div></div>', unsafe_allow_html=True)
+    with mc3:
+        st.markdown(f'<div class="metric-card"><div class="metric-title">✅ المصروف فعلياً</div><div class="metric-value" style="color:#10B981;">{tot_paid:,.0f} ر.س</div><div class="metric-sub">دفعات محولة</div></div>', unsafe_allow_html=True)
+    with mc4:
+        st.markdown(f'<div class="metric-card"><div class="metric-title">⏳ المتبقي بالرصيد</div><div class="metric-value" style="color:#EF4444;">{tot_rem:,.0f} ر.س</div><div class="metric-sub">مستحق الصرف</div></div>', unsafe_allow_html=True)
+
+    st.write("")
 
     def generate_pretty_html_pdf(df_subset, branch_name, payment_type="جميع الدفعات"):
         output = io.BytesIO()
@@ -391,7 +451,7 @@ else:
         return output
 
     if '🔍' in menu:
-        st.title('🔍 الشاشة الاحترافية لإدارة الموظفين والبحث والتعديل')
+        st.subheader('🔍 دليل ملفات الموظفين والتحرير المباشر')
         
         cnt_factory = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مصنع ميم الخماسية الخرج'])
         cnt_wh_kh = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مستودع ميم الخماسية الخرج'])
@@ -432,7 +492,7 @@ else:
                     st.info(f"لا يوجد موظفين مسجلين حالياً في {b_name}.")
 
     elif '📊' in menu:
-        st.title(f'📊 شاشة إدخال وتعديل الدفعات - ({month_selected})')
+        st.subheader(f'📊 جدول إدخال الدفعات المالية - ({month_selected})')
         st.write('💡 **التحديث التلقائي:** عند تغيير الراتب الأساسي يحسب المتبقي آلياً = [الراتب الأساسي - (الدفعة 1 + الدفعة 2)].')
         
         t1, t2, t3, t4 = st.tabs(['📍 مصنع ميم الخماسية الخرج', '📍 مستودع ميم الخماسية الخرج', '📍 مستودع ميم الخماسية الرياض', '📍 رواتب متنوعة'])
@@ -490,32 +550,18 @@ else:
                     st.session_state.payroll_df.loc[target_idx, 'الملاحظات'] = row['الملاحظات']
                 
                 save_data(st.session_state.payroll_df)
-                
-                tot_req = edited_b['الراتب الأساسي'].sum()
-                tot_p1 = edited_b['الدفعة 1'].sum()
-                tot_p2 = edited_b['الدفعة 2'].sum()
-                tot_all_p = tot_p1 + tot_p2
-                
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric(f'إجمالي مستحق {b_name}', f"{tot_req:,.0f} ر.س")
-                c2.metric('إجمالي الدفعة 1', f"{tot_p1:,.0f} ر.س")
-                c3.metric('إجمالي الدفعة 2', f"{tot_p2:,.0f} ر.س")
-                c4.metric('إجمالي المتبقي الكلي', f"{(tot_req - tot_all_p):,.0f} ر.س")
 
     elif '📈' in menu:
-        st.title('📈 مركز الموارد البشرية، المستحقات الإدارية والتقارير الشاملة')
+        st.subheader('📈 مركز الموارد البشرية، المستحقات الإدارية والتقارير الشاملة')
         
-        tab_hr1, tab_hr2, tab_hr3, tab_hr4 = st.tabs([
+        tab_hr1, tab_hr2, tab_hr3 = st.tabs([
             '🇸🇦 حاسبة مكافأة نهاية الخدمة والإجازات',
             '💼 سجل الموظفين والوثائق الرسمية',
-            '🔔 مركز تنبيهات الانتهاء والتجديد',
-            '📊 المؤشرات الإدارية العامة'
+            '🔔 مركز تنبيهات الانتهاء والتجديد'
         ])
         
         with tab_hr1:
-            st.subheader('🇸🇦 مستحقات عمالة الشركة المربوطة بنظام العمل السعودي:')
-            st.write('تعتمد الحاسبة التلقائية على تاريخ بداية العمل والراتب الأساسي الحالي لكل موظف:')
-            
+            st.write('🇸🇦 **حاسبة مستحقات نهاية الخدمة وبدل الإجازات (نظام العمل السعودي):**')
             saudi_reports = []
             for _, r in st.session_state.payroll_df.iterrows():
                 yrs, grat, leave_allow = calculate_saudi_gratuity_and_leave(r['الراتب الأساسي'], r.get('تاريخ بداية العمل', '2024-01-01'))
@@ -534,7 +580,7 @@ else:
             st.dataframe(df_saudi, use_container_width=True, hide_index=True)
 
         with tab_hr2:
-            st.subheader('💼 سجل وثائق الموظفين (المقسّم بالكامل حسب الفرع):')
+            st.write('💼 **سجل وثائق الموظفين المقسم بحسب الفرع:**')
             tab_list_b = [
                 ('🏢 مصنع ميم الخماسية الخرج', 'مصنع ميم الخماسية الخرج'),
                 ('📦 مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج'),
@@ -548,7 +594,7 @@ else:
                     st.dataframe(df_branch_emp[['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'تاريخ بداية العمل', 'تاريخ انتهاء الإقامة', 'تاريخ انتهاء العقد']], use_container_width=True, hide_index=True)
 
         with tab_hr3:
-            st.subheader('🔔 مركز تنبيهات انتهاء الإقامات والعقود:')
+            st.write('🔔 **تنبيهات قرب انتهاء الإقامات وعقود العمل:**')
             today = datetime.now().date()
             alerts = []
             for _, r in st.session_state.payroll_df.iterrows():
@@ -567,21 +613,8 @@ else:
             if alerts: st.dataframe(pd.DataFrame(alerts), use_container_width=True, hide_index=True)
             else: st.success('جميع الإقامات والعقود سارية ولا يوجد وثائق منتهية حالياً!')
 
-        with tab_hr4:
-            st.subheader('📊 ملخص الميزانية الكلية للشركة:')
-            tot_emp = len(st.session_state.payroll_df)
-            tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
-            tot_paid = st.session_state.payroll_df['الدفعة المدفوعة'].sum()
-            tot_rem = st.session_state.payroll_df['المتبقي'].sum()
-            
-            m1, m2, m3, m4 = st.columns(4)
-            m1.metric('إجمالي عدد العمالة الحالي', f'{tot_emp} موظف')
-            m2.metric('إجمالي الرواتب الكلية', f'{tot_req:,.0f} ر.س')
-            m3.metric('إجمالي المصروف فعلياً', f'{tot_paid:,.0f} ر.س')
-            m4.metric('إجمالي المتبقي الكلي', f'{tot_rem:,.0f} ر.س')
-
     elif '📑' in menu:
-        st.title(f'📑 كشوفات مسير الرواتب الرسمية - ({month_selected})')
+        st.subheader(f'📑 كشوفات مسير الرواتب الرسمية - ({month_selected})')
         filter_sheet = st.selectbox('اختر الفرع للتقرير والطباعة:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
         df_sheet = st.session_state.payroll_df if 'جميع الفروع' in filter_sheet else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == filter_sheet]
         
@@ -671,7 +704,7 @@ else:
         )
 
     elif '🖨️' in menu:
-        st.title(f'🖨️ طباعة سندات القبض المحدثة - ({month_selected})')
+        st.subheader(f'🖨️ طباعة سندات القبض المحدثة - ({month_selected})')
         col_p1, col_p2 = st.columns(2)
         with col_p1:
             selected_b = st.selectbox('اختر الفرع للتصدير والطباعة:', ['جميع الفروع', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
