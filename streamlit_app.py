@@ -10,7 +10,7 @@ st.set_page_config(page_title='شركة ميم الخماسية للتصنيع -
 
 DATA_FILE = 'payroll_data.json'
 
-# قاعدة البيانات الأساسية لـ 52 موظفاً
+# قاعدة البيانات الأساسية المعمدة لـ 52 موظفاً
 initial_data = [
     # مصنع ميم الخماسية الخرج (35 موظف)
     {'م': 1, 'الاسم': 'مد ماجد', 'الوظيفة': 'عامل', 'الراتب الأساسي': 4000, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01', 'الدفعة 1': 2000, 'الدفعة 2': 2000, 'الدفعة المدفوعة': 4000, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
@@ -138,6 +138,29 @@ else:
         month_selected = st.selectbox('📅 اختر شهر العمليات:', st.session_state.months_list)
         
         st.markdown("---")
+        # إدارة واستيراد/تصدير النسخ الاحتياطية للبيانات
+        st.markdown("### 💾 إدارة وتصدير النسخ الاحتياطية")
+        if 'payroll_df' in st.session_state:
+            json_str = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
+            st.download_button(
+                label="📥 تصدير نسخة احتياطية (JSON)",
+                data=json_str.encode('utf-8'),
+                file_name=f"payroll_backup_{month_selected}.json",
+                mime="application/json"
+            )
+        
+        uploaded_backup = st.file_uploader("📤 استيراد نسخة احتياطية سابقاً:", type=['json'])
+        if uploaded_backup:
+            try:
+                imported_df = pd.DataFrame(json.load(uploaded_backup))
+                st.session_state.payroll_df = imported_df
+                save_data(imported_df)
+                st.success("تم استيراد واستعادة البيانات بنجاح!")
+                st.rerun()
+            except Exception as e:
+                st.error("خطأ في قراءة ملف النسخة الاحتياطية.")
+
+        st.markdown("---")
         with st.expander("➕ إضافة شهر جديد"):
             new_m_input = st.text_input("اسم الشهر الجديد:", placeholder="مثلاً: ديسمبر 2026")
             if st.button("تأكيد إضافة الشهر"):
@@ -150,7 +173,6 @@ else:
         st.session_state.current_month = month_selected
         st.session_state.payroll_df = load_data()
 
-    # دالة توليد سندات القبض مع إمكانية خيار نوع الدفعة
     def generate_pretty_html_pdf(df_subset, branch_name, payment_type="جميع الدفعات"):
         output = io.BytesIO()
         html = f"""
@@ -178,7 +200,6 @@ else:
             html += '<div class="page">'
             v1 = rows[i]
             
-            # تحديد تفاصيل المبلغ المطبوع حسب النوع
             if payment_type == "الدفعة الأولى فقط":
                 amt_str = f"{v1.get('الدفعة 1', 0):,.0f} ر.س"
                 rem_str = f"{(v1['الراتب الأساسي'] - v1.get('الدفعة 1', 0)):,.0f} ر.س"
