@@ -8,7 +8,7 @@ from datetime import datetime
 # 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
 st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
 
-# تطبيق تنسيقات دفترة الفاخرة (Daftra Theme CSS)
+# تطبيق تنسيقات دفترة الفاخرة للقائمة الجانبية والواجهة (Daftra Sidebar Theme)
 st.markdown("""
     <style>
         html, body, .stApp, [data-testid="stAppViewContainer"] {
@@ -19,18 +19,64 @@ st.markdown("""
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
+        /* القائمة الجانبية المنسقة بنمط دفترة */
         [data-testid="stSidebar"] {
             right: 0 !important;
             left: auto !important;
-            border-left: 1px solid #CBD5E1 !important;
+            border-left: 1px solid #E2E8F0 !important;
             background-color: #FFFFFF !important;
+            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.03);
         }
         
         [data-testid="stSidebarContent"] {
             direction: rtl !important;
             text-align: right !important;
+            padding-top: 10px;
         }
 
+        /* تنسيق القوائم المنسدلة الفرعية لتطابق صورة دفترة */
+        [data-testid="stSidebar"] .stMarkdown h3 {
+            color: #475569;
+            font-size: 13px !important;
+            font-weight: 700;
+            margin-top: 15px;
+            margin-bottom: 5px;
+        }
+
+        [data-testid="stSidebar"] .streamlit-expanderHeader {
+            background-color: #FFFFFF !important;
+            color: #1E3A8A !important;
+            font-weight: 700 !important;
+            font-size: 15px !important;
+            border-bottom: 1px solid #F1F5F9;
+            padding: 10px 5px !important;
+        }
+
+        [data-testid="stSidebar"] .streamlit-expanderHeader:hover {
+            color: #2563EB !important;
+            background-color: #F8FAFC !important;
+        }
+
+        /* أزرار القوائم الفرعية داخل القوائم المنسدلة */
+        [data-testid="stSidebar"] .stButton>button {
+            width: 100%;
+            text-align: right !important;
+            background-color: transparent !important;
+            color: #334155 !important;
+            border: none !important;
+            padding: 8px 12px !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+            box-shadow: none !important;
+        }
+
+        [data-testid="stSidebar"] .stButton>button:hover {
+            background-color: #EFF6FF !important;
+            color: #2563EB !important;
+        }
+
+        /* محاذاة الجداول والنوافذ لليمين */
         [data-testid="stDialog"] div[role="dialog"], .stDataFrame, [data-testid="stDataEditor"] {
             direction: rtl !important;
             text-align: right !important;
@@ -41,7 +87,7 @@ st.markdown("""
             font-size: 14px !important;
         }
 
-        /* كروت الوصول السريع بنمط دفترة */
+        /* كروت الوصول السريع */
         .daftra-quick-card {
             background-color: #FFFFFF;
             border-radius: 12px;
@@ -85,8 +131,6 @@ st.markdown("""
             line-height: 1;
             margin-bottom: 10px;
         }
-
-        .stButton>button { border-radius: 8px; font-weight: 600; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -211,7 +255,6 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# 2. النافذة المنبثقة الخاطفة لإنشاء سند قبض/صرف من الشاشة الرئيسية مباشرة
 @st.dialog("⚡ إنشاء سند قبض / صرف سريع")
 def quick_cash_voucher_dialog(default_type, month_name):
     st.write(f"إضافة سند جديد لشهر: **{month_name}**")
@@ -229,10 +272,8 @@ def quick_cash_voucher_dialog(default_type, month_name):
                 m_cash = all_cash.get(month_name, {'opening': 0.0, 'transactions': []})
                 c_trans = m_cash.get('transactions', [])
                 
-                # حساب التسلسل المنفصل لكل نوع سند
                 rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
                 pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
-                
                 v_code = f"REC-{(rec_count + 1):03d}" if "قبض" in q_type else f"PAY-{(pay_count + 1):03d}"
                 
                 new_trans = {
@@ -249,7 +290,7 @@ def quick_cash_voucher_dialog(default_type, month_name):
                 m_cash['transactions'] = c_trans
                 all_cash[month_name] = m_cash
                 save_cash_data(all_cash)
-                st.success(f"تم حفظ ({q_type}) برقم #{v_code} وتحديث الخزينة بنجاح!")
+                st.success(f"تم حفظ ({q_type}) برقم #{v_code} بنجاح!")
                 st.rerun()
 
 @st.dialog("🖨️ طباعة سند الخزينة والصندوق الرسمية (A4)")
@@ -483,85 +524,85 @@ if not st.session_state.get('app_started', False):
             st.rerun()
 
 else:
-    # 3. القائمة الجانبية المحسنة على اليمين مع الشعار وزر الرئيسية المباشر
+    # 3. القائمة الجانبية المنسقة بالكامل بنمط دفترة (Daftra Sidebar)
     with st.sidebar:
         st.markdown("""
-            <div style="text-align: center; padding-bottom: 10px;">
+            <div style="text-align: center; padding-bottom: 10px; border-bottom: 2px solid #F1F5F9;">
                 <div style="font-size: 55px; font-weight: 900; color: #EF4444; line-height: 1; font-family: Arial;">5M</div>
                 <h3 style="color: #1E3A8A; margin-top: 5px; font-size: 18px; font-weight: bold;">شركة ميم الخماسية للتصنيع</h3>
             </div>
         """, unsafe_allow_html=True)
+        st.write("")
+
+        if 'months_list' not in st.session_state:
+            st.session_state.months_list = ['أغسطس 2026', 'سبتمبر 2026', 'أكتوبر 2026', 'نوفمبر 2026']
+            
+        month_selected = st.selectbox('📅 شهر العمليات الحالي:', st.session_state.months_list)
         st.divider()
 
-        if st.button("🏠 الشاشة الرئيسية (لوحة الإحصائيات)", use_container_width=True):
+        # أزرق الداشبورد بنمط دفترة
+        if st.button("🏠 لوحة التحكم الرئيسية", use_container_width=True):
             st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
             st.rerun()
 
-        st.markdown("### 📌 أقسام النظام الرئيسي:")
-        
-        with st.expander("👥 الموظفين والرواتب", expanded=True):
-            if st.button("📊 إدخال وتعديل الدفعات السريع", use_container_width=True):
-                st.session_state['current_view'] = '📊 إدخال وتعديل الدفعات السريع'
-                st.rerun()
-            if st.button("👤 دليل الموظفين والملفات الإدارية", use_container_width=True):
-                st.session_state['current_view'] = '👤 دليل الموظفين والملفات الإدارية'
-                st.rerun()
+        st.markdown("### 📌 القوائم والتطبيقات:")
 
-        with st.expander("🏦 إدارة الخزينة والصندوق", expanded=True):
+        with st.expander("🏦 الصندوق والخزينة"):
             if st.button("💵 حركة الخزينة وتوليد السندات", use_container_width=True):
                 st.session_state['current_view'] = '💵 حركة الخزينة وتوليد السندات'
                 st.rerun()
-            
-        with st.expander("📑 التقارير والسندات"):
-            if st.button("📋 مسير الرواتب الشهري", use_container_width=True):
-                st.session_state['current_view'] = '📋 مسير الرواتب الشهري'
+
+        with st.expander("👥 الموظفين"):
+            if st.button("👤 دليل الموظفين والملفات الإدارية", use_container_width=True):
+                st.session_state['current_view'] = '👤 دليل الموظفين والملفات الإدارية'
                 st.rerun()
-            if st.button("🖨️ طباعة سندات القبض والصرف (A4)", use_container_width=True):
-                st.session_state['current_view'] = '🖨️ طباعة سندات القبض والصرف (A4)'
-                st.rerun()
-            
-        with st.expander("🇸🇦 الموارد البشرية والمستحقات"):
             if st.button("🇸🇦 حاسبة نهاية الخدمة والإجازات", use_container_width=True):
                 st.session_state['current_view'] = '🇸🇦 حاسبة مكافأة نهاية الخدمة والإجازات'
                 st.rerun()
             if st.button("🔔 تنبيهات انتهاء الإقامات والعقود", use_container_width=True):
                 st.session_state['current_view'] = '🔔 تنبيهات انتهاء الإقامات والعقود'
                 st.rerun()
+        
+        with st.expander("💰 المرتبات والدفعات", expanded=True):
+            if st.button("📊 إدخال وتعديل الدفعات السريع", use_container_width=True):
+                st.session_state['current_view'] = '📊 إدخال وتعديل الدفعات السريع'
+                st.rerun()
+            if st.button("📋 مسير الرواتب الشهري الموحد", use_container_width=True):
+                st.session_state['current_view'] = '📋 مسير الرواتب الشهري'
+                st.rerun()
+            
+        with st.expander("📑 التقارير والسندات"):
+            if st.button("🖨️ طباعة سندات القبض والصرف (A4)", use_container_width=True):
+                st.session_state['current_view'] = '🖨️ طباعة سندات القبض والصرف (A4)'
+                st.rerun()
 
-        with st.expander("⚙️ الإغلاق والسنة المالية"):
+        with st.expander("💾 النسخ الاحتياطي والأرشيف"):
+            if 'payroll_df' in st.session_state:
+                json_str = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
+                st.download_button(
+                    label="📥 تصدير نسخة احتياطية (JSON)",
+                    data=json_str.encode('utf-8'),
+                    file_name=f"payroll_backup_{month_selected}.json",
+                    mime="application/json",
+                    use_container_width=True
+                )
+            uploaded_backup = st.file_uploader("📤 استيراد ورفع نسخة:", type=['json'])
+            if uploaded_backup:
+                try:
+                    imported_df = pd.DataFrame(json.load(uploaded_backup))
+                    st.session_state.payroll_df = imported_df
+                    save_data(imported_df)
+                    st.success("تم استيراد البيانات بنجاح!")
+                    st.rerun()
+                except Exception:
+                    st.error("خطأ في القراءة.")
+
+        with st.expander("⚙️ السنة المالية والإعدادات"):
             if st.button("🏁 الإغلاق السنوي وفتح سنة جديدة", use_container_width=True):
                 st.session_state['current_view'] = '🏁 الإغلاق السنوي وفتح سنة جديدة'
                 st.rerun()
 
         selected_option = st.session_state.get('current_view', '🏠 الرئيسية (لوحة الإحصائيات)')
-            
-        st.divider()
-        if 'months_list' not in st.session_state:
-            st.session_state.months_list = ['أغسطس 2026', 'سبتمبر 2026', 'أكتوبر 2026', 'نوفمبر 2026']
-            
-        month_selected = st.selectbox('📅 شهر العمليات الحالي:', st.session_state.months_list)
-        
-        st.markdown("---")
-        st.markdown("### 💾 الأرشيف والنسخ الاحتياطي")
-        if 'payroll_df' in st.session_state:
-            json_str = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
-            st.download_button(
-                label="📥 تصدير نسخة احتياطية (JSON)",
-                data=json_str.encode('utf-8'),
-                file_name=f"payroll_backup_{month_selected}.json",
-                mime="application/json"
-            )
-        
-        uploaded_backup = st.file_uploader("📤 استيراد نسخة احتياطية:", type=['json'])
-        if uploaded_backup:
-            try:
-                imported_df = pd.DataFrame(json.load(uploaded_backup))
-                st.session_state.payroll_df = imported_df
-                save_data(imported_df)
-                st.success("تم استيراد البيانات بنجاح!")
-                st.rerun()
-            except Exception as e:
-                st.error("خطأ في قراءة ملف النسخة الاحتياطية.")
 
     if 'payroll_df' not in st.session_state or st.session_state.get('current_month') != month_selected:
         st.session_state.current_month = month_selected
@@ -817,7 +858,7 @@ else:
         months_arr = st.session_state.months_list
         curr_m_idx = months_arr.index(month_selected) if month_selected in months_arr else 0
         
-        # حساب الترحيل من الشهر السابق إن وجد
+        # حساب التترحيل من الشهر السابق إن وجد
         auto_prev_opening = 0.0
         if curr_m_idx > 0:
             prev_m_name = months_arr[curr_m_idx - 1]
