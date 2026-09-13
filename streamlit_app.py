@@ -39,7 +39,6 @@ else:
     expander_bg = "#F8FAFC"
     expander_text = "#0F172A"
 
-# استدعاء خط Cairo العربي الموحد لجميع الأجهزة والآيفون والماك
 st.markdown(f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
@@ -49,7 +48,7 @@ st.markdown(f"""
             text-align: right !important;
             background-color: {bg_app} !important;
             color: {text_color} !important;
-            font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            font-family: 'Cairo', sans-serif !important;
             overflow-x: hidden !important;
             -webkit-text-size-adjust: 100% !important;
         }}
@@ -62,28 +61,20 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* ضغط المسافات الفاضية بالقائمة الجانبية وجعلها ملمومة احترافياً */
         [data-testid="stSidebar"] {{
             right: 0 !important;
             left: auto !important;
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
+            width: 280px !important;
         }}
 
         [data-testid="stSidebarContent"] {{
-            padding-top: 10px !important;
-            padding-bottom: 10px !important;
-            padding-left: 10px !important;
-            padding-right: 10px !important;
+            padding: 10px !important;
         }}
 
         [data-testid="stSidebar"] details {{
             margin-bottom: 4px !important;
-        }}
-
-        [data-testid="stSidebar"] hr {{
-            margin-top: 8px !important;
-            margin-bottom: 8px !important;
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
@@ -101,8 +92,7 @@ st.markdown(f"""
             font-weight: 700 !important;
             border: 1px solid #D97706 !important;
             border-radius: 8px !important;
-            padding-top: 6px !important;
-            padding-bottom: 6px !important;
+            padding: 6px !important;
         }}
 
         [data-testid="stSidebar"] .streamlit-expanderContent {{
@@ -131,16 +121,18 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
+        /* معالجة وتصغير حجم خط أرقام الماك بوك لمنع قطع الأرقام */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: {input_bg} !important;
             color: {input_text} !important;
             border: 1px solid #CBD5E1 !important;
-            border-radius: 8px !important;
+            border-radius: 6px !important;
             font-weight: 700 !important;
-            font-size: 14px !important;
+            font-size: 12px !important;
+            padding: 2px 6px !important;
+            height: 36px !important;
         }}
 
-        /* تنظيف تصميم النسخ الاحتياطي ورفع الملفات */
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
             background-color: #1E293B !important;
             border: 1px dashed #D97706 !important;
@@ -190,18 +182,18 @@ st.markdown(f"""
             border: none !important;
             border-radius: 8px !important;
             font-weight: 800 !important;
-            font-size: 14px !important;
+            font-size: 13px !important;
             box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4) !important;
             white-space: normal !important;
             word-wrap: break-word !important;
-            padding-top: 6px !important;
-            padding-bottom: 6px !important;
+            padding-top: 5px !important;
+            padding-bottom: 5px !important;
         }}
 
         .stMetric, .daftra-quick-card {{
             background-color: {bg_card} !important;
             border-radius: 12px !important;
-            padding: 12px !important;
+            padding: 10px !important;
             border: 1px solid {border_color} !important;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
             margin-bottom: 8px !important;
@@ -212,16 +204,17 @@ st.markdown(f"""
             text-align: right !important;
         }}
 
+        /* تقليل وضبط خطوط الجداول لتناسب شاشات MacBook Retina */
         .stDataFrame, [data-testid="stDataEditor"] {{
             direction: rtl !important;
             text-align: right !important;
             background-color: {bg_card} !important;
-            overflow-x: auto !important;
         }}
 
         .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {{
             text-align: right !important;
-            font-size: 13px !important;
+            font-size: 12px !important;
+            padding: 4px 6px !important;
             color: {text_color} !important;
         }}
 
@@ -295,22 +288,28 @@ st.markdown(f"""
             text-align: center !important;
         }}
 
-        /* المعالجة الحاسم الشامل لشاشات الآيفون والهواتف الطولية (iPhone Portrait Fix) */
         @media screen and (max-width: 768px) {{
-            .main .block-container {{
-                padding-left: 10px !important;
-                padding-right: 10px !important;
-                padding-top: 45px !important;
-            }}
-
             [data-testid="stSidebar"] {{
-                width: 82vw !important;
-                max-width: 82vw !important;
+                width: 75vw !important;
+                max-width: 75vw !important;
+                min-width: 260px !important;
                 position: fixed !important;
                 top: 0 !important;
                 right: 0 !important;
                 height: 100vh !important;
-                box-shadow: -5px 0 25px rgba(0,0,0,0.6) !important;
+                z-index: 999999 !important;
+                box-shadow: -5px 0 25px rgba(0,0,0,0.8) !important;
+            }}
+
+            [data-testid="stAppViewContainer"] {{
+                width: 100vw !important;
+                max-width: 100vw !important;
+            }}
+
+            .main .block-container {{
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+                padding-top: 50px !important;
             }}
 
             [data-testid="stHorizontalBlock"] {{
@@ -335,11 +334,6 @@ st.markdown(f"""
 
             .logo-lux {{
                 font-size: 45px !important;
-            }}
-
-            .stDataFrame, [data-testid="stDataEditor"] {{
-                width: 100% !important;
-                overflow-x: auto !important;
             }}
         }}
     </style>
@@ -787,7 +781,6 @@ else:
                     st.session_state['current_view'] = '🖨️ طباعة السندات الرسمية (A4)'
                     st.rerun()
 
-            # القائمة المباشرة والنظيفة للنسخ الاحتياطي في القائمة الجانبية
             with st.expander("💾 النسخ الاحتياطي والأرشيف", expanded=True):
                 if st.button("💾 فتح مركز النسخ الاحتياطي", use_container_width=True, key="open_backup_page_btn"):
                     st.session_state['current_view'] = '💾 مركز النسخ الاحتياطي والأرشيف'
