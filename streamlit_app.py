@@ -57,7 +57,6 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* تصميم نظيف للقائمة الجانبية مخصص لمنع تداخل النصوص */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
@@ -74,7 +73,6 @@ st.markdown(f"""
             font-weight: 700 !important;
         }}
 
-        /* أزرار التنقل القائمة الجانبية */
         [data-testid="stSidebar"] .stButton>button {{
             width: 100% !important;
             background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
@@ -111,7 +109,6 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        /* حقول الإدخال والتواريخ */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: {input_bg} !important;
             color: {input_text} !important;
@@ -122,7 +119,6 @@ st.markdown(f"""
             padding: 4px 8px !important;
         }}
 
-        /* تصحيح خطوط كروت الملاحظات والإحصائيات */
         [data-testid="stMetricValue"] div {{
             font-size: 16px !important;
             font-weight: 800 !important;
@@ -152,7 +148,6 @@ st.markdown(f"""
             text-align: right !important;
         }}
 
-        /* تصميم رفع الملفات */
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
             background-color: #1E293B !important;
             border: 1px dashed #D97706 !important;
@@ -340,6 +335,7 @@ if 'current_view' not in st.session_state:
 
 DATA_FILE = 'payroll_data.json'
 CASH_FILE = 'cashbox_data.json'
+AUDIT_FILE = 'audit_history.json'
 
 initial_data = [
     {'م': 1, 'الاسم': 'مد ساجد ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01', 'الخصومات': 0.0, 'الدفعة 1': 3000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 5000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
@@ -431,6 +427,19 @@ def load_cash_data():
 
 def save_cash_data(data):
     with open(CASH_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+def load_audit_data():
+    if os.path.exists(AUDIT_FILE):
+        try:
+            with open(AUDIT_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+def save_audit_data(data):
+    with open(AUDIT_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
 def calculate_saudi_gratuity_and_leave(salary, start_date_str):
@@ -715,7 +724,7 @@ if not st.session_state.get('app_started', False):
                     st.error("كلمة المرور غير صحيحة!")
 
 else:
-    # 3. القائمة الجانبية المباشرة والنظيفة (بدون expanders لتجنب الشفرات المتداخلة)
+    # 3. القائمة الجانبية المباشرة والنظيفة
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 5px;">
@@ -742,6 +751,10 @@ else:
 
         if st.button("🏦 حركة الصندوق والسندات", use_container_width=True):
             st.session_state['current_view'] = 'حركة الصندوق والسندات'
+            st.rerun()
+
+        if st.button("🔍 موديول جرد الخزينة المباشر", use_container_width=True):
+            st.session_state['current_view'] = '🔍 موديول جرد الخزينة المباشر'
             st.rerun()
 
         if st.session_state.user_role == "admin":
@@ -927,6 +940,10 @@ else:
 
         total_company_cash = net_main_now + net_acc_now
 
+        # استدعاء سجل آخر جرد خزانة
+        audit_history = load_audit_data()
+        last_audit = audit_history[-1] if audit_history else None
+
         st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
         
         if st.session_state.user_role == "admin":
@@ -940,6 +957,13 @@ else:
             with c_box3:
                 st.markdown("#### إجمالي نقدية الشركة:")
                 st.metric("مجموع الصناديق", f"{total_company_cash:,.2f} ر.س")
+
+            # شريط ملخص حالة آخر جرد خزينة
+            st.divider()
+            if last_audit:
+                a_diff = last_audit['diff']
+                diff_tag = "🟢 مطابقة تامة" if a_diff == 0 else (f"🔴 عجز بقيمة ({abs(a_diff):,.2f} ر.س)" if a_diff < 0 else f"🔵 زيادة بقيمة ({a_diff:,.2f} ر.س)")
+                st.info(f"🔍 **آخر جرد معتمد للصندوق ({last_audit['box_name']}):** بتاريخ **{last_audit['date']}** | حالة الجرد: **{diff_tag}** | ملاحظات: {last_audit.get('notes', 'لا يوجد')}")
 
             st.divider()
 
@@ -962,9 +986,10 @@ else:
         if st.session_state.user_role == "admin":
             q_col1, q_col2, q_col3, q_col4 = st.columns(4)
             with q_col1:
-                st.markdown('<div class="daftra-quick-card"><h3>👤</h3><h4>إضافة موظف</h4></div>', unsafe_allow_html=True)
-                if st.button("إضافة موظف", use_container_width=True, key="q_btn_add_emp"):
-                    add_employee_dialog('مصنع ميم الخماسية الخرج')
+                st.markdown('<div class="daftra-quick-card"><h3>🔍</h3><h4>جرد الخزينة</h4></div>', unsafe_allow_html=True)
+                if st.button("جرد الصندوق الآن", use_container_width=True, key="q_btn_audit_cash"):
+                    st.session_state['current_view'] = '🔍 موديول جرد الخزينة المباشر'
+                    st.rerun()
 
             with q_col2:
                 st.markdown('<div class="daftra-quick-card"><h3>🟢</h3><h4>سند قبض</h4></div>', unsafe_allow_html=True)
@@ -992,6 +1017,92 @@ else:
                 st.markdown('<div class="daftra-quick-card"><h3>🔴</h3><h4>سند صرف</h4></div>', unsafe_allow_html=True)
                 if st.button("سند صرف سريع", use_container_width=True, key="q_btn_pay"):
                     quick_cash_voucher_dialog("صرف", month_selected, "accountant")
+
+    # 5. موديول جرد الخزينة المباشر والتسويات الفورية
+    elif selected_option == '🔍 موديول جرد الخزينة المباشر':
+        st.subheader(f'🔍 موديول جرد الخزينة ومطابقة النقدية الفعلي - ({month_selected})')
+        st.write('قم بمطابقة المبالغ الموجودة بيدك داخل الصندوق مع الرصيد الدفتري المسجل بالنظام واحتساب العجز أو الزيادة فوراً:')
+        
+        all_cash_db = load_cash_data()
+        current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
+        
+        target_audit_box = st.radio("اختر الخزينة المراد جردها ومطابقتها الآن:", ["🏢 الخزينة الرئيسية (wahby)", "👤 عُهدة المحاسب (omar)"], horizontal=True)
+        active_box_key = 'transactions' if "wahby" in target_audit_box else 'acc_transactions'
+        active_opening_key = 'opening' if "wahby" in target_audit_box else 'acc_opening'
+
+        opening_bal = current_m_cash.get(active_opening_key, 0.0)
+        curr_trans = current_m_cash.get(active_box_key, [])
+        tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
+        tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
+        system_book_balance = opening_bal + tot_cash_in - tot_cash_out
+
+        st.divider()
+
+        col_aud1, col_aud2 = st.columns([1.2, 1])
+        with col_aud1:
+            st.markdown("### 💵 1. حاسبة فئات النقدية الفعلي باليد:")
+            st.write("أدخل عدد أوراق النقدية المتوفرة بالخزنة الآن ليتم إجمالي الجرد تلقائياً:")
+            
+            c_f1, c_f2 = st.columns(2)
+            with c_f1:
+                n_500 = st.number_input("فئة 500 ريال (عدد الأوراق):", min_value=0, value=0, step=1)
+                n_200 = st.number_input("فئة 200 ريال (عدد الأوراق):", min_value=0, value=0, step=1)
+                n_100 = st.number_input("فئة 100 ريال (عدد الأوراق):", min_value=0, value=0, step=1)
+                n_50 = st.number_input("فئة 50 ريال (عدد الأوراق):", min_value=0, value=0, step=1)
+            with c_f2:
+                n_20 = st.number_input("فئة 20 ريال (عدد الأوراق):", min_value=0, value=0, step=1)
+                n_10 = st.number_input("فئة 10 ريال (عدد الأوراق):", min_value=0, value=0, step=1)
+                n_5 = st.number_input("فئة 5 ريال (عدد الأوراق):", min_value=0, value=0, step=1)
+                n_coins = st.number_input("كسور / أوراق نقدية إضافية (ر.س):", min_value=0.0, value=0.0)
+
+            actual_counted_cash = (n_500 * 500) + (n_200 * 200) + (n_100 * 100) + (n_50 * 50) + (n_20 * 20) + (n_10 * 10) + (n_5 * 5) + n_coins
+
+            st.write("")
+            manual_override = st.checkbox("أو إدخال إجمالي الجرد الفعلي يدويًا دون استخدام الحاسبة")
+            if manual_override:
+                actual_counted_cash = st.number_input("إجمالي النقدية الفعلية باليد (ر.س):", min_value=0.0, value=float(actual_counted_cash))
+
+        with col_aud2:
+            st.markdown("### 📊 2. نتائج المطابقة والعجز/الزيادة:")
+            diff_amount = actual_counted_cash - system_book_balance
+
+            st.metric("📖 الرصيد الدفتري المسجل بالنظام", f"{system_book_balance:,.2f} ر.س")
+            st.metric("💵 إجمالي النقدية الفعلي باليد", f"{actual_counted_cash:,.2f} ر.س")
+
+            st.divider()
+            if diff_amount == 0:
+                st.success("🟢 **المطابقة تامة!** النقدية الفعلية بالخزنة تتطابق 100% مع الرصيد الدفتري.")
+            elif diff_amount < 0:
+                st.error(f"🔴 **يوجد عجز بالخزنة بقيمة: ({abs(diff_amount):,.2f} ر.س)**")
+            else:
+                st.warning(f"🔵 **توجد زيادة بالخزنة بقيمة: ({diff_amount:,.2f} ر.س)**")
+
+            audit_notes = st.text_input("ملاحظات الجرد / أسباب الفرق إن وجد:")
+            if st.button("💾 اعتماد وحفظ جلسة الجرد بجل السجلات", use_container_width=True):
+                audit_records = load_audit_data()
+                new_entry = {
+                    'id': len(audit_records) + 1,
+                    'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                    'month': month_selected,
+                    'box_name': target_audit_box,
+                    'book_bal': system_book_balance,
+                    'actual_cash': actual_counted_cash,
+                    'diff': diff_amount,
+                    'notes': audit_notes if audit_notes else 'مطابقة معتمدة'
+                }
+                audit_records.append(new_entry)
+                save_audit_data(audit_records)
+                st.success("تم اعتماد وتوثيق الجرد بالسجلات بنجاح!")
+                st.rerun()
+
+        st.divider()
+        st.markdown("### 📑 سجل تسويات وجرد الخزينة التاريخي:")
+        audit_history = load_audit_data()
+        if audit_history:
+            df_audit = pd.DataFrame(audit_history)
+            st.dataframe(df_audit[['id', 'date', 'box_name', 'month', 'book_bal', 'actual_cash', 'diff', 'notes']], use_container_width=True, hide_index=True)
+        else:
+            st.info("لا توجد جلسات جرد سابقة محفوظة بالنظام.")
 
     elif selected_option == 'مركز النسخ الاحتياطي والأرشيف' and st.session_state.user_role == "admin":
         st.subheader(f'💾 مركز إدارة النسخ الاحتياطي والأرشيف المالي - ({month_selected})')
