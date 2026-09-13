@@ -8,17 +8,21 @@ from datetime import datetime
 # 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
 st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
 
-if 'theme_mode' not in st.session_state:
-    st.session_state['theme_mode'] = '🌙 ليلي كحلي (Dark Navy)'
+# كلمات المرور الافتراضية - يمكنك تعديلها من هنا مباشرة
+ADMIN_PASSWORD = "admin5m"
+USER_PASSWORD = "user5m"
 
-# تطبيق التنسيقات البرمجية الصريحة مع التباين الفائق لحل مشكلة القوائم المنسدلة والنوافذ
+if 'theme_mode' not in st.session_state:
+    st.session_state['theme_mode'] = '🌙 ليلي رمادي داكن (Slate Dark)'
+
+# تطبيق التنسيقات البرمجية بالرمادي المائل للأسود
 if '🌙' in st.session_state['theme_mode']:
-    bg_app = "#0F172A"
-    bg_card = "#1E293B"
+    bg_app = "#0F172A"        # رمادي داكن مائل للأسود
+    bg_card = "#1E293B"       # كحلي رمادي مائل للكروت
     bg_sidebar = "#1E293B"
-    text_color = "#FFFFFF"
+    text_color = "#FFFFFF"     # أبيض ناصع للنصوص
     border_color = "#334155"
-    input_bg = "#0F172A"
+    input_bg = "#111827"
     input_text = "#FFFFFF"
 else:
     bg_app = "#E2E8F0"
@@ -31,7 +35,7 @@ else:
 
 st.markdown(f"""
     <style>
-        /* إجبار التطبيق على الألوان والوضوح العالي */
+        /* إجبار التطبيق على ألوان الرمادي الداكن المريح */
         html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
             direction: rtl !important;
             text-align: right !important;
@@ -58,6 +62,7 @@ st.markdown(f"""
             font-weight: 700 !important;
         }}
 
+        /* تصحيح القوائم المنسدلة عند الفتح في القائمة الجانبية */
         [data-testid="stSidebar"] .streamlit-expanderHeader {{
             background-color: {bg_sidebar} !important;
             color: #38BDF8 !important;
@@ -66,20 +71,22 @@ st.markdown(f"""
         }}
 
         [data-testid="stSidebar"] .streamlit-expanderContent {{
-            background-color: {bg_sidebar} !important;
-            color: {text_color} !important;
+            background-color: #334155 !important;
+            color: #FFFFFF !important;
+            border-radius: 8px !important;
+            padding: 10px !important;
         }}
 
-        /* تصحيح القوائم المنسدلة والخيارات عند الفتح في النظام بالكامل */
+        /* تصحيح خيارات القوائم المنسدلة عند فتحها */
         ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"] div {{
-            background-color: {bg_card} !important;
-            color: {text_color} !important;
+            background-color: #1E293B !important;
+            color: #FFFFFF !important;
             border: 1px solid #38BDF8 !important;
         }}
 
         li[role="option"] {{
-            color: {text_color} !important;
-            background-color: {bg_card} !important;
+            color: #FFFFFF !important;
+            background-color: #1E293B !important;
         }}
 
         li[role="option"]:hover {{
@@ -87,7 +94,7 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        /* إصلاح خلفية وحقول النوافذ المنبثقة بالكامل */
+        /* إصلاح خلفية النوافذ المنبثقة بالكامل بالنمط الليلي */
         [data-testid="stDialog"] div[role="dialog"] {{
             background-color: {bg_card} !important;
             border: 2px solid #38BDF8 !important;
@@ -98,7 +105,7 @@ st.markdown(f"""
             color: {text_color} !important;
         }}
 
-        /* وضوح النص المكتوب داخل حقول الإدخال والسندات */
+        /* وضوح النص المكتوب داخل حقول الإدخال */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {{
             background-color: {input_bg} !important;
             color: {input_text} !important;
@@ -412,7 +419,7 @@ def edit_cash_modal(month_name, trans_idx, target_box="main"):
 
 @st.dialog("📊 ملخص توزيع الموظفين حسب الفروع")
 def modal_emp_summary():
-    st.write("### 🏢 توزيع العمالة والمتوسطات:")
+    st.write("### 🏢 توزيع العمالة ومتوسط الرواتب:")
     df = st.session_state.payroll_df
     summary_data = []
     for b_name in ['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة']:
@@ -564,11 +571,13 @@ if not st.session_state.get('app_started', False):
     col_b1, col_b2, col_b3 = st.columns([1, 1.2, 1])
     with col_b2:
         st.markdown("<h3 style='text-align:center;'>🔑 تسجيل الدخول للنظام:</h3>", unsafe_allow_html=True)
-        username_input = st.text_input("اسم المستخدم (wahby / omar):", key="login_username")
+        
+        # اختيار اسم المستخدم من القائمة المنسدلة مباشرة
+        username_selected = st.selectbox("اختر اسم المستخدم:", ["wahby", "omar"], key="login_username_select")
         pwd_input = st.text_input("أدخل كلمة المرور:", type="password", key="login_pwd")
         
         if st.button('🚀 الدخول للنظام المالي والإداري', use_container_width=True):
-            if username_input.lower() == "wahby":
+            if username_selected == "wahby":
                 if pwd_input == "admin5m" or pwd_input == "":
                     st.session_state.app_started = True
                     st.session_state.user_role = "admin"
@@ -576,7 +585,7 @@ if not st.session_state.get('app_started', False):
                     st.rerun()
                 else:
                     st.error("كلمة المرور غير صحيحة للحساب (wahby)!")
-            elif username_input.lower() == "omar":
+            elif username_selected == "omar":
                 if pwd_input == "user5m" or pwd_input == "":
                     st.session_state.app_started = True
                     st.session_state.user_role = "accountant"
@@ -584,8 +593,6 @@ if not st.session_state.get('app_started', False):
                     st.rerun()
                 else:
                     st.error("كلمة المرور غير صحيحة للحساب (omar)!")
-            else:
-                st.error("اسم المستخدم غير مسجل بالنظام!")
 
 else:
     # 3. القائمة الجانبية المنسقة بالكامل بنمط دفترة (Daftra Sidebar)
@@ -816,7 +823,7 @@ else:
                 st.markdown("#### 🏢 الخزينة الرئيسية (wahby):")
                 st.metric("رصيد الخزينة الرئيسية الآن", f"{net_main_now:,.2f} ر.س")
             with c_box2:
-                st.markdown("#### 👤 عُهدة المحاسب الفرعية (omar):")
+                st.markdown("#### 👤 عُهدة المحاسب (omar):")
                 st.metric("الرصيد المتبقي بعهد المحاسب (omar) الآن", f"{net_acc_now:,.2f} ر.س")
 
             st.divider()
@@ -868,7 +875,6 @@ else:
 
     elif selected_option == '📊 إدخال وتعديل الدفعات السريع' and st.session_state.user_role == "admin":
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات والخصومات السريع - ({month_selected})')
-        st.write(' عدّل الخلية المطلوبة بالجدول أدناه واضغط على زر الحفظ والتثبيت لضمان حفظ تعديلاتك دائمياً:')
         
         t1, t2, t3, t4 = st.tabs(['📍 مصنع ميم الخماسية الخرج', '📍 مستودع ميم الخماسية الخرج', '📍 مستودع ميم الخماسية الرياض', '📍 رواتب متنوعة'])
         branches = [('مصنع ميم الخماسية الخرج', t1), ('مستودع ميم الخماسية الخرج', t2), ('مستودع ميم الخماسية الرياض', t3), ('رواتب متنوعة', t4)]
