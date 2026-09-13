@@ -11,15 +11,15 @@ st.set_page_config(page_title='شركة ميم الخماسية للتصنيع -
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = '🌙 ليلي كحلي (Dark Navy)'
 
-# تطبيق التنسيقات البرمجية المباشرة وضبط التباين العالي للنصوص
+# تطبيق التنسيقات البرمجية المباشرة وضبط التباين العالي القوي جداً للنصوص
 if '🌙' in st.session_state['theme_mode']:
     bg_app = "#0F172A"
     bg_card = "#1E293B"
     bg_sidebar = "#1E293B"
-    text_color = "#F8FAFC"
+    text_color = "#FFFFFF"
     border_color = "#334155"
-    input_bg = "#334155"
-    input_text = "#FFFFFF"
+    input_bg = "#FFFFFF"
+    input_text = "#0F172A"
 else:
     bg_app = "#E2E8F0"
     bg_card = "#FFFFFF"
@@ -27,10 +27,11 @@ else:
     text_color = "#0F172A"
     border_color = "#CBD5E1"
     input_bg = "#FFFFFF"
-    input_text = "#1E293B"
+    input_text = "#0F172A"
 
 st.markdown(f"""
     <style>
+        /* إجبار التطبيق على اللون الأبيض الناصع للنصوص والعناوين */
         html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
             direction: rtl !important;
             text-align: right !important;
@@ -39,6 +40,12 @@ st.markdown(f"""
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
         }}
         
+        /* توضيح نصوص التسميات (Labels) بالكامل */
+        label, p, span, h1, h2, h3, h4, h5, h6, div {{
+            color: {text_color} !important;
+            font-weight: 600 !important;
+        }}
+
         [data-testid="stSidebar"], [data-testid="stSidebarContent"] {{
             right: 0 !important;
             left: auto !important;
@@ -46,7 +53,7 @@ st.markdown(f"""
             background-color: {bg_sidebar} !important;
         }}
 
-        [data-testid="stSidebar"] .stMarkdown h3, [data-testid="stSidebar"] label {{
+        [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
             color: {text_color} !important;
             font-size: 14px !important;
             font-weight: 700 !important;
@@ -59,13 +66,14 @@ st.markdown(f"""
             border-bottom: 1px solid {border_color} !important;
         }}
 
-        /* تصحيح وضوح المستطيلات ومربعات الإدخال بالكامل */
+        /* وضوح مربعات وحقول الإدخال */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {{
             background-color: {input_bg} !important;
             color: {input_text} !important;
-            border: 1px solid {border_color} !important;
-            border-radius: 6px !important;
-            font-weight: 600 !important;
+            border: 2px solid #38BDF8 !important;
+            border-radius: 8px !important;
+            font-weight: 700 !important;
+            font-size: 15px !important;
         }}
 
         .stButton>button {{
@@ -74,6 +82,7 @@ st.markdown(f"""
             border: none !important;
             border-radius: 8px !important;
             font-weight: 700 !important;
+            font-size: 15px !important;
         }}
 
         .stMetric, .daftra-quick-card {{
@@ -81,7 +90,7 @@ st.markdown(f"""
             border-radius: 12px !important;
             padding: 15px !important;
             border: 1px solid {border_color} !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
         }}
 
         .stMetric * {{
@@ -107,13 +116,17 @@ st.markdown(f"""
             text-align: center;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
             margin-top: 20px;
-            color: white;
+            color: white !important;
+        }}
+
+        .welcome-card-lux * {{
+            color: white !important;
         }}
 
         .logo-lux {{
             font-size: 80px;
             font-weight: 900;
-            color: #EF4444;
+            color: #EF4444 !important;
             font-family: Arial, sans-serif;
             line-height: 1;
             margin-bottom: 10px;
@@ -121,7 +134,7 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# إدارة تسجيل الدخول والصلاحيات
+# إدارة حالة المستخدم والدخول
 if 'app_started' not in st.session_state:
     st.session_state['app_started'] = False
 
@@ -248,7 +261,7 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
 
 @st.dialog("⚡ إنشاء سند قبض / صرف سريع")
 def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
-    st.write(f"إضافة سند جديد لشهر: **{month_name}** ({'الخزينة الرئيسية' if target_box == 'main' else 'عُهدة المحاسب'})")
+    st.write(f"إضافة سند جديد لشهر: **{month_name}** ({'الخزينة الرئيسية' if target_box == 'main' else 'عُهدة المحاسب omar'})")
     with st.form("quick_cash_form"):
         q_type = st.selectbox("نوع السند:", ["سند قبض / إيراد", "سند صرف / مصروف"], index=0 if "قبض" in default_type else 1)
         q_party = st.text_input("صادر إلى / مستلم من (الجهة/العميل):", placeholder="اكتب اسم العميل أو الجهة...")
@@ -265,7 +278,10 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                 
                 m_cash = all_cash[month_name]
                 box_key = 'transactions' if target_box == 'main' else 'acc_transactions'
-                c_trans = m_cash.get(box_key, [])
+                if box_key not in m_cash:
+                    m_cash[box_key] = []
+                    
+                c_trans = m_cash[box_key]
                 
                 rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
                 pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
@@ -502,20 +518,20 @@ def edit_employee_dialog(emp_idx, month_selected):
             st.success(f"تم حذف الموظف ({emp_data['الاسم']}) نهائياً!")
             st.rerun()
 
-# 2. الشاشة الافتتاحية الملكية بأسلوب الدخول الآمن والصلاحيات المصممة
+# 2. الشاشة الافتتاحية الملكية بأسلوب الدخول الآمن الصريح
 if not st.session_state.get('app_started', False):
     st.markdown("""
         <div class="welcome-card-lux">
             <div class="logo-lux">5M</div>
-            <h1 style="color: #FFFFFF; margin-top: 10px; font-weight: 800;">شركة ميم الخماسية للتصنيع</h1>
-            <p style="color: #94A3B8; font-size: 18px; margin-bottom: 20px;">النظام المحاسبي والإداري الموحد لإدارة الرواتب، المستحقات، وسندات الخزينة والعُهد</p>
-            <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 25px 0;">
+            <h1 style="color: #FFFFFF !important; margin-top: 10px; font-weight: 800;">شركة ميم الخماسية للتصنيع</h1>
+            <p style="color: #94A3B8 !important; font-size: 18px; margin-bottom: 20px;">النظام المحاسبي والإداري الموحد لإدارة الرواتب، المستحقات، وسندات الخزينة والعُهد</p>
+            <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.2); margin: 25px 0;">
         </div>
     """, unsafe_allow_html=True)
     
     col_b1, col_b2, col_b3 = st.columns([1, 1.3, 1])
     with col_b2:
-        st.markdown("### 🔑 تسجيل الدخول للنظام:")
+        st.markdown("<h3 style='text-align:center;'>🔑 تسجيل الدخول للنظام المحاسبي:</h3>", unsafe_allow_html=True)
         username_input = st.text_input("اسم المستخدم (wahby / omar):", key="login_username")
         pwd_input = st.text_input("أدخل كلمة المرور:", type="password", key="login_pwd")
         
@@ -769,7 +785,7 @@ else:
                 st.metric("رصيد الخزينة الرئيسية الآن", f"{net_main_now:,.2f} ر.س")
             with c_box2:
                 st.markdown("#### 👤 عُهدة المحاسب الفرعية (مراقبة):")
-                st.metric("الرصيد المتبقي بعهد المحاسب الآن", f"{net_acc_now:,.2f} ر.س")
+                st.metric("الرصيد المتبقي بعهد المحاسب (omar) الآن", f"{net_acc_now:,.2f} ر.س")
 
             st.divider()
 
@@ -906,10 +922,13 @@ else:
         st.subheader(f'🏦 إدارة حركة الخزينة والصندوق - ({month_selected})')
         
         all_cash_db = load_cash_data()
-        current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
+        if month_selected not in all_cash_db:
+            all_cash_db[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+            
+        current_m_cash = all_cash_db[month_selected]
         
         if st.session_state.user_role == "admin":
-            box_selected = st.radio("اختر الخزينة المراد مراجعتها وتداولها:", ["🏢 الخزينة الرئيسية (الإدارة)", "👤 عُهدة المحاسب الفرعية"], horizontal=True)
+            box_selected = st.radio("اختر الخزينة المراد مراجعتها وتداولها:", ["🏢 الخزينة الرئيسية (الإدارة)", "👤 عُهدة المحاسب الفرعية (omar)"], horizontal=True)
             active_box_key = 'transactions' if "الرئيسية" in box_selected else 'acc_transactions'
             active_opening_key = 'opening' if "الرئيسية" in box_selected else 'acc_opening'
         else:
