@@ -58,17 +58,33 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        [data-testid="stSidebar"], [data-testid="stSidebarContent"] {{
+        /* ضغط المسافات الفاضية بالقائمة الجانبية وجعلها ملمومة احترافياً */
+        [data-testid="stSidebar"] {{
             right: 0 !important;
             left: auto !important;
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
-            max-width: 85vw !important;
+        }}
+
+        [data-testid="stSidebarContent"] {{
+            padding-top: 10px !important;
+            padding-bottom: 10px !important;
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+        }}
+
+        [data-testid="stSidebar"] details {{
+            margin-bottom: 4px !important;
+        }}
+
+        [data-testid="stSidebar"] hr {{
+            margin-top: 8px !important;
+            margin-bottom: 8px !important;
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
             color: {text_color} !important;
-            font-size: 14px !important;
+            font-size: 13px !important;
             font-weight: 700 !important;
         }}
 
@@ -81,13 +97,15 @@ st.markdown(f"""
             font-weight: 700 !important;
             border: 1px solid #D97706 !important;
             border-radius: 8px !important;
+            padding-top: 6px !important;
+            padding-bottom: 6px !important;
         }}
 
         [data-testid="stSidebar"] .streamlit-expanderContent {{
             background-color: {expander_bg} !important;
             color: {expander_text} !important;
             border-radius: 0 0 8px 8px !important;
-            padding: 10px !important;
+            padding: 8px !important;
             border: 1px solid #D97706 !important;
             border-top: none !important;
         }}
@@ -115,15 +133,15 @@ st.markdown(f"""
             border: 1px solid #CBD5E1 !important;
             border-radius: 8px !important;
             font-weight: 700 !important;
-            font-size: 15px !important;
+            font-size: 14px !important;
         }}
 
-        /* إصلاح واستبدال تصميم زر وحقل رفع النسخة الاحتياطية بالكامل */
+        /* تنظيف تصميم النسخ الاحتياطي ورفع الملفات */
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
             background-color: #1E293B !important;
-            border: 2px dashed #D97706 !important;
-            border-radius: 12px !important;
-            padding: 8px !important;
+            border: 1px dashed #D97706 !important;
+            border-radius: 8px !important;
+            padding: 6px !important;
         }}
 
         [data-testid="stFileUploader"] button {{
@@ -132,12 +150,14 @@ st.markdown(f"""
             border: none !important;
             border-radius: 6px !important;
             font-weight: bold !important;
-            padding: 5px 15px !important;
+            padding: 4px 10px !important;
+            font-size: 12px !important;
         }}
 
         [data-testid="stFileUploader"] span, [data-testid="stFileUploader"] label, [data-testid="stFileUploader"] small {{
             color: #FFFFFF !important;
             font-weight: bold !important;
+            font-size: 12px !important;
         }}
 
         [data-testid="stDialog"] div[role="dialog"] {{
@@ -166,19 +186,21 @@ st.markdown(f"""
             border: none !important;
             border-radius: 8px !important;
             font-weight: 800 !important;
-            font-size: 15px !important;
+            font-size: 14px !important;
             box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4) !important;
             white-space: normal !important;
             word-wrap: break-word !important;
+            padding-top: 6px !important;
+            padding-bottom: 6px !important;
         }}
 
         .stMetric, .daftra-quick-card {{
             background-color: {bg_card} !important;
             border-radius: 12px !important;
-            padding: 15px !important;
+            padding: 12px !important;
             border: 1px solid {border_color} !important;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-            margin-bottom: 10px !important;
+            margin-bottom: 8px !important;
         }}
 
         .stMetric * {{
@@ -194,7 +216,7 @@ st.markdown(f"""
 
         .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {{
             text-align: right !important;
-            font-size: 14px !important;
+            font-size: 13px !important;
             color: {text_color} !important;
         }}
 
@@ -223,7 +245,7 @@ st.markdown(f"""
             background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%);
             border: 2px solid #D97706;
             border-radius: 16px;
-            padding: 15px 15px;
+            padding: 12px 20px;
             text-align: center !important;
             margin-top: 5px;
             margin-bottom: 15px;
@@ -231,15 +253,21 @@ st.markdown(f"""
         }}
 
         .company-header-inner-title {{
-            font-size: 24px !important;
+            font-size: 22px !important;
             font-weight: 900 !important;
             color: #F59E0B !important;
             margin: 0 !important;
             text-align: center !important;
         }}
 
+        .company-header-inner-sub {{
+            font-size: 13px !important;
+            color: #94A3B8 !important;
+            margin: 2px 0 0 0 !important;
+        }}
+
         .logo-lux {{
-            font-size: 70px;
+            font-size: 65px;
             font-weight: 900;
             color: #EF4444 !important;
             font-family: Arial, sans-serif;
@@ -252,7 +280,7 @@ st.markdown(f"""
             display: inline-block;
             background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
             color: #FFFFFF !important;
-            padding: 6px 18px;
+            padding: 5px 20px;
             border-radius: 30px;
             font-size: 14px;
             font-weight: 800;
@@ -262,15 +290,21 @@ st.markdown(f"""
             text-align: center !important;
         }}
 
+        /* إصلاح حاسم ومتجاوب لتطبيق الآيفون والموبايل */
         @media (max-width: 768px) {{
+            [data-testid="stSidebar"] {{
+                width: 100vw !important;
+                max-width: 100vw !important;
+                z-index: 999999 !important;
+            }}
             .title-company-huge {{
-                font-size: 24px !important;
+                font-size: 22px !important;
             }}
             .company-header-inner-title {{
-                font-size: 20px !important;
+                font-size: 18px !important;
             }}
             .logo-lux {{
-                font-size: 60px !important;
+                font-size: 50px !important;
             }}
             [data-testid="column"] {{
                 width: 100% !important;
@@ -667,15 +701,14 @@ if not st.session_state.get('app_started', False):
                     st.error("كلمة المرور غير صحيحة!")
 
 else:
-    # 3. القائمة الجانبية
+    # 3. القائمة الجانبية ملمومة ومضغوطة لرفع السكرول
     with st.sidebar:
         st.markdown("""
-            <div style="text-align: center; padding-bottom: 10px; border-bottom: 2px solid #CBD5E1;">
-                <div style="font-size: 55px; font-weight: 900; color: #EF4444; line-height: 1; font-family: Arial;">5M</div>
-                <h3 style="color: #1E3A8A; margin-top: 5px; font-size: 18px; font-weight: bold;">شركة ميم الخماسية للتصنيع</h3>
+            <div style="text-align: center; padding-bottom: 5px;">
+                <div style="font-size: 45px; font-weight: 900; color: #EF4444; line-height: 1; font-family: Arial;">5M</div>
+                <h3 style="color: #1E3A8A; margin-top: 2px; font-size: 16px; font-weight: bold;">شركة ميم الخماسية للتصنيع</h3>
             </div>
         """, unsafe_allow_html=True)
-        st.write("")
 
         role_label = "wahby" if st.session_state.user_role == "admin" else "omar"
         st.info(f"المستخدم: **{role_label}**")
@@ -684,11 +717,8 @@ else:
             st.session_state.months_list = ['أغسطس 2026', 'سبتمبر 2026', 'أكتوبر 2026', 'نوفمبر 2026', 'ديسمبر 2026']
             
         month_selected = st.selectbox('📅 الشهر الحالي:', st.session_state.months_list)
-        st.divider()
 
         st.session_state['theme_mode'] = st.selectbox("🎨 نمط الألوان:", ["🌙 وضع ليلي", "☀️ وضع نهاري"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
-
-        st.divider()
 
         if st.button("🏠 لوحة التحكم الرئيسية", use_container_width=True):
             st.session_state['current_view'] = '🏠 الرئيسية'
@@ -726,19 +756,20 @@ else:
                     st.session_state['current_view'] = '🖨️ طباعة السندات الرسمية (A4)'
                     st.rerun()
 
-            # إجبار إظهار وفتح قسم النسخ الاحتياطي في القائمة الجانبية بوضوح صريح
+            # تصميم مبسط وعالي الوضوح للنسخ الاحتياطي بدون أزرار متداخلة
             with st.expander("💾 النسخ الاحتياطي والأرشيف", expanded=True):
                 if 'payroll_df' in st.session_state:
                     json_str = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
                     st.download_button(
-                        label="📥 تصدير نسخة (JSON)",
+                        label="📥 تنزيل نسخة احتياطية",
                         data=json_str.encode('utf-8'),
                         file_name=f"payroll_backup_{month_selected}.json",
                         mime="application/json",
                         use_container_width=True,
-                        key="sidebar_dl_backup_btn"
+                        key="dl_backup_sidebar"
                     )
-                uploaded_backup = st.file_uploader("📤 استيراد ورفع نسخة:", type=['json'], key="side_uploader_backup")
+                st.write("**📤 استيراد ورفع نسخة:**")
+                uploaded_backup = st.file_uploader("", type=['json'], key="side_uploader_backup_clean")
                 if uploaded_backup:
                     try:
                         imported_df = pd.DataFrame(json.load(uploaded_backup))
@@ -956,7 +987,7 @@ else:
                 if 'payroll_df' in st.session_state:
                     json_str_main = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
                     st.download_button(
-                        label="📥 حفظ نسخة فوراً",
+                        label="📥 تنزيل نسخة فوراً",
                         data=json_str_main.encode('utf-8'),
                         file_name=f"payroll_backup_{month_selected}.json",
                         mime="application/json",
