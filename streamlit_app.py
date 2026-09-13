@@ -20,15 +20,15 @@ if '🌙' in st.session_state['theme_mode']:
     bg_sidebar = "#1E293B"
     text_color = "#FFFFFF"
     border_color = "#334155"
-    input_bg = "#111827"
-    input_text = "#FFFFFF"
+    input_bg = "#F1F5F9"
+    input_text = "#0F172A"
 else:
     bg_app = "#E2E8F0"
     bg_card = "#FFFFFF"
     bg_sidebar = "#F8FAFC"
     text_color = "#0F172A"
     border_color = "#CBD5E1"
-    input_bg = "#FFFFFF"
+    input_bg = "#F1F5F9"
     input_text = "#0F172A"
 
 st.markdown(f"""
@@ -80,14 +80,14 @@ st.markdown(f"""
         }}
 
         ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"] div {{
-            background-color: #1E293B !important;
-            color: #FFFFFF !important;
+            background-color: #F1F5F9 !important;
+            color: #0F172A !important;
             border: 1px solid #38BDF8 !important;
         }}
 
         li[role="option"] {{
-            color: #FFFFFF !important;
-            background-color: #1E293B !important;
+            color: #0F172A !important;
+            background-color: #F1F5F9 !important;
         }}
 
         li[role="option"]:hover {{
@@ -95,23 +95,25 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
+        /* إصلاح حقول الإدخال لتصبح رمادية فاتحة مع خط أسود واضح جداً */
+        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {{
+            background-color: #F1F5F9 !important;
+            color: #0F172A !important;
+            border: 1px solid #CBD5E1 !important;
+            border-radius: 8px !important;
+            font-weight: 700 !important;
+            font-size: 15px !important;
+        }}
+
+        /* وضوح النص داخل النوافذ المنبثقة والسندات */
         [data-testid="stDialog"] div[role="dialog"] {{
-            background-color: {bg_card} !important;
-            border: 2px solid #38BDF8 !important;
+            background-color: #FFFFFF !important;
+            border: 2px solid #2563EB !important;
             border-radius: 12px !important;
         }}
 
         [data-testid="stDialog"] div[role="dialog"] * {{
-            color: {text_color} !important;
-        }}
-
-        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {{
-            background-color: {input_bg} !important;
-            color: {input_text} !important;
-            border: 2px solid #38BDF8 !important;
-            border-radius: 8px !important;
-            font-weight: 700 !important;
-            font-size: 15px !important;
+            color: #0F172A !important;
         }}
 
         .stButton>button {{
@@ -172,6 +174,7 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
+# إدارة حالة المستخدم والدخول
 if 'app_started' not in st.session_state:
     st.session_state['app_started'] = False
 
@@ -302,7 +305,7 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
     with st.form("quick_cash_form"):
         q_type = st.selectbox("نوع السند:", ["سند قبض / إيراد", "سند صرف / مصروف"], index=0 if "قبض" in default_type else 1)
         q_party = st.text_input("صادر إلى / مستلم من (الجهة/العميل):", placeholder="اسم الجهة...")
-        q_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=1000.0)
+        q_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
         q_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
         q_notes = st.text_input("البيان والملاحظات:")
         
@@ -626,6 +629,7 @@ else:
                 st.session_state['current_view'] = '💵 حركة الصندوق وتوليد السندات'
                 st.rerun()
 
+        # الموظفين والرواتب تنحصر حساباتها على wahby فقط
         if st.session_state.user_role == "admin":
             with st.expander("👥 الموظفين"):
                 if st.button("👤 دليل الموظفين والملفات الإدارية", use_container_width=True):
@@ -1002,7 +1006,7 @@ else:
             with st.form("add_cash_transaction_form"):
                 trans_type = st.selectbox("نوع الحركة المالية:", ["سند قبض / إيراد", "سند صرف / مصروف"])
                 trans_party = st.text_input("اسم العملاء / الجهة / البيان:", placeholder="مثلاً: العميل شركة الأمل / شراء مواد خام")
-                trans_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=1000.0)
+                trans_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
                 trans_pay_method = st.selectbox("طريقة السداد:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
                 trans_notes = st.text_input("ملاحظات / رقم الفاتورة الورقية إن وجد:")
                 
