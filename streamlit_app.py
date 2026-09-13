@@ -5,13 +5,12 @@ import json
 import os
 from datetime import datetime
 
-# 1. إعداد الصفحة وتطبيق تنسيق RTL الكامل
+# 1. إعداد الصفحة وتطبيق التنسيق العربي الكامل (RTL)
 st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
 
-# تطبيق تنسيق RTL الشامل وإجبار الجداول على المحاذاة لليمين
+# تطبيق تنسيق RTL الشامل لكافة عناصر الصفحة والجداول والنوافذ
 st.markdown("""
     <style>
-        /* الاتجاه العام */
         html, body, .stApp, [data-testid="stAppViewContainer"] {
             direction: rtl !important;
             text-align: right !important;
@@ -20,7 +19,6 @@ st.markdown("""
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
-        /* القائمة الجانبية على اليمين */
         [data-testid="stSidebar"] {
             right: 0 !important;
             left: auto !important;
@@ -34,21 +32,18 @@ st.markdown("""
             text-align: right !important;
         }
 
-        /* محاذاة الجداول والنوافذ المنبثقة من اليمين إلى اليسار */
         [data-testid="stDialog"] div[role="dialog"], .stDataFrame, [data-testid="stDataEditor"] {
             direction: rtl !important;
             text-align: right !important;
         }
 
-        /* محاذاة أعمدة وخلايا الجداول بالكامل لليمين */
         .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {
             text-align: right !important;
         }
 
-        /* الهيدر العلوي بنمط دفترة */
         .daftra-header {
             background: linear-gradient(90deg, #1E3A8A 0%, #2563EB 100%);
-            padding: 24px;
+            padding: 20px 24px;
             border-radius: 12px;
             color: white;
             margin-bottom: 20px;
@@ -56,7 +51,6 @@ st.markdown("""
             text-align: center;
         }
 
-        /* صفحة الدخول الاحترافية */
         .welcome-box {
             background: #FFFFFF;
             border-radius: 16px;
@@ -73,7 +67,6 @@ st.markdown("""
             font-weight: 900;
             color: #EF4444;
             font-family: Arial, sans-serif;
-            margin-bottom: 0px;
             line-height: 1;
         }
         
@@ -83,6 +76,9 @@ st.markdown("""
 
 if 'app_started' not in st.session_state:
     st.session_state['app_started'] = False
+
+if 'current_view' not in st.session_state:
+    st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
 
 DATA_FILE = 'payroll_data.json'
 
@@ -338,9 +334,8 @@ if not st.session_state.get('app_started', False):
             st.rerun()
 
 else:
-    # 3. القائمة الجانبية المحسنة مع الشعار والقوائم القابلة للتوسع على اليمين
+    # 3. القائمة الجانبية المحسنة مع الشعار وزر الرئيسية بالكامل على اليمين
     with st.sidebar:
-        # شعار الشركة واسمها أعلى القائمة اليمنى
         st.markdown("""
             <div style="text-align: center; padding-bottom: 10px;">
                 <div style="font-size: 55px; font-weight: 900; color: #EF4444; line-height: 1; font-family: Arial;">5M</div>
@@ -349,46 +344,43 @@ else:
         """, unsafe_allow_html=True)
         st.divider()
 
-        # هيكلة القوائم المنسدلة الاحترافية بدليل الأقسام
+        # زر العودة الفورية للشاشة الرئيسية الخفيفة
+        if st.button("🏠 الشاشة الرئيسية (لوحة الإحصائيات)", use_container_width=True):
+            st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
+            st.rerun()
+
         st.markdown("### 📌 أقسام النظام الرئيسي:")
         
         with st.expander("👥 الموظفين والرواتب", expanded=True):
-            menu_emp = st.radio("خيارات الرواتب:", [
-                '📊 إدخال وتعديل الدفعات السريع',
-                '👤 دليل الموظفين والملفات الإدارية'
-            ], key="radio_emp")
+            if st.button("📊 إدخال وتعديل الدفعات السريع", use_container_width=True):
+                st.session_state['current_view'] = '📊 إدخال وتعديل الدفعات السريع'
+                st.rerun()
+            if st.button("👤 دليل الموظفين والملفات الإدارية", use_container_width=True):
+                st.session_state['current_view'] = '👤 دليل الموظفين والملفات الإدارية'
+                st.rerun()
             
         with st.expander("📑 التقارير والسندات"):
-            menu_rep = st.radio("خيارات المسيرات:", [
-                '📋 مسير الرواتب الشهري',
-                '🖨️ طباعة سندات القبض والصرف (A4)'
-            ], key="radio_rep")
+            if st.button("📋 مسير الرواتب الشهري", use_container_width=True):
+                st.session_state['current_view'] = '📋 مسير الرواتب الشهري'
+                st.rerun()
+            if st.button("🖨️ طباعة سندات القبض والصرف (A4)", use_container_width=True):
+                st.session_state['current_view'] = '🖨️ طباعة سندات القبض والصرف (A4)'
+                st.rerun()
             
         with st.expander("🇸🇦 الموارد البشرية والمستحقات"):
-            menu_hr = st.radio("خيارات الـ HR:", [
-                '🇸🇦 حاسبة مكافأة نهاية الخدمة والإجازات',
-                '🔔 تنبيهات انتهاء الإقامات والعقود'
-            ], key="radio_hr")
+            if st.button("🇸🇦 حاسبة نهاية الخدمة والإجازات", use_container_width=True):
+                st.session_state['current_view'] = '🇸🇦 حاسبة مكافأة نهاية الخدمة والإجازات'
+                st.rerun()
+            if st.button("🔔 تنبيهات انتهاء الإقامات والعقود", use_container_width=True):
+                st.session_state['current_view'] = '🔔 تنبيهات انتهاء الإقامات والعقود'
+                st.rerun()
 
         with st.expander("⚙️ الإغلاق والسنة المالية"):
-            menu_sys = st.radio("إجراءات السنة:", [
-                '🏁 الإغلاق السنوي وفتح سنة جديدة'
-            ], key="radio_sys")
+            if st.button("🏁 الإغلاق السنوي وفتح سنة جديدة", use_container_width=True):
+                st.session_state['current_view'] = '🏁 الإغلاق السنوي وفتح سنة جديدة'
+                st.rerun()
 
-        # تحديد الصفحة النشطة بناءً على خيار المستخدم
-        selected_option = '📊 إدخال وتعديل الدفعات السريع'
-        if menu_emp == '👤 دليل الموظفين والملفات الإدارية':
-            selected_option = '👤 دليل الموظفين والملفات الإدارية'
-        elif menu_rep == '📋 مسير الرواتب الشهري':
-            selected_option = '📋 مسير الرواتب الشهري'
-        elif menu_rep == '🖨️ طباعة سندات القبض والصرف (A4)':
-            selected_option = '🖨️ طباعة سندات القبض والصرف (A4)'
-        elif menu_hr == '🇸🇦 حاسبة مكافأة نهاية الخدمة والإجازات':
-            selected_option = '🇸🇦 حاسبة مكافأة نهاية الخدمة والإجازات'
-        elif menu_hr == '🔔 تنبيهات انتهاء الإقامات والعقود':
-            selected_option = '🔔 تنبيهات انتهاء الإقامات والعقود'
-        elif menu_sys == '🏁 الإغلاق السنوي وفتح سنة جديدة':
-            selected_option = '🏁 الإغلاق السنوي وفتح سنة جديدة'
+        selected_option = st.session_state.get('current_view', '🏠 الرئيسية (لوحة الإحصائيات)')
             
         st.divider()
         if 'months_list' not in st.session_state:
@@ -422,20 +414,17 @@ else:
         st.session_state.current_month = month_selected
         st.session_state.payroll_df = load_data()
 
-    # المربع الأزرق العلوي المبسط والمركز على اسم الشركة فقط
+    # الهيدر التفاعلي العلوي (الضغط عليه يُعيدك للشاشة الرئيسية المبدئية الخفيفة)
     tot_emp = len(st.session_state.payroll_df)
     tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
     tot_paid = st.session_state.payroll_df['الدفعة المدفوعة'].sum()
     tot_rem = st.session_state.payroll_df['المتبقي'].sum()
 
-    st.markdown(f"""
-        <div class="daftra-header">
-            <h2 style="margin:0; color: white; font-weight: 800;">🏢 شركة ميم الخماسية للتصنيع</h2>
-            <p style="margin:5px 0 0 0; opacity: 0.9;">النظام المحاسبي الموحد لإدارة الرواتب والمستحقات المالية - ({month_selected})</p>
-        </div>
-    """, unsafe_allow_html=True)
+    if st.button("🏢 شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد", use_container_width=True):
+        st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
+        st.rerun()
 
-    # الكروت الإحصائية والملاحظات التفاعلية
+    # الكروت الإحصائية الأربعة التفاعلية
     mc1, mc2, mc3, mc4 = st.columns(4)
     with mc1:
         if st.button(f"👥 إجمالي العمالة: {tot_emp} موظف", use_container_width=True):
@@ -547,7 +536,11 @@ else:
         output.seek(0)
         return output
 
-    if selected_option == '📊 إدخال وتعديل الدفعات السريع':
+    # 4. الشاشات المباشرة عند الطلب
+    if selected_option == '🏠 الرئيسية (لوحة الإحصائيات)':
+        st.info("💡 مرحباً بك في الواجهة الرئيسية. اختر القسم المطلوب العمل عليه من القائمة الجانبية على اليمين.")
+
+    elif selected_option == '📊 إدخال وتعديل الدفعات السريع':
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات السريع - ({month_selected})')
         st.write('💡 **طريقة العمل السريعة:** عدّل أي خلية بالجدول أدناه مباشرة وسيتم حفظها آلياً!')
         
