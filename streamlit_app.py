@@ -57,6 +57,7 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
+        /* تصميم نظيف للقائمة الجانبية مخصص لمنع تداخل النصوص */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
@@ -73,6 +74,7 @@ st.markdown(f"""
             font-weight: 700 !important;
         }}
 
+        /* أزرار التنقل بالقائمة الجانبية */
         [data-testid="stSidebar"] .stButton>button {{
             width: 100% !important;
             background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
@@ -109,6 +111,7 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
+        /* حقول الإدخال والتواريخ */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: {input_bg} !important;
             color: {input_text} !important;
@@ -119,6 +122,7 @@ st.markdown(f"""
             padding: 4px 8px !important;
         }}
 
+        /* تصحيح خطوط كروت الملاحظات والإحصائيات */
         [data-testid="stMetricValue"] div {{
             font-size: 16px !important;
             font-weight: 800 !important;
@@ -148,6 +152,7 @@ st.markdown(f"""
             text-align: right !important;
         }}
 
+        /* تصميم رفع الملفات */
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
             background-color: #1E293B !important;
             border: 1px dashed #D97706 !important;
@@ -724,7 +729,7 @@ if not st.session_state.get('app_started', False):
                     st.error("كلمة المرور غير صحيحة!")
 
 else:
-    # 3. القائمة الجانبية المباشرة والنظيفة
+    # 3. القائمة الجانبية المباشرة والنظيفة (بدون expanders لتجنب الشفرات المتداخلة)
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 5px;">
@@ -1078,7 +1083,7 @@ else:
                 st.warning(f"🔵 **توجد زيادة بالخزنة بقيمة: ({diff_amount:,.2f} ر.س)**")
 
             audit_notes = st.text_input("ملاحظات الجرد / أسباب الفرق إن وجد:")
-            if st.button("💾 اعتماد وحفظ جلسة الجرد بجل السجلات", use_container_width=True):
+            if st.button("💾 اعتماد وحفظ جلسة الجرد بسجل السجلات", use_container_width=True):
                 audit_records = load_audit_data()
                 new_entry = {
                     'id': len(audit_records) + 1,
