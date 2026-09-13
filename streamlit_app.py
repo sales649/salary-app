@@ -616,140 +616,28 @@ def print_cash_voucher_dialog(trans_item, month_name):
     """
     st.components.v1.html(html_v, height=480, scrolling=True)
 
-@st.dialog("تعديل حركة الصندوق")
-def edit_cash_modal(month_name, trans_idx, target_box="main"):
-    all_cash = load_cash_data()
-    m_cash = all_cash.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
-    box_key = 'transactions' if target_box == 'main' else 'acc_transactions'
-    trans_list = m_cash.get(box_key, [])
-    
-    if trans_idx < len(trans_list):
-        curr_item = trans_list[trans_idx]
-        st.write(f"تعديل السند رقم: **#{curr_item.get('code', curr_item['id'])}**")
-        with st.form("edit_cash_item_form"):
-            e_type = st.selectbox("نوع الحركة:", ["سند قبض / إيراد", "سند صرف / مصروف"], index=["سند قبض / إيراد", "سند صرف / مصروف"].index(curr_item['type']))
-            e_party = st.text_input("اسم الجهة / البيان:", value=curr_item['party'])
-            e_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=float(curr_item['amount']))
-            e_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"], index=["نقداً بالصندوق", "تحويل بنكي", "شيك"].index(curr_item['method']))
-            e_notes = st.text_input("الملاحظات / الفاتورة:", value=curr_item.get('notes', ''))
+@st.dialog("✏️ تعديل عُهدة سائق")
+def edit_driver_custody_modal(item_idx):
+    drivers_db = load_drivers_data()
+    if item_idx < len(drivers_db):
+        curr_d = drivers_db[item_idx]
+        st.write(f"تعديل العُهدة رقم: **#{curr_d['id']} - السائق: {curr_d['driver']}**")
+        with st.form("edit_driver_custody_form"):
+            e_given = st.number_input("المبلغ المسلم للعُهدة (ر.س):", min_value=0.0, value=float(curr_d['given_amt']))
+            e_spent = st.number_input("المصروف بالفواتير (ر.س):", min_value=0.0, value=float(curr_d.get('spent_amt', 0.0)))
+            e_purpose = st.text_input("الغرض والبيان:", value=curr_d.get('purpose', ''))
+            e_status = st.selectbox("حالة العُهدة:", ["مفتوحة", "تمت التصفية"], index=0 if curr_d['status'] == "مفتوحة" else 1)
             
-            sub_e_cash = st.form_submit_button("حفظ التعديل")
-            if sub_e_cash:
-                trans_list[trans_idx]['type'] = e_type
-                trans_list[trans_idx]['party'] = e_party
-                trans_list[trans_idx]['amount'] = e_amt
-                trans_list[trans_idx]['method'] = e_method
-                trans_list[trans_idx]['notes'] = e_notes
-                all_cash[month_name][box_key] = trans_list
-                save_cash_data(all_cash)
-                st.success("تم التعديل بنجاح!")
+            sub_e_driver = st.form_submit_button("💾 حفظ التعديلات")
+            if sub_e_driver:
+                drivers_db[item_idx]['given_amt'] = e_given
+                drivers_db[item_idx]['spent_amt'] = e_spent
+                drivers_db[item_idx]['diff_amt'] = e_given - e_spent
+                drivers_db[item_idx]['purpose'] = e_purpose
+                drivers_db[item_idx]['status'] = e_status
+                save_drivers_data(drivers_db)
+                st.success("تم تعديل بيانات عُهدة السائق بنجاح!")
                 st.rerun()
-
-@st.dialog("إضافة موظف جديد")
-def add_employee_dialog(default_branch):
-    st.write(f"إضافة موظف لفرع: **{default_branch}**")
-    with st.form("add_emp_modal_form"):
-        c1, c2 = st.columns(2)
-        with c1:
-            new_name = st.text_input("اسم الموظف الثلاثي:")
-            new_job = st.text_input("الوظيفة:", "عامل")
-            new_branch = st.selectbox("الفرع:", ['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'], index=['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'].index(default_branch))
-        with c2:
-            new_sal = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=2500.0)
-            new_start = st.date_input("تاريخ بداية العمل:", datetime(2024, 1, 1))
-            new_iq = st.date_input("تاريخ انتهاء الإقامة:", datetime(2027, 12, 31))
-            new_ct = st.date_input("تاريخ انتهاء العقد:", datetime(2027, 12, 31))
-            
-        sub_btn = st.form_submit_button("حفظ وإضافة الموظف")
-        if sub_btn:
-            if new_name:
-                max_id = st.session_state.payroll_df['م'].max() + 1 if not st.session_state.payroll_df.empty else 1
-                new_dict = {
-                    'م': max_id,
-                    'الاسم': new_name,
-                    'الوظيفة': new_job,
-                    'الراتب الأساسي': new_sal,
-                    'الفرع': new_branch,
-                    'تاريخ بداية العمل': str(new_start),
-                    'تاريخ انتهاء الإقامة': str(new_iq),
-                    'تاريخ انتهاء العقد': str(new_ct),
-                    'الخصومات': 0.0,
-                    'الدفعة 1': new_sal / 2.0,
-                    'الدفعة 2': new_sal / 2.0,
-                    'الدفعة المدفوعة': new_sal,
-                    'المتبقي': 0.0,
-                    'نوع الإجراء': 'صرف كامل',
-                    'الملاحظات': ''
-                }
-                st.session_state.payroll_df = pd.concat([st.session_state.payroll_df, pd.DataFrame([new_dict])], ignore_index=True)
-                save_data(st.session_state.payroll_df)
-                st.success(f"تمت إضافة ({new_name}) بنجاح!")
-                st.rerun()
-
-@st.dialog("تعديل ملف الموظف")
-def edit_employee_dialog(emp_idx, month_selected):
-    emp_data = st.session_state.payroll_df.loc[emp_idx]
-    st.write(f"تعديل الموظف: **{emp_data['الاسم']}** (كود: #{emp_data['م']})")
-    
-    with st.form(f'edit_modal_{emp_data["م"]}'):
-        col_e1, col_e2, col_e3 = st.columns(3)
-        with col_e1:
-            st.markdown("### البيانات الإدارية")
-            up_name = st.text_input("اسم الموظف الثلاثي:", value=emp_data['الاسم'])
-            up_job = st.text_input("الوظيفة:", value=emp_data['الوظيفة'])
-            up_branch = st.selectbox("الفرع التابع له:", [
-                'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'
-            ], index=['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'].index(emp_data['الفرع']))
-            
-        with col_e2:
-            st.markdown("### المالية (" + month_selected + ")")
-            up_salary = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=float(emp_data['الراتب الأساسي']))
-            up_pay1 = st.number_input("الدفعة 1 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 1', 0)))
-            up_pay2 = st.number_input("الدفعة 2 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 2', 0)))
-            up_ded = st.number_input("الخصومات (ر.س):", min_value=0.0, value=float(emp_data.get('الخصومات', 0)))
-            up_action = st.selectbox("نوع الإجراء:", ["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"], index=["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"].index(emp_data['نوع الإجراء']))
-            up_notes = st.text_input("الملاحظات:", value=emp_data['الملاحظات'])
-            
-        with col_e3:
-            st.markdown("### التواريخ والوثائق")
-            st_val = datetime.strptime(str(emp_data.get('تاريخ بداية العمل', '2024-01-01')), '%Y-%m-%d')
-            iq_val = datetime.strptime(str(emp_data['تاريخ انتهاء الإقامة']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء الإقامة']) else datetime(2027, 12, 31)
-            ct_val = datetime.strptime(str(emp_data['تاريخ انتهاء العقد']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء العقد']) else datetime(2027, 12, 31)
-            
-            up_start_date = st.date_input("تاريخ بداية العمل:", st_val)
-            up_iqama_date = st.date_input("تاريخ انتهاء الإقامة:", iq_val)
-            up_contract_date = st.date_input("تاريخ انتهاء العقد:", ct_val)
-            
-        st.divider()
-        save_btn = st.form_submit_button('حفظ وتحديث البيانات')
-        
-        if save_btn:
-            tot_paid_emp = up_pay1 + up_pay2
-            st.session_state.payroll_df.loc[emp_idx, 'الاسم'] = up_name
-            st.session_state.payroll_df.loc[emp_idx, 'الوظيفة'] = up_job
-            st.session_state.payroll_df.loc[emp_idx, 'الفرع'] = up_branch
-            st.session_state.payroll_df.loc[emp_idx, 'الراتب الأساسي'] = up_salary
-            st.session_state.payroll_df.loc[emp_idx, 'الخصومات'] = up_ded
-            st.session_state.payroll_df.loc[emp_idx, 'الدفعة 1'] = up_pay1
-            st.session_state.payroll_df.loc[emp_idx, 'الدفعة 2'] = up_pay2
-            st.session_state.payroll_df.loc[emp_idx, 'الدفعة المدفوعة'] = tot_paid_emp
-            st.session_state.payroll_df.loc[emp_idx, 'المتبقي'] = up_salary - (tot_paid_emp + up_ded)
-            st.session_state.payroll_df.loc[emp_idx, 'نوع الإجراء'] = up_action
-            st.session_state.payroll_df.loc[emp_idx, 'الملاحظات'] = up_notes
-            st.session_state.payroll_df.loc[emp_idx, 'تاريخ بداية العمل'] = str(up_start_date)
-            st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء الإقامة'] = str(up_iqama_date)
-            st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء العقد'] = str(up_contract_date)
-            
-            save_data(st.session_state.payroll_df)
-            st.success("تم الحفظ بنجاح!")
-            st.rerun()
-
-    with st.expander(f"حذف الموظف ({emp_data['الاسم']})"):
-        if st.button(f"تأكيد الحذف النهائياً", key=f"del_modal_{emp_data['م']}"):
-            st.session_state.payroll_df = st.session_state.payroll_df.drop(emp_idx).reset_index(drop=True)
-            save_data(st.session_state.payroll_df)
-            st.success("تم الحذف!")
-            st.rerun()
 
 # 2. الشاشة الافتتاحية
 if not st.session_state.get('app_started', False):
@@ -1130,7 +1018,7 @@ else:
                     st.rerun()
                 st.divider()
 
-    # 6. موديول عُهد وتصفية السائقين
+    # 6. موديول عُهد وتصفية السائقين المصحح والمزود بهيدر عربي وأزرار حذف/تعديل
     elif selected_option == 'عُهد وتصفية السائقين':
         st.subheader(f'🚚 موديول إدارة عُهد وتصفية السائقين المباشر - ({month_selected})')
         st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائقين المعتمدين وتصفية الفواتير والمتبقي/الزيادة عند العودة:')
@@ -1250,13 +1138,33 @@ else:
                 st.info("لا توجد عُهد مفتوحة حالياً بانتظار التصفية.")
 
         st.divider()
-        st.markdown("### 📑 سجل كشف حساب وتصفية السائقين الشامل (رؤية wahby و omar):")
+        st.markdown("### 📑 سجل كشف حساب وتصفية السائقين المباشر (تعديل وحذف وحقول موثقة):")
         if drivers_db:
             filter_driver_name = st.selectbox("تصفية الكشف حسب السائق:", ["جميع السائقين"] + approved_drivers)
             filtered_drivers_list = drivers_db if filter_driver_name == "جميع السائقين" else [d for d in drivers_db if d['driver'] == filter_driver_name]
             
-            df_drivers = pd.DataFrame(filtered_drivers_list)
-            st.dataframe(df_drivers[['id', 'date', 'driver', 'given_amt', 'spent_amt', 'diff_amt', 'status', 'purpose']], use_container_width=True, hide_index=True)
+            # عرض سجل حركات السائقين في جدول صريح بهيدر عربي وأزرار حذف/تعديل لكل حركة
+            for d_idx, d_item in enumerate(reversed(filtered_drivers_list)):
+                real_d_idx = drivers_db.index(d_item)
+                
+                col_d1, col_d2, col_d3, col_d4, col_d5, col_d6 = st.columns([0.6, 1.8, 1.5, 1.5, 0.9, 0.9])
+                col_d1.write(f"#{d_item['id']}")
+                col_d2.write(f"🚚 **{d_item['driver']}**\n📅 {d_item['date']}")
+                col_d3.write(f"المسلم: **{d_item['given_amt']:,.2f} ر.س**\nالمصروف: **{d_item.get('spent_amt', 0.0):,.2f} ر.س**")
+                
+                diff_val = d_item.get('diff_amt', 0.0)
+                diff_str = "🟢 تصفية كاملة" if d_item['status'] == 'تمت التصفية' and diff_val == 0 else (f"🔴 متبقي معه ({diff_val:,.2f} ر.س)" if diff_val > 0 else f"🔵 زيادة له ({abs(diff_val):,.2f} ر.س)")
+                col_d4.write(f"الحالة: **{d_item['status']}**\n{diff_str}")
+                
+                if col_d5.button("✏️ تعديل", key=f"edit_drv_btn_{real_d_idx}"):
+                    edit_driver_custody_modal(real_d_idx)
+
+                if col_d6.button("🗑️ حذف", key=f"del_drv_btn_{real_d_idx}"):
+                    drivers_db.pop(real_d_idx)
+                    save_drivers_data(drivers_db)
+                    st.success("تم حذف حركة عُهدة السائق!")
+                    st.rerun()
+                st.divider()
         else:
             st.info("لا يوجد سجل عُهد سابق للسائقين.")
 
