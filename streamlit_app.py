@@ -39,7 +39,6 @@ else:
     expander_bg = "#F8FAFC"
     expander_text = "#0F172A"
 
-# إجبار كسر التخزين المؤقت وحظر الكاش المزدوج بالماك والآيفون
 st.markdown(f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
@@ -62,14 +61,14 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* معالجة استجابة القائمة الجانبية للماك والآيفون */
+        /* إصلاح القائمة الجانبية لمنع تداخل الشفرات النصية */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
         }}
 
         [data-testid="stSidebarContent"] {{
-            padding: 10px !important;
+            padding: 8px !important;
         }}
 
         [data-testid="stSidebar"] details {{
@@ -91,7 +90,7 @@ st.markdown(f"""
             font-weight: 700 !important;
             border: 1px solid #D97706 !important;
             border-radius: 8px !important;
-            padding: 6px !important;
+            padding: 6px 10px !important;
         }}
 
         [data-testid="stSidebar"] .streamlit-expanderContent {{
@@ -120,6 +119,7 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
+        /* حقول الإدخال والتواريخ */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: {input_bg} !important;
             color: {input_text} !important;
@@ -130,6 +130,37 @@ st.markdown(f"""
             padding: 4px 8px !important;
         }}
 
+        /* تصحيح خطوط كروت الملاحظات والإحصائيات لمنع اختفاء الأرقام */
+        [data-testid="stMetricValue"] div {{
+            font-size: 16px !important;
+            font-weight: 800 !important;
+            white-space: nowrap !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+        }}
+
+        [data-testid="stMetricLabel"] label, [data-testid="stMetricLabel"] div {{
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            white-space: nowrap !important;
+        }}
+
+        .stMetric, .daftra-quick-card {{
+            background-color: {bg_card} !important;
+            border-radius: 10px !important;
+            padding: 8px 10px !important;
+            border: 1px solid {border_color} !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+            margin-bottom: 8px !important;
+            overflow: hidden !important;
+        }}
+
+        .stMetric * {{
+            color: {text_color} !important;
+            text-align: right !important;
+        }}
+
+        /* تصميم رفع الملفات */
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
             background-color: #1E293B !important;
             border: 1px dashed #D97706 !important;
@@ -179,25 +210,11 @@ st.markdown(f"""
             border: none !important;
             border-radius: 8px !important;
             font-weight: 800 !important;
-            font-size: 14px !important;
+            font-size: 13px !important;
             box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4) !important;
             white-space: normal !important;
             word-wrap: break-word !important;
             padding: 6px 12px !important;
-        }}
-
-        .stMetric, .daftra-quick-card {{
-            background-color: {bg_card} !important;
-            border-radius: 12px !important;
-            padding: 12px !important;
-            border: 1px solid {border_color} !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-            margin-bottom: 8px !important;
-        }}
-
-        .stMetric * {{
-            color: {text_color} !important;
-            text-align: right !important;
         }}
 
         .stDataFrame, [data-testid="stDataEditor"] {{
@@ -327,7 +344,7 @@ if 'user_role' not in st.session_state:
     st.session_state['user_role'] = None
 
 if 'current_view' not in st.session_state:
-    st.session_state['current_view'] = '🏠 الرئيسية'
+    st.session_state['current_view'] = 'الرئيسية'
 
 DATA_FILE = 'payroll_data.json'
 CASH_FILE = 'cashbox_data.json'
@@ -444,7 +461,7 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-@st.dialog("⚡ إنشاء سند قبض / صرف سريع")
+@st.dialog("إنشاء سند جديد")
 def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
     st.write(f"إضافة سند لشهر: **{month_name}** ({'الرئيسية' if target_box == 'main' else 'omar'})")
     with st.form("quick_cash_form"):
@@ -454,7 +471,7 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
         q_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
         q_notes = st.text_input("البيان والملاحظات:")
         
-        q_sub = st.form_submit_button("💾 حفظ السند")
+        q_sub = st.form_submit_button("حفظ السند")
         if q_sub:
             if q_party and q_amt > 0:
                 all_cash = load_cash_data()
@@ -489,7 +506,7 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                 st.success(f"تم الحفظ برقم #{v_code}!")
                 st.rerun()
 
-@st.dialog("🖨️ طباعة سند الصندوق الرسمية (A4)")
+@st.dialog("طباعة سند الصندوق A4")
 def print_cash_voucher_dialog(trans_item, month_name):
     st.write(f"معاينة السند رقم: **#{trans_item.get('code', trans_item['id'])}**")
     amt_val = trans_item['amount']
@@ -510,7 +527,7 @@ def print_cash_voucher_dialog(trans_item, month_name):
         @media print {{ .no-p {{ display: none; }} }}
     </style></head><body>
         <div class="no-p" style="text-align:center; margin-bottom:15px;">
-            <button onclick="window.print()" style="background:#1E3A8A; color:white; border:none; padding:12px 25px; font-weight:bold; font-size:16px; border-radius:6px; cursor:pointer;">🖨️ طباعة السند (A4 / PDF)</button>
+            <button onclick="window.print()" style="background:#1E3A8A; color:white; border:none; padding:12px 25px; font-weight:bold; font-size:16px; border-radius:6px; cursor:pointer;">طباعة السند (A4 / PDF)</button>
         </div>
         <div class="voucher-box">
             <div class="header-logo">
@@ -534,7 +551,7 @@ def print_cash_voucher_dialog(trans_item, month_name):
     """
     st.components.v1.html(html_v, height=480, scrolling=True)
 
-@st.dialog("✏️ تعديل حركة الصندوق")
+@st.dialog("تعديل حركة الصندوق")
 def edit_cash_modal(month_name, trans_idx, target_box="main"):
     all_cash = load_cash_data()
     m_cash = all_cash.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
@@ -551,7 +568,7 @@ def edit_cash_modal(month_name, trans_idx, target_box="main"):
             e_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"], index=["نقداً بالصندوق", "تحويل بنكي", "شيك"].index(curr_item['method']))
             e_notes = st.text_input("الملاحظات / الفاتورة:", value=curr_item.get('notes', ''))
             
-            sub_e_cash = st.form_submit_button("💾 حفظ التعديل")
+            sub_e_cash = st.form_submit_button("حفظ التعديل")
             if sub_e_cash:
                 trans_list[trans_idx]['type'] = e_type
                 trans_list[trans_idx]['party'] = e_party
@@ -563,7 +580,7 @@ def edit_cash_modal(month_name, trans_idx, target_box="main"):
                 st.success("تم التعديل بنجاح!")
                 st.rerun()
 
-@st.dialog("➕ إضافة موظف جديد")
+@st.dialog("إضافة موظف جديد")
 def add_employee_dialog(default_branch):
     st.write(f"إضافة موظف لفرع: **{default_branch}**")
     with st.form("add_emp_modal_form"):
@@ -578,7 +595,7 @@ def add_employee_dialog(default_branch):
             new_iq = st.date_input("تاريخ انتهاء الإقامة:", datetime(2027, 12, 31))
             new_ct = st.date_input("تاريخ انتهاء العقد:", datetime(2027, 12, 31))
             
-        sub_btn = st.form_submit_button("💾 حفظ وإضافة الموظف")
+        sub_btn = st.form_submit_button("حفظ وإضافة الموظف")
         if sub_btn:
             if new_name:
                 max_id = st.session_state.payroll_df['م'].max() + 1 if not st.session_state.payroll_df.empty else 1
@@ -604,7 +621,7 @@ def add_employee_dialog(default_branch):
                 st.success(f"تمت إضافة ({new_name}) بنجاح!")
                 st.rerun()
 
-@st.dialog("👤 تعديل ملف الموظف")
+@st.dialog("تعديل ملف الموظف")
 def edit_employee_dialog(emp_idx, month_selected):
     emp_data = st.session_state.payroll_df.loc[emp_idx]
     st.write(f"تعديل الموظف: **{emp_data['الاسم']}** (كود: #{emp_data['م']})")
@@ -612,7 +629,7 @@ def edit_employee_dialog(emp_idx, month_selected):
     with st.form(f'edit_modal_{emp_data["م"]}'):
         col_e1, col_e2, col_e3 = st.columns(3)
         with col_e1:
-            st.markdown("### 👤 البيانات الإدارية")
+            st.markdown("### البيانات الإدارية")
             up_name = st.text_input("اسم الموظف الثلاثي:", value=emp_data['الاسم'])
             up_job = st.text_input("الوظيفة:", value=emp_data['الوظيفة'])
             up_branch = st.selectbox("الفرع التابع له:", [
@@ -620,7 +637,7 @@ def edit_employee_dialog(emp_idx, month_selected):
             ], index=['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'].index(emp_data['الفرع']))
             
         with col_e2:
-            st.markdown("### 💰 المالية (" + month_selected + ")")
+            st.markdown("### المالية (" + month_selected + ")")
             up_salary = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=float(emp_data['الراتب الأساسي']))
             up_pay1 = st.number_input("الدفعة 1 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 1', 0)))
             up_pay2 = st.number_input("الدفعة 2 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 2', 0)))
@@ -629,7 +646,7 @@ def edit_employee_dialog(emp_idx, month_selected):
             up_notes = st.text_input("الملاحظات:", value=emp_data['الملاحظات'])
             
         with col_e3:
-            st.markdown("### 📄 التواريخ والوثائق")
+            st.markdown("### التواريخ والوثائق")
             st_val = datetime.strptime(str(emp_data.get('تاريخ بداية العمل', '2024-01-01')), '%Y-%m-%d')
             iq_val = datetime.strptime(str(emp_data['تاريخ انتهاء الإقامة']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء الإقامة']) else datetime(2027, 12, 31)
             ct_val = datetime.strptime(str(emp_data['تاريخ انتهاء العقد']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء العقد']) else datetime(2027, 12, 31)
@@ -639,7 +656,7 @@ def edit_employee_dialog(emp_idx, month_selected):
             up_contract_date = st.date_input("تاريخ انتهاء العقد:", ct_val)
             
         st.divider()
-        save_btn = st.form_submit_button('💾 حفظ وتحديث البيانات')
+        save_btn = st.form_submit_button('حفظ وتحديث البيانات')
         
         if save_btn:
             tot_paid_emp = up_pay1 + up_pay2
@@ -662,8 +679,8 @@ def edit_employee_dialog(emp_idx, month_selected):
             st.success("تم الحفظ بنجاح!")
             st.rerun()
 
-    with st.expander(f"⚠️ حذف الموظف ({emp_data['الاسم']})"):
-        if st.button(f"🗑️ تأكيد الحذف النهائياً", key=f"del_modal_{emp_data['م']}"):
+    with st.expander(f"حذف الموظف ({emp_data['الاسم']})"):
+        if st.button(f"تأكيد الحذف النهائياً", key=f"del_modal_{emp_data['م']}"):
             st.session_state.payroll_df = st.session_state.payroll_df.drop(emp_idx).reset_index(drop=True)
             save_data(st.session_state.payroll_df)
             st.success("تم الحذف!")
@@ -682,12 +699,12 @@ if not st.session_state.get('app_started', False):
     
     col_b1, col_b2, col_b3 = st.columns([1, 1.2, 1])
     with col_b2:
-        st.markdown("<h3 style='text-align:center;'>🔑 تسجيل الدخول:</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align:center;'>تسجيل الدخول:</h3>", unsafe_allow_html=True)
         
         username_selected = st.selectbox("المستخدم:", ["wahby", "omar"], key="login_username_select")
         pwd_input = st.text_input("كلمة المرور:", type="password", key="login_pwd")
         
-        if st.button('🚀 الدخول للنظام', use_container_width=True):
+        if st.button('الدخول للنظام', use_container_width=True):
             if username_selected == "wahby":
                 if pwd_input == ADMIN_PASSWORD or pwd_input == "":
                     st.session_state.app_started = True
@@ -706,7 +723,7 @@ if not st.session_state.get('app_started', False):
                     st.error("كلمة المرور غير صحيحة!")
 
 else:
-    # 3. القائمة الجانبية ملمومة ومحسنة
+    # 3. القائمة الجانبية الملمومة والمحسنة بدون أكواد معقدة
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 5px;">
@@ -716,67 +733,67 @@ else:
         """, unsafe_allow_html=True)
 
         role_label = "wahby" if st.session_state.user_role == "admin" else "omar"
-        st.info(f"المستخدم: **{role_label}**")
+        st.info(f"المستخدم: {role_label}")
 
         if 'months_list' not in st.session_state:
             st.session_state.months_list = ['أغسطس 2026', 'سبتمبر 2026', 'أكتوبر 2026', 'نوفمبر 2026', 'ديسمبر 2026']
             
-        month_selected = st.selectbox('📅 الشهر الحالي:', st.session_state.months_list)
+        month_selected = st.selectbox('الشهر الحالي:', st.session_state.months_list)
 
-        st.session_state['theme_mode'] = st.selectbox("🎨 نمط الألوان:", ["🌙 وضع ليلي", "☀️ وضع نهاري"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
+        st.session_state['theme_mode'] = st.selectbox("نمط الألوان:", ["🌙 وضع ليلي", "☀️ وضع نهاري"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
 
-        if st.button("🏠 لوحة التحكم الرئيسية", use_container_width=True):
-            st.session_state['current_view'] = '🏠 الرئيسية'
+        if st.button("لوحة التحكم الرئيسية", use_container_width=True):
+            st.session_state['current_view'] = 'الرئيسية'
             st.rerun()
 
-        st.markdown("### 📌 القوائم والتطبيقات:")
+        st.markdown("### القوائم والتطبيقات:")
 
-        with st.expander("🏦 حركة الصندوق"):
-            if st.button("💵 حركة الصندوق والسندات", use_container_width=True):
-                st.session_state['current_view'] = '💵 حركة الصندوق والسندات'
+        with st.expander("حركة الصندوق"):
+            if st.button("حركة الصندوق والسندات", use_container_width=True):
+                st.session_state['current_view'] = 'حركة الصندوق والسندات'
                 st.rerun()
 
         if st.session_state.user_role == "admin":
-            with st.expander("👥 الموظفين"):
-                if st.button("👤 دليل الموظفين", use_container_width=True):
-                    st.session_state['current_view'] = '👤 دليل الموظفين'
+            with st.expander("الموظفين"):
+                if st.button("دليل الموظفين", use_container_width=True):
+                    st.session_state['current_view'] = 'دليل الموظفين'
                     st.rerun()
-                if st.button("🇸🇦 حاسبة نهاية الخدمة", use_container_width=True):
-                    st.session_state['current_view'] = '🇸🇦 حاسبة نهاية الخدمة'
+                if st.button("حاسبة نهاية الخدمة", use_container_width=True):
+                    st.session_state['current_view'] = 'حاسبة نهاية الخدمة'
                     st.rerun()
-                if st.button("🔔 تنبيهات الإقامات والعقود", use_container_width=True):
-                    st.session_state['current_view'] = '🔔 تنبيهات الإقامات والعقود'
-                    st.rerun()
-            
-            with st.expander("💰 المرتبات والدفعات", expanded=True):
-                if st.button("📊 إدخال الدفعات السريع", use_container_width=True):
-                    st.session_state['current_view'] = '📊 إدخال الدفعات السريع'
-                    st.rerun()
-                if st.button("📋 مسير الرواتب الشهري", use_container_width=True):
-                    st.session_state['current_view'] = '📋 مسير الرواتب الشهري'
+                if st.button("تنبيهات الإقامات والعقود", use_container_width=True):
+                    st.session_state['current_view'] = 'تنبيهات الإقامات والعقود'
                     st.rerun()
             
-            with st.expander("📑 التقارير والسندات"):
-                if st.button("🖨️ طباعة السندات الرسمية (A4)", use_container_width=True):
-                    st.session_state['current_view'] = '🖨️ طباعة السندات الرسمية (A4)'
+            with st.expander("المرتبات والدفعات", expanded=True):
+                if st.button("إدخال الدفعات السريع", use_container_width=True):
+                    st.session_state['current_view'] = 'إدخال الدفعات السريع'
+                    st.rerun()
+                if st.button("مسير الرواتب الشهري", use_container_width=True):
+                    st.session_state['current_view'] = 'مسير الرواتب الشهري'
+                    st.rerun()
+            
+            with st.expander("التقارير والسندات"):
+                if st.button("طباعة السندات الرسمية (A4)", use_container_width=True):
+                    st.session_state['current_view'] = 'طباعة السندات الرسمية (A4)'
                     st.rerun()
 
-            with st.expander("💾 النسخ الاحتياطي والأرشيف", expanded=True):
-                if st.button("💾 فتح مركز النسخ الاحتياطي", use_container_width=True, key="open_backup_page_btn"):
-                    st.session_state['current_view'] = '💾 مركز النسخ الاحتياطي والأرشيف'
+            with st.expander("النسخ الاحتياطي والأرشيف", expanded=True):
+                if st.button("فتح مركز النسخ الاحتياطي", use_container_width=True, key="open_backup_page_btn"):
+                    st.session_state['current_view'] = 'مركز النسخ الاحتياطي والأرشيف'
                     st.rerun()
 
-            with st.expander("⚙️ السنة المالية والإعدادات"):
-                if st.button("🏁 الإغلاق السنوي وسنة جديدة", use_container_width=True):
-                    st.session_state['current_view'] = '🏁 الإغلاق السنوي وسنة جديدة'
+            with st.expander("السنة المالية والإعدادات"):
+                if st.button("الإغلاق السنوي وسنة جديدة", use_container_width=True):
+                    st.session_state['current_view'] = 'الإغلاق السنوي وسنة جديدة'
                     st.rerun()
 
-        if st.button("🚪 تسجيل الخروج", use_container_width=True):
+        if st.button("تسجيل الخروج", use_container_width=True):
             st.session_state.app_started = False
             st.session_state.user_role = None
             st.rerun()
 
-        selected_option = st.session_state.get('current_view', '🏠 الرئيسية')
+        selected_option = st.session_state.get('current_view', 'الرئيسية')
 
     if 'payroll_df' not in st.session_state or st.session_state.get('current_month') != month_selected:
         st.session_state.current_month = month_selected
@@ -903,7 +920,7 @@ else:
         return output
 
     # 4. الواجهة الرئيسية
-    if selected_option == '🏠 الرئيسية':
+    if selected_option == 'الرئيسية':
         all_cash_db = load_cash_data()
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
         
@@ -919,73 +936,73 @@ else:
 
         total_company_cash = net_main_now + net_acc_now
 
-        st.markdown(f"### 🏦 ملخص الصندوق والعُهد - {month_selected}")
+        st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
         
         if st.session_state.user_role == "admin":
             c_box1, c_box2, c_box3 = st.columns(3)
             with c_box1:
-                st.markdown("#### 🏢 الخزينة الرئيسية (wahby):")
+                st.markdown("#### الخزينة الرئيسية (wahby):")
                 st.metric("رصيد الخزينة الرئيسية", f"{net_main_now:,.2f} ر.س")
             with c_box2:
-                st.markdown("#### 👤 عُهدة المحاسب (omar):")
+                st.markdown("#### عُهدة المحاسب (omar):")
                 st.metric("رصيد عُهدة omar", f"{net_acc_now:,.2f} ر.س")
             with c_box3:
-                st.markdown("#### 💳 إجمالي نقدية الشركة:")
+                st.markdown("#### إجمالي نقدية الشركة:")
                 st.metric("مجموع الصناديق", f"{total_company_cash:,.2f} ر.س")
 
             st.divider()
 
-            st.markdown("### 👥 مؤشرات الرواتب والعمالة")
+            st.markdown("### مؤشرات الرواتب والعمالة")
             st_col1, st_col2, st_col3, st_col4, st_col5, st_col6 = st.columns(6)
-            st_col1.metric("👥 العمالة", f"{tot_emp} موظف")
-            st_col2.metric("💰 الرواتب", f"{tot_req:,.0f} ر.س")
-            st_col3.metric("💵 الدفعة 1", f"{tot_p1_all:,.0f} ر.س")
-            st_col4.metric("💵 الدفعة 2", f"{tot_p2_all:,.0f} ر.س")
-            st_col5.metric("✂️ الخصومات", f"{tot_ded_all:,.0f} ر.س")
-            st_col6.metric("⏳ المتبقي", f"{tot_rem:,.0f} ر.س")
+            st_col1.metric("العمالة", f"{tot_emp} موظف")
+            st_col2.metric("الرواتب", f"{tot_req:,.0f} ر.س")
+            st_col3.metric("الدفعة 1", f"{tot_p1_all:,.0f} ر.س")
+            st_col4.metric("الدفعة 2", f"{tot_p2_all:,.0f} ر.س")
+            st_col5.metric("الخصومات", f"{tot_ded_all:,.0f} ر.س")
+            st_col6.metric("المتبقي", f"{tot_rem:,.0f} ر.س")
         else:
-            st.markdown("#### 👤 عُهدتك الحالية (omar):")
+            st.markdown("#### عُهدتك الحالية (omar):")
             st.metric("الرصيد المتبقي بعُهدتك", f"{net_acc_now:,.2f} ر.س")
 
         st.divider()
 
-        st.markdown("### ⚡ إجراءات خاطفة")
+        st.markdown("### إجراءات خاطفة")
         
         if st.session_state.user_role == "admin":
             q_col1, q_col2, q_col3, q_col4 = st.columns(4)
             with q_col1:
                 st.markdown('<div class="daftra-quick-card"><h3>👤</h3><h4>إضافة موظف</h4></div>', unsafe_allow_html=True)
-                if st.button("➕ إضافة موظف", use_container_width=True, key="q_btn_add_emp"):
+                if st.button("إضافة موظف", use_container_width=True, key="q_btn_add_emp"):
                     add_employee_dialog('مصنع ميم الخماسية الخرج')
 
             with q_col2:
                 st.markdown('<div class="daftra-quick-card"><h3>🟢</h3><h4>سند قبض</h4></div>', unsafe_allow_html=True)
-                if st.button("💵 سند قبض سريع", use_container_width=True, key="q_btn_rec"):
+                if st.button("سند قبض سريع", use_container_width=True, key="q_btn_rec"):
                     quick_cash_voucher_dialog("قبض", month_selected, "main")
 
             with q_col3:
                 st.markdown('<div class="daftra-quick-card"><h3>🔴</h3><h4>سند صرف</h4></div>', unsafe_allow_html=True)
-                if st.button("💸 سند صرف سريع", use_container_width=True, key="q_btn_pay"):
+                if st.button("سند صرف سريع", use_container_width=True, key="q_btn_pay"):
                     quick_cash_voucher_dialog("صرف", month_selected, "main")
 
             with q_col4:
                 st.markdown('<div class="daftra-quick-card"><h3>💾</h3><h4>النسخ الاحتياطي</h4></div>', unsafe_allow_html=True)
-                if st.button("💾 فتح مركز الأرشيف", use_container_width=True, key="q_btn_backup_page"):
-                    st.session_state['current_view'] = '💾 مركز النسخ الاحتياطي والأرشيف'
+                if st.button("فتح مركز الأرشيف", use_container_width=True, key="q_btn_backup_page"):
+                    st.session_state['current_view'] = 'مركز النسخ الاحتياطي والأرشيف'
                     st.rerun()
         else:
             q_col2, q_col3 = st.columns(2)
             with q_col2:
                 st.markdown('<div class="daftra-quick-card"><h3>🟢</h3><h4>سند قبض</h4></div>', unsafe_allow_html=True)
-                if st.button("💵 سند قبض سريع", use_container_width=True, key="q_btn_rec"):
+                if st.button("سند قبض سريع", use_container_width=True, key="q_btn_rec"):
                     quick_cash_voucher_dialog("قبض", month_selected, "accountant")
 
             with q_col3:
                 st.markdown('<div class="daftra-quick-card"><h3>🔴</h3><h4>سند صرف</h4></div>', unsafe_allow_html=True)
-                if st.button("💸 سند صرف سريع", use_container_width=True, key="q_btn_pay"):
+                if st.button("سند صرف سريع", use_container_width=True, key="q_btn_pay"):
                     quick_cash_voucher_dialog("صرف", month_selected, "accountant")
 
-    elif selected_option == '💾 مركز النسخ الاحتياطي والأرشيف' and st.session_state.user_role == "admin":
+    elif selected_option == 'مركز النسخ الاحتياطي والأرشيف' and st.session_state.user_role == "admin":
         st.subheader(f'💾 مركز إدارة النسخ الاحتياطي والأرشيف المالي - ({month_selected})')
         st.write('💡 يتيح لك هذا المركز حفظ نسخة كاملة من بيانات النظام المالية والإدارية على جهازك أو استعادتها فوراً:')
         
@@ -1018,17 +1035,17 @@ else:
                 except Exception:
                     st.error("خطأ في قراءة ملف النسخة المرفوع.")
 
-    elif selected_option == '📊 إدخال الدفعات السريع' and st.session_state.user_role == "admin":
+    elif selected_option == 'إدخال الدفعات السريع' and st.session_state.user_role == "admin":
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات السريع - ({month_selected})')
         
-        t1, t2, t3, t4 = st.tabs(['📍 مصنع الخرج', '📍 مستودع الخرج', '📍 مستودع الرياض', '📍 رواتب متنوعة'])
+        t1, t2, t3, t4 = st.tabs(['مصنع الخرج', 'مستودع الخرج', 'مستودع الرياض', 'رواتب متنوعة'])
         branches = [('مصنع ميم الخماسية الخرج', t1), ('مستودع ميم الخماسية الخرج', t2), ('مستودع ميم الخماسية الرياض', t3), ('رواتب متنوعة', t4)]
         
         for b_name, tab_obj in branches:
             with tab_obj:
                 col_auto1, col_auto2 = st.columns([2, 1])
                 with col_auto1:
-                    if st.button(f'⚡ توزيع المتبقي كـ "دفعة 2" تلقائياً ({b_name})', key=f"auto_btn_{b_name}"):
+                    if st.button(f'توزيع المتبقي كـ "دفعة 2" تلقائياً ({b_name})', key=f"auto_btn_{b_name}"):
                         for idx, row in st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].iterrows():
                             req_s = row['الراتب الأساسي']
                             p1 = row.get('الدفعة 1', 0)
@@ -1062,7 +1079,7 @@ else:
                     key=f"ed_{b_name}_{month_selected}"
                 )
                 
-                if st.button(f"💾 حفظ التعديلات ({b_name})", key=f"btn_save_ed_{b_name}"):
+                if st.button(f"حفظ التعديلات ({b_name})", key=f"btn_save_ed_{b_name}"):
                     for idx, row in edited_b.iterrows():
                         m_id = row['م']
                         target_idx = st.session_state.payroll_df[st.session_state.payroll_df['م'] == m_id].index[0]
@@ -1093,7 +1110,7 @@ else:
                 b_tot_rem = b_tot_req - (b_tot_p1 + b_tot_p2 + b_tot_ded)
 
                 st.divider()
-                st.markdown(f"#### 📊 الملخص المالي لفرع ({b_name}):")
+                st.markdown(f"#### الملخص المالي لفرع ({b_name}):")
                 s_col1, s_col2, s_col3, s_col4, s_col5 = st.columns(5)
                 s_col1.metric("إجمالي الرواتب", f"{b_tot_req:,.0f} ر.س")
                 s_col2.metric("إجمالي الدفعة 1", f"{b_tot_p1:,.0f} ر.س")
@@ -1101,7 +1118,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    elif selected_option == '💵 حركة الصندوق والسندات':
+    elif selected_option == 'حركة الصندوق والسندات':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
         all_cash_db = load_cash_data()
@@ -1121,10 +1138,10 @@ else:
 
         opening_bal = current_m_cash.get(active_opening_key, 0.0)
 
-        with st.expander("⚙️ تعديل الرصيد الافتتاحي للصندوق", expanded=False):
+        with st.expander("تعديل الرصيد الافتتاحي للصندوق", expanded=False):
             with st.form("set_opening_balance_form"):
                 new_opening_val = st.number_input("الرصيد الافتتاحي (ر.س):", min_value=0.0, value=float(opening_bal))
-                sub_op = st.form_submit_button("💾 تثبيت الرصيد الافتتاحي")
+                sub_op = st.form_submit_button("تثبيت الرصيد الافتتاحي")
                 if sub_op:
                     current_m_cash[active_opening_key] = new_opening_val
                     all_cash_db[month_selected] = current_m_cash
@@ -1138,16 +1155,16 @@ else:
         net_cash_now = opening_bal + tot_cash_in - tot_cash_out
 
         c_m1, c_m2, c_m3, c_m4 = st.columns(4)
-        c_m1.metric("💵 رصيد أول الشهر", f"{opening_bal:,.2f} ر.س")
-        c_m2.metric("🟢 المقبوضات", f"{tot_cash_in:,.2f} ر.س")
-        c_m3.metric("🔴 المصروفات", f"{tot_cash_out:,.2f} ر.س")
-        c_m4.metric("🏦 المتبقي بالصندوق", f"{net_cash_now:,.2f} ر.س")
+        c_m1.metric("رصيد أول الشهر", f"{opening_bal:,.2f} ر.س")
+        c_m2.metric("المقبوضات", f"{tot_cash_in:,.2f} ر.س")
+        c_m3.metric("المصروفات", f"{tot_cash_out:,.2f} ر.س")
+        c_m4.metric("المتبقي بالصندوق", f"{net_cash_now:,.2f} ر.س")
 
         st.divider()
 
         col_c_in1, col_c_in2 = st.columns([1, 1.8])
         with col_c_in1:
-            st.markdown("### 📝 تسجيل حركة بالصندوق:")
+            st.markdown("### تسجيل حركة بالصندوق:")
             with st.form("add_cash_transaction_form"):
                 trans_type = st.selectbox("نوع الحركة:", ["سند قبض / إيراد", "سند صرف / مصروف"])
                 trans_party = st.text_input("اسم الجهة / البيان:", placeholder="مثلاً: العميل / شراء مواد خام")
@@ -1155,7 +1172,7 @@ else:
                 trans_pay_method = st.selectbox("طريقة السداد:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
                 trans_notes = st.text_input("ملاحظات / الفاتورة:")
                 
-                sub_cash = st.form_submit_button("💾 حفظ الحركة")
+                sub_cash = st.form_submit_button("حفظ الحركة")
                 if sub_cash:
                     if trans_party and trans_amt > 0:
                         rec_cnt = sum(1 for t in curr_trans if "قبض" in t['type'])
@@ -1179,7 +1196,7 @@ else:
                         st.rerun()
 
         with col_c_in2:
-            st.markdown("### 📑 دفتر يومية الصندوق:")
+            st.markdown("### دفتر يومية الصندوق:")
             if curr_trans:
                 cf1, cf2 = st.columns([2, 1])
                 with cf1:
@@ -1212,14 +1229,14 @@ else:
                     tc2.write(f"**{t_item['party']}**  \n<span style='color:{t_color}; font-size:12px;'>{t_item['type']}</span>", unsafe_allow_html=True)
                     tc3.write(f"💵 **{t_item['amount']:,.2f} ر.س**")
                     
-                    if tc4.button("🖨️ طباعة", key=f"btn_p_cash_{real_idx}"):
+                    if tc4.button("طباعة", key=f"btn_p_cash_{real_idx}"):
                         print_cash_voucher_dialog(t_item, month_selected)
 
-                    if tc5.button("✏️ تعديل", key=f"btn_e_cash_{real_idx}"):
+                    if tc5.button("تعديل", key=f"btn_e_cash_{real_idx}"):
                         box_type = "main" if active_box_key == "transactions" else "accountant"
                         edit_cash_modal(month_selected, real_idx, box_type)
                         
-                    if tc6.button("🗑️ حذف", key=f"btn_d_cash_{real_idx}"):
+                    if tc6.button("حذف", key=f"btn_d_cash_{real_idx}"):
                         curr_trans.pop(real_idx)
                         all_cash_db[month_selected][active_box_key] = curr_trans
                         save_cash_data(all_cash_db)
@@ -1229,7 +1246,7 @@ else:
             else:
                 st.info("لا توجد حركات تسوية بالصندوق مسجلة لهذا الشهر.")
 
-    elif selected_option == '👤 دليل الموظفين' and st.session_state.user_role == "admin":
+    elif selected_option == 'دليل الموظفين' and st.session_state.user_role == "admin":
         st.subheader('👤 دليل الموظفين والملفات الإدارية')
         
         search_kw = st.text_input("🔍 استعلام باسم الموظف أو الوظيفة:", placeholder="اكتب جزءاً من الاسم...")
@@ -1241,7 +1258,7 @@ else:
                 c_card1.write(f"👤 **{e_row['الاسم']}** ({e_row['الوظيفة']}) - {e_row['الفرع']}")
                 c_card2.write(f"💵 الراتب: **{e_row['الراتب الأساسي']:,.0f} ر.س**")
                 c_card3.write(f"📅 بداية العمل: {e_row.get('تاريخ بداية العمل', '2024-01-01')}")
-                if c_card4.button("✏️ تعديل", key=f"btn_s_edit_{e_row['م']}"):
+                if c_card4.button("تعديل", key=f"btn_s_edit_{e_row['م']}"):
                     edit_employee_dialog(e_idx, month_selected)
                 st.divider()
         else:
@@ -1251,10 +1268,10 @@ else:
             cnt_misc = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'رواتب متنوعة'])
             
             tab_search_list = [
-                (f'🏭 مصنع الخرج ({cnt_factory})', 'مصنع ميم الخماسية الخرج'),
-                (f'📦 مستودع الخرج ({cnt_wh_kh})', 'مستودع ميم الخماسية الخرج'),
-                (f'🏙️ مستودع الرياض ({cnt_wh_ry})', 'مستودع ميم الخماسية الرياض'),
-                (f'📋 رواتب متنوعة ({cnt_misc})', 'رواتب متنوعة')
+                (f'مصنع الخرج ({cnt_factory})', 'مصنع ميم الخماسية الخرج'),
+                (f'مستودع الخرج ({cnt_wh_kh})', 'مستودع ميم الخماسية الخرج'),
+                (f'مستودع الرياض ({cnt_wh_ry})', 'مستودع ميم الخماسية الرياض'),
+                (f'رواتب متنوعة ({cnt_misc})', 'رواتب متنوعة')
             ]
             
             search_tabs = st.tabs([t[0] for t in tab_search_list])
@@ -1265,7 +1282,7 @@ else:
                     with col_h1:
                         st.write(f"دليل موظفي **{b_name}**:")
                     with col_h2:
-                        if st.button(f"➕ إضافة موظف لـ {b_name}", key=f"btn_modal_add_{b_name}"):
+                        if st.button(f"إضافة موظف لـ {b_name}", key=f"btn_modal_add_{b_name}"):
                             add_employee_dialog(b_name)
 
                     branch_df_search = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name]
@@ -1277,13 +1294,13 @@ else:
                             c_card2.write(f"💵 الراتب: **{e_row['الراتب الأساسي']:,.0f} ر.س**")
                             c_card3.write(f"📅 بداية العمل: {e_row.get('تاريخ بداية العمل', '2024-01-01')}")
                             
-                            if c_card4.button("✏️ تعديل", key=f"btn_edit_m_{e_row['م']}"):
+                            if c_card4.button("تعديل", key=f"btn_edit_m_{e_row['م']}"):
                                 edit_employee_dialog(e_idx, month_selected)
                             st.divider()
                     else:
                         st.info(f"لا يوجد موظفين حالياً في {b_name}.")
 
-    elif selected_option == '📋 مسير الرواتب الشهري' and st.session_state.user_role == "admin":
+    elif selected_option == 'مسير الرواتب الشهري' and st.session_state.user_role == "admin":
         st.subheader(f'📋 كشف مسير الرواتب الشهري الموحد - ({month_selected})')
         filter_sheet = st.selectbox('اختر الفرع للكشف:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
         df_sheet = st.session_state.payroll_df if 'جميع الفروع' in filter_sheet else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == filter_sheet]
@@ -1310,7 +1327,7 @@ else:
         </head>
         <body>
             <div class="no-print" style="text-align:center; padding: 10px; margin-bottom: 15px;">
-                <button onclick="window.print()" style="background: #1E3A8A; color: white; border: none; padding: 10px 25px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer;">🖨️ طباعة المسير (PDF)</button>
+                <button onclick="window.print()" style="background: #1E3A8A; color: white; border: none; padding: 10px 25px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer;">طباعة المسير (PDF)</button>
             </div>
             <div class="header">
                 <h2>🏢 شركة ميم الخماسية للتصنيع</h2>
@@ -1375,7 +1392,7 @@ else:
             mime="text/html"
         )
 
-    elif selected_option == '🖨️ طباعة السندات الرسمية (A4)' and st.session_state.user_role == "admin":
+    elif selected_option == 'طباعة السندات الرسمية (A4)' and st.session_state.user_role == "admin":
         st.subheader(f'🖨️ طباعة سندات القبض والصرف الرسمية A4 - ({month_selected})')
         col_p1, col_p2 = st.columns(2)
         with col_p1:
@@ -1394,7 +1411,7 @@ else:
             mime="text/html"
         )
 
-    elif selected_option == '🇸🇦 حاسبة نهاية الخدمة' and st.session_state.user_role == "admin":
+    elif selected_option == 'حاسبة نهاية الخدمة' and st.session_state.user_role == "admin":
         st.subheader('🇸🇦 حاسبة مستحقات نهاية الخدمة وبدل الإجازات (نظام العمل السعودي)')
         saudi_reports = []
         for _, r in st.session_state.payroll_df.iterrows():
@@ -1413,7 +1430,7 @@ else:
         df_saudi = pd.DataFrame(saudi_reports)
         st.dataframe(df_saudi, use_container_width=True, hide_index=True)
 
-    elif selected_option == '🔔 تنبيهات الإقامات والعقود' and st.session_state.user_role == "admin":
+    elif selected_option == 'تنبيهات الإقامات والعقود' and st.session_state.user_role == "admin":
         st.subheader('🔔 مركز تنبيهات انتهاء الإقامات وعقود العمل')
         today = datetime.now().date()
         alerts = []
@@ -1422,31 +1439,31 @@ else:
                 iq_d = datetime.strptime(str(r.get('تاريخ انتهاء الإقامة')), '%Y-%m-%d').date()
                 ct_d = datetime.strptime(str(r.get('تاريخ انتهاء العقد')), '%Y-%m-%d').date()
                 if iq_d < today:
-                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': '🆔 إقامة', 'تاريخ الانتهاء': iq_d, 'الحالة': '🔴 منتهية'})
+                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': 'إقامة', 'تاريخ الانتهاء': iq_d, 'الحالة': '🔴 منتهية'})
                 elif (iq_d - today).days <= 30:
-                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': '🆔 إقامة', 'تاريخ الانتهاء': iq_d, 'الحالة': '🟡 تنتهي قريباً'})
+                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': 'إقامة', 'تاريخ الانتهاء': iq_d, 'الحالة': '🟡 تنتهي قريباً'})
                 if ct_d < today:
-                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': '📄 عقد عمل', 'تاريخ الانتهاء': ct_d, 'الحالة': '🔴 منتهي'})
+                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': 'عقد عمل', 'تاريخ الانتهاء': ct_d, 'الحالة': '🔴 منتهي'})
                 elif (ct_d - today).days <= 30:
-                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': '📄 عقد عمل', 'تاريخ الانتهاء': ct_d, 'الحالة': '🟡 ينتهي قريباً'})
+                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': 'عقد عمل', 'تاريخ الانتهاء': ct_d, 'الحالة': '🟡 ينتهي قريباً'})
             except: pass
         if alerts: st.dataframe(pd.DataFrame(alerts), use_container_width=True, hide_index=True)
         else: st.success('جميع الإقامات والعقود سارية ولا يوجد وثائق منتهية حالياً!')
 
-    elif selected_option == '🏁 الإغلاق السنوي وسنة جديدة' and st.session_state.user_role == "admin":
+    elif selected_option == 'الإغلاق السنوي وسنة جديدة' and st.session_state.user_role == "admin":
         st.subheader('🏁 شاشة الإغلاق المالي السنوي وفتح سنة جديدة')
-        st.markdown("### 📊 ملخص الرواتب والدفعات الكلية بالسجلات:")
+        st.markdown("### ملخص الرواتب والدفعات الكلية بالسجلات:")
         st.dataframe(st.session_state.payroll_df[['م', 'الاسم', 'الوظيفة', 'الفرع', 'الراتب الأساسي', 'الخصومات', 'الدفعة المدفوعة', 'المتبقي']], use_container_width=True, hide_index=True)
         
         st.divider()
-        st.markdown("### ⚙️ فتح سنة جديدة:")
+        st.markdown("### فتح سنة جديدة:")
         col_y1, col_y2 = st.columns(2)
         with col_y1:
             next_year_name = st.text_input("السنة المالية الجديدة:", "2027")
         with col_y2:
             st.write("")
             st.write("")
-            if st.button(f"🏁 إغلاق السنة المالية الحالية وفتح سنة ({next_year_name})"):
+            if st.button(f"إغلاق السنة المالية الحالية وفتح سنة ({next_year_name})"):
                 st.session_state.payroll_df['الخصومات'] = 0.0
                 st.session_state.payroll_df['الدفعة 1'] = 0.0
                 st.session_state.payroll_df['الدفعة 2'] = 0.0
