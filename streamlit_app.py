@@ -12,14 +12,14 @@ ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
 
 if 'theme_mode' not in st.session_state:
-    st.session_state['theme_mode'] = '🌙 ليلي ذهبي نحاسي (Copper Gold Dark)'
+    st.session_state['theme_mode'] = '🌙 ليلي ذهبي نحاسي (Copper Dark)'
 
 if '🌙' in st.session_state['theme_mode']:
     bg_app = "#0F172A"
     bg_card = "#1E293B"
     bg_sidebar = "#1E293B"
     text_color = "#FFFFFF"
-    border_color = "#D97706"  # لون نحاسي فاخر للحدود
+    border_color = "#D97706"
     input_bg = "#F1F5F9"
     input_text = "#0F172A"
 else:
@@ -59,7 +59,7 @@ st.markdown(f"""
             font-weight: 700 !important;
         }}
 
-        /* ألوان القوائم المنسدلة النحاسية الذهبية */
+        /* ألوان القوائم المنسدلة النحاسية الذهبية وتثبيت الألوان */
         [data-testid="stSidebar"] .streamlit-expanderHeader,
         [data-testid="stSidebar"] details[open] summary,
         [data-testid="stSidebar"] details summary:hover,
@@ -80,22 +80,24 @@ st.markdown(f"""
             border-top: none !important;
         }}
 
+        /* تصحيح وضوح خطوط القوائم المنسدلة عند الفتح */
         ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"] div {{
-            background-color: #F1F5F9 !important;
-            color: #0F172A !important;
+            background-color: #1E293B !important;
             border: 1px solid #D97706 !important;
         }}
 
-        li[role="option"] {{
-            color: #0F172A !important;
-            background-color: #F1F5F9 !important;
+        li[role="option"], li[role="option"] * {{
+            color: #FFFFFF !important;
+            background-color: #1E293B !important;
+            font-weight: 700 !important;
         }}
 
-        li[role="option"]:hover {{
+        li[role="option"]:hover, li[role="option"]:hover * {{
             background-color: #D97706 !important;
             color: #FFFFFF !important;
         }}
 
+        /* إصلاح حقول الإدخال والتواريخ لتصبح رمادية فاتحة مع خط أسود واضح جداً */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: #F1F5F9 !important;
             color: #0F172A !important;
@@ -105,7 +107,19 @@ st.markdown(f"""
             font-size: 15px !important;
         }}
 
-        /* النوافذ المنبثقة والسندات باللون الذهبي النحاسي */
+        /* إصلاح حقل رفع الملفات والنسخ الاحتياطي بالكامل */
+        [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
+            background-color: #1E293B !important;
+            border: 2px dashed #D97706 !important;
+            border-radius: 10px !important;
+            padding: 10px !important;
+        }}
+
+        [data-testid="stFileUploader"] button, [data-testid="stFileUploader"] span, [data-testid="stFileUploader"] label {{
+            color: #FFFFFF !important;
+        }}
+
+        /* وضوح العناوين والتسميات والأزرار داخل النوافذ المنبثقة والسندات */
         [data-testid="stDialog"] div[role="dialog"] {{
             background-color: #FFFFFF !important;
             border: 3px solid #D97706 !important;
@@ -123,25 +137,14 @@ st.markdown(f"""
             font-weight: 700 !important;
         }}
 
-        [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
-            background-color: #1E293B !important;
-            border: 2px dashed #D97706 !important;
-            border-radius: 10px !important;
-            padding: 10px !important;
-        }}
-
-        [data-testid="stFileUploader"] button, [data-testid="stFileUploader"] span {{
-            color: #FFFFFF !important;
-        }}
-
-        .stButton>button, .stDownloadButton>button {{
+        .stButton>button, .stDownloadButton>button, form [data-testid="stFormSubmitButton"] button {{
             background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
             color: #FFFFFF !important;
             border: none !important;
             border-radius: 8px !important;
             font-weight: 700 !important;
             font-size: 15px !important;
-            box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.3) !important;
+            box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4) !important;
         }}
 
         .stMetric, .daftra-quick-card {{
@@ -191,7 +194,6 @@ st.markdown(f"""
             margin-bottom: 10px;
         }}
 
-        /* تصميم شريط التاريخ الجمالي باللون الذهبي النحاسي */
         .date-badge-lux {{
             display: inline-block;
             background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
@@ -647,7 +649,7 @@ else:
         month_selected = st.selectbox('📅 شهر العمليات الحالي:', st.session_state.months_list)
         st.divider()
 
-        st.session_state['theme_mode'] = st.selectbox("🎨 نمط ألوان الواجهة:", ["🌙 ليلي ذهبي نحاسي (Copper Dark)", "☀️ نهاري رمادي مريح (Slate Day)"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
+        st.session_state['theme_mode'] = st.selectbox("🎨 نمط ألوان الواجهة:", ["🌙 ليلي رمادي داكن (Slate Dark)", "☀️ نهاري رمادي مريح (Slate Day)"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
 
         st.divider()
 
@@ -662,6 +664,7 @@ else:
                 st.session_state['current_view'] = '💵 حركة الصندوق وتوليد السندات'
                 st.rerun()
 
+        # الموظفين والرواتب تنحصر حساباتها على wahby فقط
         if st.session_state.user_role == "admin":
             with st.expander("👥 الموظفين"):
                 if st.button("👤 دليل الموظفين والملفات الإدارية", use_container_width=True):
