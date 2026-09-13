@@ -41,7 +41,10 @@ st.markdown(f"""
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
         }}
         
-        label, p, span, h1, h2, h3, h4, h5, h6, div {{
+        /* إجبار محاذاة العناوين بالكامل من اليمين إلى اليسار */
+        h1, h2, h3, h4, h5, h6, .stMarkdown, label, p, span, div {{
+            direction: rtl !important;
+            text-align: right !important;
             color: {text_color} !important;
             font-weight: 600 !important;
         }}
@@ -59,6 +62,7 @@ st.markdown(f"""
             font-weight: 700 !important;
         }}
 
+        /* القوائم المنسدلة النحاسية الذهبية */
         [data-testid="stSidebar"] .streamlit-expanderHeader,
         [data-testid="stSidebar"] details[open] summary,
         [data-testid="stSidebar"] details summary:hover,
@@ -96,7 +100,7 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        /* إصلاح حقول الإدخال والتواريخ لتصبح رمادية فاتحة مع خط أسود واضح جداً */
+        /* حقول الإدخال والتواريخ */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: #F1F5F9 !important;
             color: #0F172A !important;
@@ -106,7 +110,19 @@ st.markdown(f"""
             font-size: 15px !important;
         }}
 
-        /* إصلاح النوافذ المنبثقة والسندات بالكامل باللون الكحلي الداكن والأبيض */
+        /* رفع الملفات والنسخ الاحتياطي */
+        [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
+            background-color: #1E293B !important;
+            border: 2px dashed #D97706 !important;
+            border-radius: 10px !important;
+            padding: 10px !important;
+        }}
+
+        [data-testid="stFileUploader"] button, [data-testid="stFileUploader"] span, [data-testid="stFileUploader"] label {{
+            color: #FFFFFF !important;
+        }}
+
+        /* النوافذ المنبثقة والسندات */
         [data-testid="stDialog"] div[role="dialog"] {{
             background-color: #1E293B !important;
             border: 3px solid #D97706 !important;
@@ -122,27 +138,16 @@ st.markdown(f"""
         [data-testid="stDialog"] div[role="dialog"] div {{
             color: #FFFFFF !important;
             font-weight: 700 !important;
+            text-align: right !important;
         }}
 
-        [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
-            background-color: #1E293B !important;
-            border: 2px dashed #D97706 !important;
-            border-radius: 10px !important;
-            padding: 10px !important;
-        }}
-
-        [data-testid="stFileUploader"] button, [data-testid="stFileUploader"] span, [data-testid="stFileUploader"] label {{
-            color: #FFFFFF !important;
-        }}
-
-        /* الأزرار العريضة الملونة وأزرار حفظ النوافذ */
         .stButton>button, .stDownloadButton>button, [data-testid="stFormSubmitButton"] button {{
             background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
             color: #FFFFFF !important;
             border: none !important;
             border-radius: 8px !important;
             font-weight: 800 !important;
-            font-size: 16px !important;
+            font-size: 15px !important;
             box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4) !important;
         }}
 
@@ -156,6 +161,7 @@ st.markdown(f"""
 
         .stMetric * {{
             color: {text_color} !important;
+            text-align: right !important;
         }}
 
         .stDataFrame, [data-testid="stDataEditor"] {{
@@ -170,12 +176,12 @@ st.markdown(f"""
             color: {text_color} !important;
         }}
 
-        /* كارت الترحيب الضخم والفاخر للشاشة الافتتاحية */
+        /* كارت الترحيب الضخم والفاخر لشاشة الدخول الافتتاحية */
         .welcome-card-lux {{
             background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
             border-radius: 20px;
             padding: 50px 30px;
-            text-align: center;
+            text-align: center !important;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
             margin-top: 20px;
             border: 2px solid #D97706;
@@ -190,6 +196,35 @@ st.markdown(f"""
             margin-top: 15px;
             margin-bottom: 10px;
             letter-spacing: 0.5px;
+            text-align: center !important;
+        }}
+
+        /* كارت المسمى الداخلي العريض المميز بعد الدخول */
+        .company-header-inner {{
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+            border: 2px solid #D97706;
+            border-radius: 16px;
+            padding: 20px 30px;
+            text-align: center !important;
+            margin-top: 10px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+        }}
+
+        .company-header-inner-title {{
+            font-size: 32px !important;
+            font-weight: 900 !important;
+            color: #F59E0B !important;
+            margin: 0 !important;
+            text-align: center !important;
+            letter-spacing: 1px;
+        }}
+
+        .company-header-inner-sub {{
+            color: #94A3B8 !important;
+            font-size: 15px !important;
+            margin-top: 5px !important;
+            text-align: center !important;
         }}
 
         .logo-lux {{
@@ -199,6 +234,7 @@ st.markdown(f"""
             font-family: Arial, sans-serif;
             line-height: 1;
             margin-bottom: 10px;
+            text-align: center !important;
         }}
 
         .date-badge-lux {{
@@ -212,6 +248,7 @@ st.markdown(f"""
             margin-bottom: 15px;
             box-shadow: 0 4px 15px rgba(217, 119, 6, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.3);
+            text-align: center !important;
         }}
     </style>
 """, unsafe_allow_html=True)
@@ -245,7 +282,7 @@ initial_data = [
     {'م': 13, 'الاسم': 'محمد فوزي', 'الوظيفة': 'عامل', 'الراتب الأساسي': 3000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-03-01', 'تاريخ انتهاء العقد': '2027-05-01', 'الخصومات': 0.0, 'الدفعة 1': 2000.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 3000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 14, 'الاسم': 'إبراهيم السيد', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-11-15', 'تاريخ انتهاء العقد': '2027-02-01', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 15, 'الاسم': 'مصطفي عماد', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-01-20', 'تاريخ انتهاء العقد': '2027-03-15', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
-    {'م': 16, 'الاسم': 'محمد شريف ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2200.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-12-10', 'تاريخ انتهاء العقد': '2027-02-28', 'الخصومات': 0.0, 'الدفعة 1': 1200.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2200.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
+    {'م': 16, 'الاسم': 'محمد شريف ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2200.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-12-10', 'تاريخ انتهاء العقد': '2027-28', 'الخصومات': 0.0, 'الدفعة 1': 1200.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2200.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 17, 'الاسم': 'محمد رضا', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-02-15', 'تاريخ انتهاء العقد': '2027-04-30', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 18, 'الاسم': 'محمد ابو نهي ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 4000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-05', 'تاريخ انتهاء العقد': '2026-12-15', 'الخصومات': 0.0, 'الدفعة 1': 2000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 4000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 19, 'الاسم': 'محمد ابو صبري ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-04-01', 'تاريخ انتهاء العقد': '2027-06-15', 'الخصومات': 0.0, 'الدفعة 1': 3000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 5000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
@@ -462,7 +499,7 @@ def edit_cash_modal(month_name, trans_idx, target_box="main"):
 
 @st.dialog("📊 ملخص توزيع الموظفين حسب الفروع")
 def modal_emp_summary():
-    st.write("### 🏢 توزيع العمالة والمتوسطات:")
+    st.write("### 🏢 توزيع العمالة ومتوسط الرواتب:")
     df = st.session_state.payroll_df
     summary_data = []
     for b_name in ['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة']:
@@ -751,9 +788,13 @@ else:
     
     st.markdown(f'<div style="text-align: center;"><div class="date-badge-lux">{date_formatted}</div></div>', unsafe_allow_html=True)
 
-    if st.button("🏢 شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد", use_container_width=True):
-        st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
-        st.rerun()
+    # كارت الشركة الرئيسي الداخلي
+    st.markdown("""
+        <div class="company-header-inner">
+            <h1 class="company-header-inner-title">🏢 شركة ميم الخماسية للتصنيع</h1>
+            <p class="company-header-inner-sub">النظام المحاسبي والإداري الموحد لإدارة الرواتب، الدفعات، وسندات الصندوق والعُهد</p>
+        </div>
+    """, unsafe_allow_html=True)
 
     def generate_pretty_html_pdf(df_subset, branch_name, payment_type="جميع الدفعات"):
         output = io.BytesIO()
