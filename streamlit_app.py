@@ -5,102 +5,80 @@ import json
 import os
 from datetime import datetime
 
-# 1. إعداد الصفحة وتحديد الثيم الافتراضي
+# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
 st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
 
 if 'theme_mode' not in st.session_state:
-    st.session_state['theme_mode'] = '☀️ نهاري (Soft Light)'
+    st.session_state['theme_mode'] = '☀️ نهاري رمادي مريح (Slate Day)'
 
-# تطبيق التنسيقات البرمجية بناءً على خيار الوضع الليلي أو النهاري
+# تطبيق التنسيقات البرمجية الصريحة بناءً على الاختيار
 if '🌙' in st.session_state['theme_mode']:
-    # تنسيقات الوضع الليلي (Dark Navy Theme)
     bg_app = "#0F172A"
+    bg_card = "#1E293B"
     bg_sidebar = "#1E293B"
     text_color = "#F8FAFC"
-    card_bg = "#1E293B"
     border_color = "#334155"
-    table_bg = "#1E293B"
 else:
-    # تنسيقات الوضع النهاري المريح (Soft Light Theme)
-    bg_app = "#F1F5F9"
-    bg_sidebar = "#FFFFFF"
-    text_color = "#1E293B"
-    card_bg = "#FFFFFF"
+    bg_app = "#E2E8F0"
+    bg_card = "#FFFFFF"
+    bg_sidebar = "#F8FAFC"
+    text_color = "#0F172A"
     border_color = "#CBD5E1"
-    table_bg = "#FFFFFF"
 
 st.markdown(f"""
     <style>
-        html, body, .stApp, [data-testid="stAppViewContainer"] {{
+        /* إجبار التطبيق على تغيير الألوان وتغطية إعدادات المتصفح الافتراضية */
+        html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
             direction: rtl !important;
             text-align: right !important;
             background-color: {bg_app} !important;
             color: {text_color} !important;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
         }}
         
-        [data-testid="stSidebar"] {{
+        [data-testid="stSidebar"], [data-testid="stSidebarContent"] {{
             right: 0 !important;
             left: auto !important;
-            border-left: 1px solid {border_color} !important;
+            border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
         }}
-        
-        [data-testid="stSidebarContent"] {{
-            direction: rtl !important;
-            text-align: right !important;
-            padding-top: 10px;
+
+        [data-testid="stSidebar"] .stMarkdown h3 {{
+            color: {text_color} !important;
+            font-size: 13px !important;
+            font-weight: 700;
+        }}
+
+        [data-testid="stSidebar"] .streamlit-expanderHeader {{
+            background-color: {bg_sidebar} !important;
+            color: #1E3A8A !important;
+            font-weight: 700 !important;
+            border-bottom: 1px solid {border_color} !important;
+        }}
+
+        /* كروت الإحصائيات وبطاقات دفترة */
+        .stMetric, .daftra-quick-card {{
+            background-color: {bg_card} !important;
+            border-radius: 12px !important;
+            padding: 15px !important;
+            border: 1px solid {border_color} !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+        }}
+
+        .stMetric * {{
+            color: {text_color} !important;
         }}
 
         [data-testid="stDialog"] div[role="dialog"], .stDataFrame, [data-testid="stDataEditor"] {{
             direction: rtl !important;
             text-align: right !important;
-            background-color: {table_bg} !important;
+            background-color: {bg_card} !important;
         }}
 
         .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {{
             text-align: right !important;
             font-size: 14px !important;
             color: {text_color} !important;
-        }}
-
-        .daftra-quick-card {{
-            background-color: {card_bg};
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            border: 1px solid {border_color};
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            transition: all 0.2s ease-in-out;
-        }}
-        
-        .daftra-header-blue {{
-            background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
-            padding: 22px;
-            border-radius: 14px;
-            color: white;
-            text-align: center;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.3);
-        }}
-
-        .welcome-card-lux {{
-            background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
-            border-radius: 20px;
-            padding: 50px 30px;
-            text-align: center;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-            margin-top: 30px;
-            color: white;
-        }}
-
-        .logo-lux {{
-            font-size: 90px;
-            font-weight: 900;
-            color: #EF4444;
-            font-family: Arial, sans-serif;
-            line-height: 1;
-            margin-bottom: 10px;
         }}
 
         .stButton>button {{ border-radius: 8px; font-weight: 600; }}
@@ -500,7 +478,7 @@ else:
     # 3. القائمة الجانبية المنسقة بالكامل بنمط دفترة (Daftra Sidebar)
     with st.sidebar:
         st.markdown("""
-            <div style="text-align: center; padding-bottom: 10px; border-bottom: 2px solid #F1F5F9;">
+            <div style="text-align: center; padding-bottom: 10px; border-bottom: 2px solid #CBD5E1;">
                 <div style="font-size: 55px; font-weight: 900; color: #EF4444; line-height: 1; font-family: Arial;">5M</div>
                 <h3 style="color: #1E3A8A; margin-top: 5px; font-size: 18px; font-weight: bold;">شركة ميم الخماسية للتصنيع</h3>
             </div>
@@ -513,8 +491,8 @@ else:
         month_selected = st.selectbox('📅 شهر العمليات الحالي:', st.session_state.months_list)
         st.divider()
 
-        # زر النمط الداكن/النهاري داخل القائمة الجانبية
-        st.session_state['theme_mode'] = st.selectbox("🎨 نمط ألوان الواجهة:", ["☀️ نهاري (Soft Light)", "🌙 ليلي (Dark Navy)"], index=0 if "☀️" in st.session_state['theme_mode'] else 1)
+        # زر النمط المدمج بالتحويل الفوري للعين
+        st.session_state['theme_mode'] = st.selectbox("🎨 نمط ألوان الواجهة:", ["☀️ نهاري رمادي مريح (Slate Day)", "🌙 ليلي كحلي (Dark Navy)"], index=0 if "☀️" in st.session_state['theme_mode'] else 1)
 
         st.divider()
 
@@ -712,9 +690,41 @@ else:
         st.markdown(f"""
             <div style="text-align: center; margin-bottom: 20px;">
                 <span style="color: #64748B; font-size: 14px; font-weight: 600;">{today_str}</span>
-                <h2 style="color: #1E293B; font-weight: 800; margin-top: 5px;">أهلاً بك، مرحباً بعودتك بالنظام المحاسبي! 👋</h2>
+                <h2 style="font-weight: 800; margin-top: 5px;">أهلاً بك، مرحباً بعودتك بالنظام المحاسبي! 👋</h2>
             </div>
         """, unsafe_allow_html=True)
+
+        # دمج كارت ملخص حركة الخزينة والصندوق المالي في الشاشة الرئيسية
+        all_cash_db = load_cash_data()
+        current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': []})
+        
+        months_arr = st.session_state.months_list
+        curr_m_idx = months_arr.index(month_selected) if month_selected in months_arr else 0
+        
+        auto_prev_opening = 0.0
+        if curr_m_idx > 0:
+            prev_m_name = months_arr[curr_m_idx - 1]
+            prev_cash_data = all_cash_db.get(prev_m_name, {'opening': 0.0, 'transactions': []})
+            prev_opening = prev_cash_data.get('opening', 0.0)
+            prev_trans = prev_cash_data.get('transactions', [])
+            prev_in = sum(t['amount'] for t in prev_trans if 'قبض' in t['type'])
+            prev_out = sum(t['amount'] for t in prev_trans if 'صرف' in t['type'])
+            auto_prev_opening = prev_opening + prev_in - prev_out
+
+        opening_bal = current_m_cash.get('opening', auto_prev_opening)
+        curr_trans = current_m_cash.get('transactions', [])
+        tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
+        tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
+        net_cash_now = opening_bal + tot_cash_in - tot_cash_out
+
+        st.markdown(f"### 🏦 ملخص النقدية وحركة الخزينة المباشرة لشهر ({month_selected}):")
+        hm1, hm2, hm3, hm4 = st.columns(4)
+        hm1.metric("💵 رصيد أول الشهر (المرحل)", f"{opening_bal:,.2f} ر.س")
+        hm2.metric("🟢 إجمالي المقبوضات (الوارد)", f"{tot_cash_in:,.2f} ر.س")
+        hm3.metric("🔴 إجمالي المصروفات (المنصرف)", f"{tot_cash_out:,.2f} ر.س")
+        hm4.metric("🏦 الرصيد المتبقي بالصندوق الآن", f"{net_cash_now:,.2f} ر.س")
+
+        st.divider()
 
         st.markdown("### ⚡ الوصول السريع للإجراءات اليومية:")
         q_col1, q_col2, q_col3, q_col4 = st.columns(4)
