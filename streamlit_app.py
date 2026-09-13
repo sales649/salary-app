@@ -57,7 +57,7 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* تصميم نظيف للقائمة الجانبية مخصص لمنع تداخل النصوص */
+        /* القائمة الجانبية النظيفة والمبسطة */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
@@ -74,7 +74,7 @@ st.markdown(f"""
             font-weight: 700 !important;
         }}
 
-        /* أزرار التنقل بالقائمة الجانبية */
+        /* أزرار القائمة الجانبية المبسطة */
         [data-testid="stSidebar"] .stButton>button {{
             width: 100% !important;
             background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
@@ -152,7 +152,6 @@ st.markdown(f"""
             text-align: right !important;
         }}
 
-        /* تصميم رفع الملفات */
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
             background-color: #1E293B !important;
             border: 1px dashed #D97706 !important;
@@ -358,7 +357,7 @@ initial_data = [
     {'م': 13, 'الاسم': 'محمد فوزي', 'الوظيفة': 'عامل', 'الراتب الأساسي': 3000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-03-01', 'تاريخ انتهاء العقد': '2027-05-01', 'الخصومات': 0.0, 'الدفعة 1': 2000.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 3000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 14, 'الاسم': 'إبراهيم السيد', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-11-15', 'تاريخ انتهاء العقد': '2027-02-01', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 15, 'الاسم': 'مصطفي عماد', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-01-20', 'تاريخ انتهاء العقد': '2027-03-15', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
-    {'م': 16, 'الاسم': 'محمد شريف ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2200.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-12-10', 'تاريخ انتهاء العقد': '2027-02-28', 'الخصومات': 0.0, 'الدفعة 1': 1200.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2200.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
+    {'م': 16, 'الاسم': 'محمد شريف ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2200.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-12-10', 'تاريخ انتهاء العقد': '2027-2-28', 'الخصومات': 0.0, 'الدفعة 1': 1200.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2200.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 17, 'الاسم': 'محمد رضا', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-02-15', 'تاريخ انتهاء العقد': '2027-04-30', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 18, 'الاسم': 'محمد ابو نهي ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 4000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-05', 'تاريخ انتهاء العقد': '2026-12-15', 'الخصومات': 0.0, 'الدفعة 1': 2000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 4000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 19, 'الاسم': 'محمد ابو صبري ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-04-01', 'تاريخ انتهاء العقد': '2027-06-15', 'الخصومات': 0.0, 'الدفعة 1': 3000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 5000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
@@ -729,7 +728,7 @@ if not st.session_state.get('app_started', False):
                     st.error("كلمة المرور غير صحيحة!")
 
 else:
-    # 3. القائمة الجانبية المباشرة والنظيفة (بدون expanders لتجنب الشفرات المتداخلة)
+    # 3. القائمة الجانبية المباشرة والنظيفة بالمسميات المحدثة
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 5px;">
@@ -754,12 +753,12 @@ else:
             st.session_state['current_view'] = 'الرئيسية'
             st.rerun()
 
-        if st.button("🏦 حركة الصندوق والسندات", use_container_width=True):
-            st.session_state['current_view'] = 'حركة الصندوق والسندات'
+        if st.button("🏦 حركة الصندوق", use_container_width=True):
+            st.session_state['current_view'] = 'حركة الصندوق'
             st.rerun()
 
-        if st.button("🔍 موديول جرد الخزينة المباشر", use_container_width=True):
-            st.session_state['current_view'] = '🔍 موديول جرد الخزينة المباشر'
+        if st.button("🔍 جرد الخزينة", use_container_width=True):
+            st.session_state['current_view'] = 'جرد الخزينة'
             st.rerun()
 
         if st.session_state.user_role == "admin":
@@ -775,12 +774,12 @@ else:
                 st.session_state['current_view'] = 'دليل الموظفين'
                 st.rerun()
 
-            if st.button("🖨️ طباعة السندات الرسمية A4", use_container_width=True):
-                st.session_state['current_view'] = 'طباعة السندات الرسمية (A4)'
+            if st.button("🖨️ طباعة السندات", use_container_width=True):
+                st.session_state['current_view'] = 'طباعة السندات'
                 st.rerun()
 
-            if st.button("💾 مركز النسخ الاحتياطي", use_container_width=True):
-                st.session_state['current_view'] = 'مركز النسخ الاحتياطي والأرشيف'
+            if st.button("💾 النسخ الاحتياطي", use_container_width=True):
+                st.session_state['current_view'] = 'النسخ الاحتياطي'
                 st.rerun()
 
             if st.button("🇸🇦 حاسبة نهاية الخدمة", use_container_width=True):
@@ -945,7 +944,6 @@ else:
 
         total_company_cash = net_main_now + net_acc_now
 
-        # استدعاء سجل آخر جرد خزانة
         audit_history = load_audit_data()
         last_audit = audit_history[-1] if audit_history else None
 
@@ -963,7 +961,6 @@ else:
                 st.markdown("#### إجمالي نقدية الشركة:")
                 st.metric("مجموع الصناديق", f"{total_company_cash:,.2f} ر.س")
 
-            # شريط ملخص حالة آخر جرد خزينة
             st.divider()
             if last_audit:
                 a_diff = last_audit['diff']
@@ -993,7 +990,7 @@ else:
             with q_col1:
                 st.markdown('<div class="daftra-quick-card"><h3>🔍</h3><h4>جرد الخزينة</h4></div>', unsafe_allow_html=True)
                 if st.button("جرد الصندوق الآن", use_container_width=True, key="q_btn_audit_cash"):
-                    st.session_state['current_view'] = '🔍 موديول جرد الخزينة المباشر'
+                    st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
             with q_col2:
@@ -1009,7 +1006,7 @@ else:
             with q_col4:
                 st.markdown('<div class="daftra-quick-card"><h3>💾</h3><h4>النسخ الاحتياطي</h4></div>', unsafe_allow_html=True)
                 if st.button("فتح مركز الأرشيف", use_container_width=True, key="q_btn_backup_page"):
-                    st.session_state['current_view'] = 'مركز النسخ الاحتياطي والأرشيف'
+                    st.session_state['current_view'] = 'النسخ الاحتياطي'
                     st.rerun()
         else:
             q_col2, q_col3 = st.columns(2)
@@ -1023,10 +1020,10 @@ else:
                 if st.button("سند صرف سريع", use_container_width=True, key="q_btn_pay"):
                     quick_cash_voucher_dialog("صرف", month_selected, "accountant")
 
-    # 5. موديول جرد الخزينة المباشر والتسويات الفورية
-    elif selected_option == '🔍 موديول جرد الخزينة المباشر':
+    # 5. موديول جرد الخزينة المحدث بمبالغ الفئات المباشرة بالريال
+    elif selected_option == 'جرد الخزينة':
         st.subheader(f'🔍 موديول جرد الخزينة ومطابقة النقدية الفعلي - ({month_selected})')
-        st.write('قم بمطابقة المبالغ الموجودة بيدك داخل الصندوق مع الرصيد الدفتري المسجل بالنظام واحتساب العجز أو الزيادة فوراً:')
+        st.write('قم بمطابقة المبالغ النقدية الموجودة بيدك داخل الصندوق مع الرصيد الدفتري المسجل بالنظام واحتساب العجز أو الزيادة فوراً:')
         
         all_cash_db = load_cash_data()
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
@@ -1045,27 +1042,27 @@ else:
 
         col_aud1, col_aud2 = st.columns([1.2, 1])
         with col_aud1:
-            st.markdown("### 💵 1. حاسبة فئات النقدية الفعلي باليد:")
-            st.write("أدخل عدد أوراق النقدية المتوفرة بالخزنة الآن ليتم إجمالي الجرد تلقائياً:")
+            st.markdown("### 💵 1. حاسبة مبالغ الفئات بالخزينة (بالريال):")
+            st.write("أدخل **إجمالي المبلغ الموجود بيدك** لكل فئة نقدية بالريال مباشرة:")
             
             c_f1, c_f2 = st.columns(2)
             with c_f1:
-                n_500 = st.number_input("فئة 500 ريال (عدد الأوراق):", min_value=0, value=0, step=1)
-                n_200 = st.number_input("فئة 200 ريال (عدد الأوراق):", min_value=0, value=0, step=1)
-                n_100 = st.number_input("فئة 100 ريال (عدد الأوراق):", min_value=0, value=0, step=1)
-                n_50 = st.number_input("فئة 50 ريال (عدد الأوراق):", min_value=0, value=0, step=1)
+                v_500 = st.number_input("إجمالي فئة 500 ريال (ر.س):", min_value=0.0, value=0.0, step=500.0)
+                v_200 = st.number_input("إجمالي فئة 200 ريال (ر.س):", min_value=0.0, value=0.0, step=200.0)
+                v_100 = st.number_input("إجمالي فئة 100 ريال (ر.س):", min_value=0.0, value=0.0, step=100.0)
+                v_50 = st.number_input("إجمالي فئة 50 ريال (ر.س):", min_value=0.0, value=0.0, step=50.0)
             with c_f2:
-                n_20 = st.number_input("فئة 20 ريال (عدد الأوراق):", min_value=0, value=0, step=1)
-                n_10 = st.number_input("فئة 10 ريال (عدد الأوراق):", min_value=0, value=0, step=1)
-                n_5 = st.number_input("فئة 5 ريال (عدد الأوراق):", min_value=0, value=0, step=1)
-                n_coins = st.number_input("كسور / أوراق نقدية إضافية (ر.س):", min_value=0.0, value=0.0)
+                v_20 = st.number_input("إجمالي فئة 20 ريال (ر.س):", min_value=0.0, value=0.0, step=20.0)
+                v_10 = st.number_input("إجمالي فئة 10 ريال (ر.س):", min_value=0.0, value=0.0, step=10.0)
+                v_5 = st.number_input("إجمالي فئة 5 ريال (ر.س):", min_value=0.0, value=0.0, step=5.0)
+                v_coins = st.number_input("كسور / مبالغ إضافية بالريال (ر.س):", min_value=0.0, value=0.0)
 
-            actual_counted_cash = (n_500 * 500) + (n_200 * 200) + (n_100 * 100) + (n_50 * 50) + (n_20 * 20) + (n_10 * 10) + (n_5 * 5) + n_coins
+            actual_counted_cash = v_500 + v_200 + v_100 + v_50 + v_20 + v_10 + v_5 + v_coins
 
             st.write("")
-            manual_override = st.checkbox("أو إدخال إجمالي الجرد الفعلي يدويًا دون استخدام الحاسبة")
+            manual_override = st.checkbox("أو كتابة المجموع الكلي الفعلي مباشرة دون تفصيل الفئات")
             if manual_override:
-                actual_counted_cash = st.number_input("إجمالي النقدية الفعلية باليد (ر.س):", min_value=0.0, value=float(actual_counted_cash))
+                actual_counted_cash = st.number_input("إجمالي النقدية الفعلية باليد كلياً (ر.س):", min_value=0.0, value=float(actual_counted_cash))
 
         with col_aud2:
             st.markdown("### 📊 2. نتائج المطابقة والعجز/الزيادة:")
@@ -1109,7 +1106,7 @@ else:
         else:
             st.info("لا توجد جلسات جرد سابقة محفوظة بالنظام.")
 
-    elif selected_option == 'مركز النسخ الاحتياطي والأرشيف' and st.session_state.user_role == "admin":
+    elif selected_option == 'النسخ الاحتياطي' and st.session_state.user_role == "admin":
         st.subheader(f'💾 مركز إدارة النسخ الاحتياطي والأرشيف المالي - ({month_selected})')
         st.write('💡 يتيح لك هذا المركز حفظ نسخة كاملة من بيانات النظام المالية والإدارية على جهازك أو استعادتها فوراً:')
         
@@ -1225,7 +1222,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    elif selected_option == 'حركة الصندوق والسندات':
+    elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
         all_cash_db = load_cash_data()
@@ -1499,7 +1496,7 @@ else:
             mime="text/html"
         )
 
-    elif selected_option == 'طباعة السندات الرسمية (A4)' and st.session_state.user_role == "admin":
+    elif selected_option == 'طباعة السندات' and st.session_state.user_role == "admin":
         st.subheader(f'🖨️ طباعة سندات القبض والصرف الرسمية A4 - ({month_selected})')
         col_p1, col_p2 = st.columns(2)
         with col_p1:
