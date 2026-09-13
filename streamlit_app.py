@@ -484,7 +484,6 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
 def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
     st.write(f"إضافة سند لشهر: **{month_name}** ({'الرئيسية' if target_box == 'main' else 'omar'})")
     
-    # تحسين خيارات تحويل العُهدة حسب المستخدم
     if target_box == "main":
         type_options = ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (omar)"]
     else:
@@ -511,7 +510,6 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                     
                 c_trans = m_cash[box_key]
                 
-                # 1. تحويل عُهدة من wahby إلى omar
                 if "تحويل عُهدة إلى (omar)" in q_type and target_box == "main":
                     v_code = f"TRF-{(len(c_trans) + 1):03d}"
                     c_trans.append({
@@ -540,7 +538,6 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                     })
                     m_cash['acc_transactions'] = acc_trans
 
-                # 2. تحويل عُهدة من omar إلى wahby (استرداد نقدية)
                 elif "تحويل عُهدة إلى (wahby)" in q_type and target_box == "accountant":
                     v_code = f"TRF-ACC-{(len(c_trans) + 1):03d}"
                     c_trans.append({
@@ -899,7 +896,7 @@ else:
         output.seek(0)
         return output
 
-    # 4. الواجهة الرئيسية
+    # 4. الواجهة الرئيسية مع ضبط الصلاحيات لحجاب الخزينة الرئيسية عن omar
     if selected_option == 'الرئيسية':
         all_cash_db = load_cash_data()
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
@@ -917,8 +914,6 @@ else:
         total_company_cash = net_main_now + net_acc_now
 
         drivers_db = load_drivers_data()
-        
-        # تصحيح حساب المتبقي التراكمي المترصد بذمة السائق
         tot_given_drivers = sum(d['given_amt'] for d in drivers_db)
         tot_spent_drivers = sum(d['spent_amt'] for d in drivers_db)
         open_driver_custody_sum = max(0.0, tot_given_drivers - tot_spent_drivers)
@@ -928,6 +923,7 @@ else:
 
         st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
         
+        # العرض الكامل لـ wahby المشتمل الخزينة الرئيسية
         if st.session_state.user_role == "admin":
             c_box1, c_box2, c_box3, c_box4 = st.columns(4)
             with c_box1:
@@ -1000,9 +996,16 @@ else:
                 if st.button("النسخ الاحتياطي", use_container_width=True, key="q_btn_backup_page"):
                     st.session_state['current_view'] = 'النسخ الاحتياطي'
                     st.rerun()
+
+        # العرض المقتصر الخص بـ omar الخالي من الخزينة الرئيسية
         else:
-            st.markdown("#### عُهدتك الحالية (omar):")
-            st.metric("الرصيد المتبقي بعُهدتك", f"{net_acc_now:,.2f} ر.س")
+            c_box1, c_box2 = st.columns(2)
+            with c_box1:
+                st.markdown("#### عُهدتك الحالية (omar):")
+                st.metric("الرصيد المتبقي بعُهدتك", f"{net_acc_now:,.2f} ر.س")
+            with c_box2:
+                st.markdown("#### 🚚 عُهد السائقين المترصدة:")
+                st.metric("إجمالي المتبقي باليد", f"{open_driver_custody_sum:,.2f} ر.س")
 
             st.divider()
             st.markdown("### ⚡ إجراءات خاطفة وسريعة (لوحة omar)")
@@ -1029,7 +1032,7 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 5. موديول عُهد وتصفية السائقين التراكمي والمباشر مع التسميع بصندوق omar
+    # 5. موديول عُهد وتصفية السائقين التراكمي المباشر
     elif selected_option == 'عُهد وتصفية السائقين':
         st.subheader(f'🚚 موديول إدارة عُهد وتصفية السائقين المباشر - ({month_selected})')
         st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والتسميع التراكمي المباشر بصندوق omar:')
@@ -1074,7 +1077,7 @@ else:
                     })
                     save_drivers_data(drivers_db)
 
-                    # تسميع فوري كـ "سند صرف" مبسط بصندوق omar عند التسليم
+                    # تسميع فوري كـ "سند صرف" مبسط ببيان صريح بصندوق omar
                     all_cash = load_cash_data()
                     if month_selected not in all_cash:
                         all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
@@ -1195,7 +1198,13 @@ else:
         all_cash_db = load_cash_data()
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
         
-        target_audit_box = st.radio("اختر الخزينة المراد جردها ومطابقتها الآن:", ["🏢 الخزينة الرئيسية (wahby)", "👤 عُهدة المحاسب (omar)"], horizontal=True)
+        # حجب خيار الخزينة الرئيسية إذا كان المستخدم omar
+        if st.session_state.user_role == "admin":
+            target_audit_box = st.radio("اختر الخزينة المراد جردها ومطابقتها الآن:", ["🏢 الخزينة الرئيسية (wahby)", "👤 عُهدة المحاسب (omar)"], horizontal=True)
+        else:
+            target_audit_box = "👤 عُهدة المحاسب (omar)"
+            st.info("أنت تقوم الآن بـ **جرد ومطابقة الخزينة المخصصة لعُهدتك (omar)**.")
+
         active_box_key = 'transactions' if "wahby" in target_audit_box else 'acc_transactions'
         active_opening_key = 'opening' if "wahby" in target_audit_box else 'acc_opening'
 
@@ -1413,6 +1422,7 @@ else:
             
         current_m_cash = all_cash_db[month_selected]
         
+        # حجب التنقل واقتصار حركة الصندوق لـ omar على عُهدته فقط
         if st.session_state.user_role == "admin":
             box_selected = st.radio("اختر الصندوق:", ["🏢 الخزينة الرئيسية (wahby)", "👤 عُهدة المحاسب (omar)"], horizontal=True)
             active_box_key = 'transactions' if "wahby" in box_selected else 'acc_transactions'
