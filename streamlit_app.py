@@ -11,15 +11,15 @@ st.set_page_config(page_title='شركة ميم الخماسية للتصنيع -
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = '🌙 ليلي كحلي (Dark Navy)'
 
-# تطبيق التنسيقات البرمجية المباشرة وضبط التباين العالي القوي جداً للنصوص
+# تطبيق التنسيقات البرمجية الصريحة بناءً على الاختيار
 if '🌙' in st.session_state['theme_mode']:
     bg_app = "#0F172A"
     bg_card = "#1E293B"
     bg_sidebar = "#1E293B"
     text_color = "#FFFFFF"
     border_color = "#334155"
-    input_bg = "#FFFFFF"
-    input_text = "#0F172A"
+    input_bg = "#1E293B"
+    input_text = "#FFFFFF"
 else:
     bg_app = "#E2E8F0"
     bg_card = "#FFFFFF"
@@ -40,7 +40,6 @@ st.markdown(f"""
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
         }}
         
-        /* توضيح نصوص التسميات (Labels) بالكامل */
         label, p, span, h1, h2, h3, h4, h5, h6, div {{
             color: {text_color} !important;
             font-weight: 600 !important;
@@ -59,11 +58,28 @@ st.markdown(f"""
             font-weight: 700 !important;
         }}
 
+        /* تصحيح القوائم المنسدلة المفتوحة داخل القائمة الجانبية */
         [data-testid="stSidebar"] .streamlit-expanderHeader {{
             background-color: {bg_sidebar} !important;
             color: #38BDF8 !important;
             font-weight: 700 !important;
             border-bottom: 1px solid {border_color} !important;
+        }}
+
+        [data-testid="stSidebar"] .streamlit-expanderContent {{
+            background-color: {bg_sidebar} !important;
+            color: {text_color} !important;
+        }}
+
+        /* إصلاح خلفية النوافذ المنبثقة بالكامل بالنمط الليلي */
+        [data-testid="stDialog"] div[role="dialog"] {{
+            background-color: {bg_card} !important;
+            border: 1px solid {border_color} !important;
+            border-radius: 12px !important;
+        }}
+
+        [data-testid="stDialog"] div[role="dialog"] * {{
+            color: {text_color} !important;
         }}
 
         /* وضوح مربعات وحقول الإدخال */
@@ -97,7 +113,7 @@ st.markdown(f"""
             color: {text_color} !important;
         }}
 
-        [data-testid="stDialog"] div[role="dialog"], .stDataFrame, [data-testid="stDataEditor"] {{
+        .stDataFrame, [data-testid="stDataEditor"] {{
             direction: rtl !important;
             text-align: right !important;
             background-color: {bg_card} !important;
@@ -269,7 +285,7 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
         q_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
         q_notes = st.text_input("البيان والملاحظات:")
         
-        q_sub = st.form_submit_button("💾 حفظ السند وتحديث الخزينة")
+        q_sub = st.form_submit_button("💾 حفظ السند وتحديث الصندوق")
         if q_sub:
             if q_party and q_amt > 0:
                 all_cash = load_cash_data()
@@ -304,7 +320,7 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                 st.success(f"تم حفظ ({q_type}) برقم #{v_code} بنجاح!")
                 st.rerun()
 
-@st.dialog("🖨️ طباعة سند الخزينة والصندوق الرسمية (A4)")
+@st.dialog("🖨️ طباعة سند الصندوق الرسمية (A4)")
 def print_cash_voucher_dialog(trans_item, month_name):
     st.write(f"معاينة طباعة السند رقم: **#{trans_item.get('code', trans_item['id'])}**")
     amt_val = trans_item['amount']
@@ -349,7 +365,7 @@ def print_cash_voucher_dialog(trans_item, month_name):
     """
     st.components.v1.html(html_v, height=480, scrolling=True)
 
-@st.dialog("✏️ تعديل حركة الخزينة والصندوق")
+@st.dialog("✏️ تعديل حركة الصندوق")
 def edit_cash_modal(month_name, trans_idx, target_box="main"):
     all_cash = load_cash_data()
     m_cash = all_cash.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
@@ -375,7 +391,7 @@ def edit_cash_modal(month_name, trans_idx, target_box="main"):
                 trans_list[trans_idx]['notes'] = e_notes
                 all_cash[month_name][box_key] = trans_list
                 save_cash_data(all_cash)
-                st.success("تم تعديل سند الخزينة بنجاح!")
+                st.success("تم تعديل سند الصندوق بنجاح!")
                 st.rerun()
 
 @st.dialog("📊 ملخص توزيع الموظفين حسب الفروع")
@@ -518,20 +534,20 @@ def edit_employee_dialog(emp_idx, month_selected):
             st.success(f"تم حذف الموظف ({emp_data['الاسم']}) نهائياً!")
             st.rerun()
 
-# 2. الشاشة الافتتاحية الملكية بأسلوب الدخول الآمن الصريح
+# 2. الشاشة الافتتاحية الملكية
 if not st.session_state.get('app_started', False):
     st.markdown("""
         <div class="welcome-card-lux">
             <div class="logo-lux">5M</div>
             <h1 style="color: #FFFFFF !important; margin-top: 10px; font-weight: 800;">شركة ميم الخماسية للتصنيع</h1>
-            <p style="color: #94A3B8 !important; font-size: 18px; margin-bottom: 20px;">النظام المحاسبي والإداري الموحد لإدارة الرواتب، المستحقات، وسندات الخزينة والعُهد</p>
+            <p style="color: #94A3B8 !important; font-size: 18px; margin-bottom: 20px;">النظام المحاسبي والإداري الموحد لإدارة الرواتب، المستحقات، وسندات الصندوق والعُهد</p>
             <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.2); margin: 25px 0;">
         </div>
     """, unsafe_allow_html=True)
     
     col_b1, col_b2, col_b3 = st.columns([1, 1.3, 1])
     with col_b2:
-        st.markdown("<h3 style='text-align:center;'>🔑 تسجيل الدخول للنظام المحاسبي:</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='text-align:center;'>🔑 تسجيل الدخول للنظام:</h3>", unsafe_allow_html=True)
         username_input = st.text_input("اسم المستخدم (wahby / omar):", key="login_username")
         pwd_input = st.text_input("أدخل كلمة المرور:", type="password", key="login_pwd")
         
@@ -540,18 +556,18 @@ if not st.session_state.get('app_started', False):
                 if pwd_input == "admin5m" or pwd_input == "":
                     st.session_state.app_started = True
                     st.session_state.user_role = "admin"
-                    st.success("أهلاً بك يا مدير النظام (wahby)!")
+                    st.success("أهلاً بك (wahby)!")
                     st.rerun()
                 else:
-                    st.error("كلمة المرور غير صحيحة للحساب الرئيسي (wahby)!")
+                    st.error("كلمة المرور غير صحيحة للحساب (wahby)!")
             elif username_input.lower() == "omar":
                 if pwd_input == "user5m" or pwd_input == "":
                     st.session_state.app_started = True
                     st.session_state.user_role = "accountant"
-                    st.success("أهلاً بك يا محاسب النظام (omar)!")
+                    st.success("أهلاً بك (omar)!")
                     st.rerun()
                 else:
-                    st.error("كلمة المرور غير صحيحة لحساب المحاسب (omar)!")
+                    st.error("كلمة المرور غير صحيحة للحساب (omar)!")
             else:
                 st.error("اسم المستخدم غير مسجل بالنظام!")
 
@@ -566,7 +582,7 @@ else:
         """, unsafe_allow_html=True)
         st.write("")
 
-        role_label = "👑 المالك (wahby)" if st.session_state.user_role == "admin" else "👤 المحاسب (omar)"
+        role_label = "wahby" if st.session_state.user_role == "admin" else "omar"
         st.info(f"المستخدم الحالي: **{role_label}**")
 
         if 'months_list' not in st.session_state:
@@ -585,9 +601,9 @@ else:
 
         st.markdown("### 📌 القوائم والتطبيقات:")
 
-        with st.expander("🏦 الصندوق والخزينة"):
-            if st.button("💵 حركة الخزينة وتوليد السندات", use_container_width=True):
-                st.session_state['current_view'] = '💵 حركة الخزينة وتوليد السندات'
+        with st.expander("🏦 حركة الصندوق"):
+            if st.button("💵 حركة الصندوق وتوليد السندات", use_container_width=True):
+                st.session_state['current_view'] = '💵 حركة الصندوق وتوليد السندات'
                 st.rerun()
 
         # الموظفين والرواتب تنحصر حساباتها على wahby فقط
@@ -776,15 +792,15 @@ else:
         tot_out_acc = sum(t['amount'] for t in curr_trans_acc if 'صرف' in t['type'])
         net_acc_now = current_m_cash.get('acc_opening', 0.0) + tot_in_acc - tot_out_acc
 
-        st.markdown(f"### 🏦 1. ملخص النقدية والخزائن لشهر ({month_selected}):")
+        st.markdown(f"### 🏦 1. ملخص حركة الصندوق لشهر ({month_selected}):")
         
         if st.session_state.user_role == "admin":
             c_box1, c_box2 = st.columns(2)
             with c_box1:
-                st.markdown("#### 🏢 الخزينة الرئيسية (الإدارة):")
+                st.markdown("#### 🏢 الخزينة الرئيسية (wahby):")
                 st.metric("رصيد الخزينة الرئيسية الآن", f"{net_main_now:,.2f} ر.س")
             with c_box2:
-                st.markdown("#### 👤 عُهدة المحاسب الفرعية (مراقبة):")
+                st.markdown("#### 👤 عُهدة المحاسب الفرعية (omar):")
                 st.metric("الرصيد المتبقي بعهد المحاسب (omar) الآن", f"{net_acc_now:,.2f} ر.س")
 
             st.divider()
@@ -798,7 +814,7 @@ else:
             st_col5.metric("✂️ إجمالي الخصومات", f"{tot_ded_all:,.0f} ر.س")
             st_col6.metric("⏳ المتبقي بالرصيد", f"{tot_rem:,.0f} ر.س")
         else:
-            st.markdown("#### 👤 عُهدتك المالية الحالية (المحاسب omar):")
+            st.markdown("#### 👤 عُهدتك المالية الحالية (omar):")
             st.metric("الرصيد المتبقي في عُهدتك الآن", f"{net_acc_now:,.2f} ر.س")
 
         st.divider()
@@ -918,8 +934,8 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي بالرصيد", f"{b_tot_rem:,.0f} ر.س")
 
-    elif selected_option == '💵 حركة الخزينة وتوليد السندات':
-        st.subheader(f'🏦 إدارة حركة الخزينة والصندوق - ({month_selected})')
+    elif selected_option == '💵 حركة الصندوق وتوليد السندات':
+        st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
         all_cash_db = load_cash_data()
         if month_selected not in all_cash_db:
@@ -928,13 +944,13 @@ else:
         current_m_cash = all_cash_db[month_selected]
         
         if st.session_state.user_role == "admin":
-            box_selected = st.radio("اختر الخزينة المراد مراجعتها وتداولها:", ["🏢 الخزينة الرئيسية (الإدارة)", "👤 عُهدة المحاسب الفرعية (omar)"], horizontal=True)
-            active_box_key = 'transactions' if "الرئيسية" in box_selected else 'acc_transactions'
-            active_opening_key = 'opening' if "الرئيسية" in box_selected else 'acc_opening'
+            box_selected = st.radio("اختر الصندوق المراد مراجعتها وتداولها:", ["🏢 الخزينة الرئيسية (wahby)", "👤 عُهدة المحاسب الفرعية (omar)"], horizontal=True)
+            active_box_key = 'transactions' if "wahby" in box_selected else 'acc_transactions'
+            active_opening_key = 'opening' if "wahby" in box_selected else 'acc_opening'
         else:
             active_box_key = 'acc_transactions'
             active_opening_key = 'acc_opening'
-            st.info("أنت تعمل حالياً على شاشة **عُهدتك المالية الفرعية (المحاسب omar)**.")
+            st.info("أنت تعمل حالياً على شاشة **عُهدتك المالية الفرعية (omar)**.")
 
         opening_bal = current_m_cash.get(active_opening_key, 0.0)
 
@@ -958,7 +974,7 @@ else:
         c_m1.metric("💵 رصيد أول الشهر (المرحل/الافتتاحي)", f"{opening_bal:,.2f} ر.س")
         c_m2.metric("🟢 إجمالي المقبوضات (الوارد)", f"{tot_cash_in:,.2f} ر.س")
         c_m3.metric("🔴 إجمالي المصروفات (المنصرف)", f"{tot_cash_out:,.2f} ر.س")
-        c_m4.metric("🏦 الرصيد المتبقي بالخزينة الآن", f"{net_cash_now:,.2f} ر.س")
+        c_m4.metric("🏦 الرصيد المتبقي بالصندوق الآن", f"{net_cash_now:,.2f} ر.س")
 
         st.divider()
 
@@ -972,7 +988,7 @@ else:
                 trans_pay_method = st.selectbox("طريقة السداد:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
                 trans_notes = st.text_input("ملاحظات / رقم الفاتورة الورقية إن وجد:")
                 
-                sub_cash = st.form_submit_button("💾 حفظ الحركة وتحديث الخزينة")
+                sub_cash = st.form_submit_button("💾 حفظ الحركة وتحديث الصندوق")
                 if sub_cash:
                     if trans_party and trans_amt > 0:
                         rec_cnt = sum(1 for t in curr_trans if "قبض" in t['type'])
@@ -996,7 +1012,7 @@ else:
                         st.rerun()
 
         with col_c_in2:
-            st.markdown("### 📑 دفتر يومية الخزينة والصندوق (المنظم المدمج):")
+            st.markdown("### 📑 دفتر يومية الصندوق (المنظم المدمج):")
             if curr_trans:
                 cf1, cf2 = st.columns([2, 1])
                 with cf1:
