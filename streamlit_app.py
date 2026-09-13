@@ -11,14 +11,14 @@ st.set_page_config(page_title='شركة ميم الخماسية للتصنيع -
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = '🌙 ليلي كحلي (Dark Navy)'
 
-# تطبيق التنسيقات البرمجية الصريحة بناءً على الاختيار
+# تطبيق التنسيقات البرمجية الصريحة مع التباين الفائق لحل مشكلة القوائم المنسدلة والنوافذ
 if '🌙' in st.session_state['theme_mode']:
     bg_app = "#0F172A"
     bg_card = "#1E293B"
     bg_sidebar = "#1E293B"
     text_color = "#FFFFFF"
     border_color = "#334155"
-    input_bg = "#1E293B"
+    input_bg = "#0F172A"
     input_text = "#FFFFFF"
 else:
     bg_app = "#E2E8F0"
@@ -31,7 +31,7 @@ else:
 
 st.markdown(f"""
     <style>
-        /* إجبار التطبيق على اللون الأبيض الناصع للنصوص والعناوين */
+        /* إجبار التطبيق على الألوان والوضوح العالي */
         html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
             direction: rtl !important;
             text-align: right !important;
@@ -58,7 +58,6 @@ st.markdown(f"""
             font-weight: 700 !important;
         }}
 
-        /* تصحيح القوائم المنسدلة المفتوحة داخل القائمة الجانبية */
         [data-testid="stSidebar"] .streamlit-expanderHeader {{
             background-color: {bg_sidebar} !important;
             color: #38BDF8 !important;
@@ -71,10 +70,27 @@ st.markdown(f"""
             color: {text_color} !important;
         }}
 
-        /* إصلاح خلفية النوافذ المنبثقة بالكامل بالنمط الليلي */
+        /* تصحيح القوائم المنسدلة والخيارات عند الفتح في النظام بالكامل */
+        ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"] div {{
+            background-color: {bg_card} !important;
+            color: {text_color} !important;
+            border: 1px solid #38BDF8 !important;
+        }}
+
+        li[role="option"] {{
+            color: {text_color} !important;
+            background-color: {bg_card} !important;
+        }}
+
+        li[role="option"]:hover {{
+            background-color: #2563EB !important;
+            color: #FFFFFF !important;
+        }}
+
+        /* إصلاح خلفية وحقول النوافذ المنبثقة بالكامل */
         [data-testid="stDialog"] div[role="dialog"] {{
             background-color: {bg_card} !important;
-            border: 1px solid {border_color} !important;
+            border: 2px solid #38BDF8 !important;
             border-radius: 12px !important;
         }}
 
@@ -82,7 +98,7 @@ st.markdown(f"""
             color: {text_color} !important;
         }}
 
-        /* وضوح مربعات وحقول الإدخال */
+        /* وضوح النص المكتوب داخل حقول الإدخال والسندات */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {{
             background-color: {input_bg} !important;
             color: {input_text} !important;
@@ -277,10 +293,10 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
 
 @st.dialog("⚡ إنشاء سند قبض / صرف سريع")
 def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
-    st.write(f"إضافة سند جديد لشهر: **{month_name}** ({'الخزينة الرئيسية' if target_box == 'main' else 'عُهدة المحاسب omar'})")
+    st.write(f"إضافة سند جديد لشهر: **{month_name}** ({'الخزينة الرئيسية' if target_box == 'main' else 'عُهدة omar'})")
     with st.form("quick_cash_form"):
         q_type = st.selectbox("نوع السند:", ["سند قبض / إيراد", "سند صرف / مصروف"], index=0 if "قبض" in default_type else 1)
-        q_party = st.text_input("صادر إلى / مستلم من (الجهة/العميل):", placeholder="اكتب اسم العميل أو الجهة...")
+        q_party = st.text_input("صادر إلى / مستلم من (الجهة/العميل):", placeholder="اسم الجهة...")
         q_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=1000.0)
         q_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
         q_notes = st.text_input("البيان والملاحظات:")
@@ -396,7 +412,7 @@ def edit_cash_modal(month_name, trans_idx, target_box="main"):
 
 @st.dialog("📊 ملخص توزيع الموظفين حسب الفروع")
 def modal_emp_summary():
-    st.write("### 🏢 توزيع العمالة ومتوسط الرواتب:")
+    st.write("### 🏢 توزيع العمالة والمتوسطات:")
     df = st.session_state.payroll_df
     summary_data = []
     for b_name in ['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة']:
@@ -534,7 +550,7 @@ def edit_employee_dialog(emp_idx, month_selected):
             st.success(f"تم حذف الموظف ({emp_data['الاسم']}) نهائياً!")
             st.rerun()
 
-# 2. الشاشة الافتتاحية الملكية
+# 2. الشاشة الافتتاحية المباشرة والموجزة
 if not st.session_state.get('app_started', False):
     st.markdown("""
         <div class="welcome-card-lux">
@@ -545,7 +561,7 @@ if not st.session_state.get('app_started', False):
         </div>
     """, unsafe_allow_html=True)
     
-    col_b1, col_b2, col_b3 = st.columns([1, 1.3, 1])
+    col_b1, col_b2, col_b3 = st.columns([1, 1.2, 1])
     with col_b2:
         st.markdown("<h3 style='text-align:center;'>🔑 تسجيل الدخول للنظام:</h3>", unsafe_allow_html=True)
         username_input = st.text_input("اسم المستخدم (wahby / omar):", key="login_username")
@@ -852,7 +868,7 @@ else:
 
     elif selected_option == '📊 إدخال وتعديل الدفعات السريع' and st.session_state.user_role == "admin":
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات والخصومات السريع - ({month_selected})')
-        st.write('💡 **طريقة العمل السريعة:** عدّل الخلية المطلوبة بالجدول أدناه واضغط على زر الحفظ والتثبيت لضمان حفظ تعديلاتك دائمياً!')
+        st.write(' عدّل الخلية المطلوبة بالجدول أدناه واضغط على زر الحفظ والتثبيت لضمان حفظ تعديلاتك دائمياً:')
         
         t1, t2, t3, t4 = st.tabs(['📍 مصنع ميم الخماسية الخرج', '📍 مستودع ميم الخماسية الخرج', '📍 مستودع ميم الخماسية الرياض', '📍 رواتب متنوعة'])
         branches = [('مصنع ميم الخماسية الخرج', t1), ('مستودع ميم الخماسية الخرج', t2), ('مستودع ميم الخماسية الرياض', t3), ('رواتب متنوعة', t4)]
@@ -944,7 +960,7 @@ else:
         current_m_cash = all_cash_db[month_selected]
         
         if st.session_state.user_role == "admin":
-            box_selected = st.radio("اختر الصندوق المراد مراجعتها وتداولها:", ["🏢 الخزينة الرئيسية (wahby)", "👤 عُهدة المحاسب الفرعية (omar)"], horizontal=True)
+            box_selected = st.radio("اختر الصندوق المراد تداوله:", ["🏢 الخزينة الرئيسية (wahby)", "👤 عُهدة المحاسب (omar)"], horizontal=True)
             active_box_key = 'transactions' if "wahby" in box_selected else 'acc_transactions'
             active_opening_key = 'opening' if "wahby" in box_selected else 'acc_opening'
         else:
@@ -954,7 +970,7 @@ else:
 
         opening_bal = current_m_cash.get(active_opening_key, 0.0)
 
-        with st.expander("⚙️ إدخال وتعديل الرصيد الافتتاحي للصندوق المحدد:", expanded=False):
+        with st.expander("⚙️ تعديل الرصيد الافتتاحي للصندوق المحدد:", expanded=False):
             with st.form("set_opening_balance_form"):
                 new_opening_val = st.number_input("الرصيد الافتتاحي للصندوق لشهر (" + month_selected + ") (ر.س):", min_value=0.0, value=float(opening_bal))
                 sub_op = st.form_submit_button("💾 تثبيت الرصيد الافتتاحي للصندوق")
@@ -971,10 +987,10 @@ else:
         net_cash_now = opening_bal + tot_cash_in - tot_cash_out
 
         c_m1, c_m2, c_m3, c_m4 = st.columns(4)
-        c_m1.metric("💵 رصيد أول الشهر (المرحل/الافتتاحي)", f"{opening_bal:,.2f} ر.س")
-        c_m2.metric("🟢 إجمالي المقبوضات (الوارد)", f"{tot_cash_in:,.2f} ر.س")
-        c_m3.metric("🔴 إجمالي المصروفات (المنصرف)", f"{tot_cash_out:,.2f} ر.س")
-        c_m4.metric("🏦 الرصيد المتبقي بالصندوق الآن", f"{net_cash_now:,.2f} ر.س")
+        c_m1.metric("💵 رصيد أول الشهر", f"{opening_bal:,.2f} ر.س")
+        c_m2.metric("🟢 المقبوضات (الوارد)", f"{tot_cash_in:,.2f} ر.س")
+        c_m3.metric("🔴 المصروفات (المنصرف)", f"{tot_cash_out:,.2f} ر.س")
+        c_m4.metric("🏦 المتبقي بالصندوق الآن", f"{net_cash_now:,.2f} ر.س")
 
         st.divider()
 
@@ -1016,7 +1032,7 @@ else:
             if curr_trans:
                 cf1, cf2 = st.columns([2, 1])
                 with cf1:
-                    cash_search = st.text_input("🔍 استعلام سريع بالبيان أو الجهة:", key="search_cash_input")
+                    cash_search = st.text_input("🔍 استعلام بالبيان أو الجهة:", key="search_cash_input")
                 with cf2:
                     cash_filter_type = st.selectbox("تصفية بنوع الحركة:", ["جميع الحركات", "سند قبض / إيراد", "سند صرف / مصروف"], key="filter_cash_type")
 
