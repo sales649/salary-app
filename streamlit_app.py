@@ -39,25 +39,30 @@ else:
     expander_bg = "#F8FAFC"
     expander_text = "#0F172A"
 
+# استدعاء خط Cairo العربي الموحد لجميع الأجهزة والآيفون والماك
 st.markdown(f"""
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+
         html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
             direction: rtl !important;
             text-align: right !important;
             background-color: {bg_app} !important;
             color: {text_color} !important;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
             overflow-x: hidden !important;
+            -webkit-text-size-adjust: 100% !important;
         }}
         
         h1, h2, h3, h4, h5, h6, .stMarkdown, label, p, span, div {{
             direction: rtl !important;
             text-align: right !important;
             color: {text_color} !important;
-            font-weight: 600 !important;
+            font-family: 'Cairo', sans-serif !important;
             word-wrap: break-word !important;
         }}
 
+        /* ضغط المسافات الفاضية بالقائمة الجانبية وجعلها ملمومة احترافياً */
         [data-testid="stSidebar"] {{
             right: 0 !important;
             left: auto !important;
@@ -135,6 +140,7 @@ st.markdown(f"""
             font-size: 14px !important;
         }}
 
+        /* تنظيف تصميم النسخ الاحتياطي ورفع الملفات */
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
             background-color: #1E293B !important;
             border: 1px dashed #D97706 !important;
@@ -210,6 +216,7 @@ st.markdown(f"""
             direction: rtl !important;
             text-align: right !important;
             background-color: {bg_card} !important;
+            overflow-x: auto !important;
         }}
 
         .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {{
@@ -288,24 +295,51 @@ st.markdown(f"""
             text-align: center !important;
         }}
 
-        @media (max-width: 768px) {{
+        /* المعالجة الحاسم الشامل لشاشات الآيفون والهواتف الطولية (iPhone Portrait Fix) */
+        @media screen and (max-width: 768px) {{
+            .main .block-container {{
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+                padding-top: 45px !important;
+            }}
+
             [data-testid="stSidebar"] {{
-                width: 100vw !important;
-                max-width: 100vw !important;
-                z-index: 999999 !important;
+                width: 82vw !important;
+                max-width: 82vw !important;
+                position: fixed !important;
+                top: 0 !important;
+                right: 0 !important;
+                height: 100vh !important;
+                box-shadow: -5px 0 25px rgba(0,0,0,0.6) !important;
             }}
-            .title-company-huge {{
-                font-size: 22px !important;
+
+            [data-testid="stHorizontalBlock"] {{
+                flex-direction: column !important;
+                flex-wrap: wrap !important;
             }}
-            .company-header-inner-title {{
-                font-size: 18px !important;
-            }}
-            .logo-lux {{
-                font-size: 50px !important;
-            }}
-            [data-testid="column"] {{
+
+            [data-testid="column"], [data-testid="stColumn"] {{
                 width: 100% !important;
                 flex: 1 1 100% !important;
+                min-width: 100% !important;
+                margin-bottom: 8px !important;
+            }}
+
+            .title-company-huge {{
+                font-size: 20px !important;
+            }}
+
+            .company-header-inner-title {{
+                font-size: 17px !important;
+            }}
+
+            .logo-lux {{
+                font-size: 45px !important;
+            }}
+
+            .stDataFrame, [data-testid="stDataEditor"] {{
+                width: 100% !important;
+                overflow-x: auto !important;
             }}
         }}
     </style>
@@ -753,7 +787,7 @@ else:
                     st.session_state['current_view'] = '🖨️ طباعة السندات الرسمية (A4)'
                     st.rerun()
 
-            # القائمة المباشرة للنسخ الاحتياطي
+            # القائمة المباشرة والنظيفة للنسخ الاحتياطي في القائمة الجانبية
             with st.expander("💾 النسخ الاحتياطي والأرشيف", expanded=True):
                 if st.button("💾 فتح مركز النسخ الاحتياطي", use_container_width=True, key="open_backup_page_btn"):
                     st.session_state['current_view'] = '💾 مركز النسخ الاحتياطي والأرشيف'
