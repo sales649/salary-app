@@ -5,10 +5,10 @@ import json
 import os
 from datetime import datetime
 
-# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
+# 1. إعداد الصفحة وتطبيق التنسيق العربي الكامل (RTL)
 st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
 
-# تطبيق التنسيقات الفاخرة المحدثة
+# تطبيق تنسيق RTL الشامل لكافة عناصر الصفحة والجداول والنوافذ
 st.markdown("""
     <style>
         html, body, .stApp, [data-testid="stAppViewContainer"] {
@@ -31,18 +31,18 @@ st.markdown("""
             text-align: right !important;
         }
 
-        /* الجداول التفاعلية محاذاة من اليمين إلى اليسار */
         [data-testid="stDialog"] div[role="dialog"], .stDataFrame, [data-testid="stDataEditor"] {
             direction: rtl !important;
             text-align: right !important;
         }
 
+        /* المحاذاة اليمنى الصريحة للنصوص داخل الجداول */
         .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {
             text-align: right !important;
             font-size: 14px !important;
         }
 
-        /* الهيدر الأزرق الفخم والمصمم خصيصاً */
+        /* الهيدر الأزرق الفخم */
         .daftra-header-blue {
             background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
             padding: 22px;
@@ -53,22 +53,25 @@ st.markdown("""
             box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.3);
         }
 
-        /* الكروت الإحصائية الأنيقة والاحترافية */
-        .stat-card {
-            background: #FFFFFF;
-            border-radius: 12px;
-            padding: 16px 20px;
-            border: 1px solid #E2E8F0;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        /* صفحة الدخول الأولى الفاخرة */
+        .welcome-card-lux {
+            background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
+            border-radius: 20px;
+            padding: 50px 30px;
             text-align: center;
-            transition: all 0.3s ease;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+            margin-top: 30px;
+            color: white;
         }
-        .stat-card:hover {
-            border-color: #2563EB;
-            transform: translateY(-2px);
+
+        .logo-lux {
+            font-size: 90px;
+            font-weight: 900;
+            color: #EF4444;
+            font-family: Arial, sans-serif;
+            line-height: 1;
+            margin-bottom: 10px;
         }
-        .stat-title { font-size: 13px; color: #64748B; font-weight: 600; margin-bottom: 5px; }
-        .stat-num { font-size: 22px; color: #0F172A; font-weight: 800; }
 
         .stButton>button { border-radius: 8px; font-weight: 600; }
     </style>
@@ -316,14 +319,14 @@ def edit_employee_dialog(emp_idx, month_selected):
             st.success(f"تم حذف الموظف ({emp_data['الاسم']}) نهائياً!")
             st.rerun()
 
-# 2. صفحة الدخول الاحترافية والحديثة
+# 2. صفحة الدخول الأولى الفخمة والحديثة
 if not st.session_state.get('app_started', False):
     st.markdown("""
-        <div class="welcome-box">
-            <div class="logo-text">5M</div>
-            <h1 style="color: #1E3A8A; margin-top: 10px; font-weight: 800;">شركة ميم الخماسية للتصنيع</h1>
-            <p style="color: #64748B; font-size: 18px; margin-bottom: 30px;">النظام المحاسبي والإداري الموحد لإدارة الرواتب، المستحقات، وسندات الصرف</p>
-            <hr style="border: none; border-top: 1px solid #E2E8F0; margin: 25px 0;">
+        <div class="welcome-card-lux">
+            <div class="logo-lux">5M</div>
+            <h1 style="color: #FFFFFF; margin-top: 10px; font-weight: 800;">شركة ميم الخماسية للتصنيع</h1>
+            <p style="color: #94A3B8; font-size: 18px; margin-bottom: 30px;">النظام المحاسبي والإداري الموحد لإدارة الرواتب، المستحقات، وسندات الصرف</p>
+            <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 25px 0;">
         </div>
     """, unsafe_allow_html=True)
     
@@ -334,7 +337,7 @@ if not st.session_state.get('app_started', False):
             st.rerun()
 
 else:
-    # 3. القائمة الجانبية المحسنة مع الشعار وزر الرئيسية بالكامل على اليمين
+    # 3. القائمة الجانبية المحسنة على اليمين مع الشعار وزر الرئيسية المباشر
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 10px;">
@@ -414,20 +417,17 @@ else:
         st.session_state.current_month = month_selected
         st.session_state.payroll_df = load_data()
 
-    # المربع الأزرق الملكي الفخم للشركة التفاعلي للعودة للرئيسية
+    # الهيدر الأزرق الملكي الفخم التفاعلي الممتد بنفس الشكل الفاخر الأول
     tot_emp = len(st.session_state.payroll_df)
     tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
     tot_paid = st.session_state.payroll_df['الدفعة المدفوعة'].sum()
     tot_rem = st.session_state.payroll_df['المتبقي'].sum()
 
-    st.markdown(f"""
-        <div class="daftra-header-blue">
-            <h2 style="margin:0; color: white; font-weight: 800;">🏢 شركة ميم الخماسية للتصنيع</h2>
-            <p style="margin:5px 0 0 0; opacity: 0.9;">النظام المحاسبي الموحد لإدارة الرواتب والمستحقات المالية - ({month_selected})</p>
-        </div>
-    """, unsafe_allow_html=True)
+    if st.button("🏢 شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد", use_container_width=True):
+        st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
+        st.rerun()
 
-    # الكروت الإحصائية الأربعة الفاخرة
+    # الكروت الإحصائية الأربعة التفاعلية الأنيقة
     mc1, mc2, mc3, mc4 = st.columns(4)
     with mc1:
         if st.button(f"👥 إجمالي العمالة\n\n{tot_emp} موظف", use_container_width=True):
@@ -568,9 +568,10 @@ else:
 
                 df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
                 
-                # ترتيب الأعمدة من اليمين إلى اليسار بشكل محكم
+                # ترتيب الأعمدة البرمجي المقلوب من اليمين إلى اليسار صراحة
+                cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'نوع الإجراء', 'الملاحظات']
                 edited_b = st.data_editor(
-                    df_b[['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'نوع الإجراء', 'الملاحظات']],
+                    df_b[cols_rtl],
                     column_config={
                         "م": st.column_config.NumberColumn("مسلسل", disabled=True),
                         "الاسم": st.column_config.TextColumn("اسم الموظف"),
