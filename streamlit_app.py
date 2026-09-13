@@ -5,10 +5,10 @@ import json
 import os
 from datetime import datetime
 
-# 1. إعداد الصفحة وتطبيق التنسيق العربي الكامل (RTL)
+# 1. إعداد الصفحة وتطبيق التنسيق العربي RTL
 st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
 
-# تطبيق تنسيق RTL الشامل لكافة عناصر الصفحة والجداول والنوافذ
+# تطبيق تنسيق RTL الشامل وإجبار الجداول على المحاذاة لليمين
 st.markdown("""
     <style>
         html, body, .stApp, [data-testid="stAppViewContainer"] {
@@ -36,13 +36,11 @@ st.markdown("""
             text-align: right !important;
         }
 
-        /* المحاذاة اليمنى الصريحة للنصوص داخل الجداول */
         .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {
             text-align: right !important;
             font-size: 14px !important;
         }
 
-        /* الهيدر الأزرق الفخم */
         .daftra-header-blue {
             background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
             padding: 22px;
@@ -53,7 +51,6 @@ st.markdown("""
             box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.3);
         }
 
-        /* صفحة الدخول الأولى الفاخرة */
         .welcome-card-lux {
             background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
             border-radius: 20px;
@@ -319,7 +316,7 @@ def edit_employee_dialog(emp_idx, month_selected):
             st.success(f"تم حذف الموظف ({emp_data['الاسم']}) نهائياً!")
             st.rerun()
 
-# 2. صفحة الدخول الأولى الفخمة والحديثة
+# 2. صفحة الدخول الأولى الفخمة والحديثة المعتمدة
 if not st.session_state.get('app_started', False):
     st.markdown("""
         <div class="welcome-card-lux">
@@ -347,7 +344,6 @@ else:
         """, unsafe_allow_html=True)
         st.divider()
 
-        # زر العودة الفورية للشاشة الرئيسية الخفيفة
         if st.button("🏠 الشاشة الرئيسية (لوحة الإحصائيات)", use_container_width=True):
             st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
             st.rerun()
@@ -417,7 +413,7 @@ else:
         st.session_state.current_month = month_selected
         st.session_state.payroll_df = load_data()
 
-    # الهيدر الأزرق الملكي الفخم التفاعلي الممتد بنفس الشكل الفاخر الأول
+    # الهيدر الأزرق الملكي الفخم الممتد
     tot_emp = len(st.session_state.payroll_df)
     tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
     tot_paid = st.session_state.payroll_df['الدفعة المدفوعة'].sum()
@@ -427,7 +423,7 @@ else:
         st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
         st.rerun()
 
-    # الكروت الإحصائية الأربعة التفاعلية الأنيقة
+    # الكروت الإحصائية الأربعة الفاخرة
     mc1, mc2, mc3, mc4 = st.columns(4)
     with mc1:
         if st.button(f"👥 إجمالي العمالة\n\n{tot_emp} موظف", use_container_width=True):
@@ -568,7 +564,7 @@ else:
 
                 df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
                 
-                # ترتيب الأعمدة البرمجي المقلوب من اليمين إلى اليسار صراحة
+                # ترتيب الأعمدة من اليمين إلى اليسار بشكل محكم
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'نوع الإجراء', 'الملاحظات']
                 edited_b = st.data_editor(
                     df_b[cols_rtl],
@@ -605,6 +601,20 @@ else:
                     st.session_state.payroll_df.loc[target_idx, 'الملاحظات'] = row['الملاحظات']
                 
                 save_data(st.session_state.payroll_df)
+
+                # شريط ملخص رقمي أزلي يظهر تحت جدول كل فرع مباشرة
+                b_tot_req = edited_b['الراتب الأساسي'].sum()
+                b_tot_p1 = edited_b['الدفعة 1'].sum()
+                b_tot_p2 = edited_b['الدفعة 2'].sum()
+                b_tot_rem = b_tot_req - (b_tot_p1 + b_tot_p2)
+
+                st.divider()
+                st.markdown(f"#### 📊 الملخص المالي لفرع ({b_name}):")
+                s_col1, s_col2, s_col3, s_col4 = st.columns(4)
+                s_col1.metric("إجمالي الرواتب المستحقة", f"{b_tot_req:,.0f} ر.س")
+                s_col2.metric("إجمالي الدفعة الأولى", f"{b_tot_p1:,.0f} ر.س")
+                s_col3.metric("إجمالي الدفعة الثانية", f"{b_tot_p2:,.0f} ر.س")
+                s_col4.metric("إجمالي المتبقي بالرصيد", f"{b_tot_rem:,.0f} ر.س")
 
     elif selected_option == '👤 دليل الموظفين والملفات الإدارية':
         st.subheader('👤 دليل الموظفين والملفات الإدارية')
