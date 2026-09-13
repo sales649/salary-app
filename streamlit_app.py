@@ -9,25 +9,29 @@ from datetime import datetime
 st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
 
 if 'theme_mode' not in st.session_state:
-    st.session_state['theme_mode'] = '☀️ نهاري رمادي مريح (Slate Day)'
+    st.session_state['theme_mode'] = '🌙 ليلي كحلي (Dark Navy)'
 
 # تطبيق التنسيقات البرمجية الصريحة بناءً على الاختيار
 if '🌙' in st.session_state['theme_mode']:
     bg_app = "#0F172A"
     bg_card = "#1E293B"
     bg_sidebar = "#1E293B"
-    text_color = "#F8FAFC"
+    text_color = "#FFFFFF"
     border_color = "#334155"
+    btn_bg = "#334155"
+    btn_text = "#FFFFFF"
 else:
     bg_app = "#E2E8F0"
     bg_card = "#FFFFFF"
     bg_sidebar = "#F8FAFC"
     text_color = "#0F172A"
     border_color = "#CBD5E1"
+    btn_bg = "#FFFFFF"
+    btn_text = "#1E293B"
 
 st.markdown(f"""
     <style>
-        /* إجبار التطبيق على تغيير الألوان وتغطية إعدادات المتصفح الافتراضية */
+        /* إجبار التطبيق على تغيير الألوان مع وضوح النصوص بالنظام الليلي */
         html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
             direction: rtl !important;
             text-align: right !important;
@@ -51,9 +55,18 @@ st.markdown(f"""
 
         [data-testid="stSidebar"] .streamlit-expanderHeader {{
             background-color: {bg_sidebar} !important;
-            color: #1E3A8A !important;
+            color: #38BDF8 !important;
             font-weight: 700 !important;
             border-bottom: 1px solid {border_color} !important;
+        }}
+
+        /* تصحيح ألوان الأزرار والمستطيلات لتظهر النصوص بوضوح */
+        .stButton>button {{
+            background-color: {btn_bg} !important;
+            color: {btn_text} !important;
+            border: 1px solid {border_color} !important;
+            border-radius: 8px !important;
+            font-weight: 700 !important;
         }}
 
         /* كروت الإحصائيات وبطاقات دفترة */
@@ -62,7 +75,7 @@ st.markdown(f"""
             border-radius: 12px !important;
             padding: 15px !important;
             border: 1px solid {border_color} !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
         }}
 
         .stMetric * {{
@@ -81,7 +94,25 @@ st.markdown(f"""
             color: {text_color} !important;
         }}
 
-        .stButton>button {{ border-radius: 8px; font-weight: 600; }}
+        /* الشاشة الافتتاحية الفاخرة المعتمدة */
+        .welcome-card-lux {{
+            background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
+            border-radius: 20px;
+            padding: 50px 30px;
+            text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+            margin-top: 30px;
+            color: white;
+        }}
+
+        .logo-lux {{
+            font-size: 90px;
+            font-weight: 900;
+            color: #EF4444;
+            font-family: Arial, sans-serif;
+            line-height: 1;
+            margin-bottom: 10px;
+        }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -492,7 +523,7 @@ else:
         st.divider()
 
         # زر النمط المدمج بالتحويل الفوري للعين
-        st.session_state['theme_mode'] = st.selectbox("🎨 نمط ألوان الواجهة:", ["☀️ نهاري رمادي مريح (Slate Day)", "🌙 ليلي كحلي (Dark Navy)"], index=0 if "☀️" in st.session_state['theme_mode'] else 1)
+        st.session_state['theme_mode'] = st.selectbox("🎨 نمط ألوان الواجهة:", ["🌙 ليلي كحلي (Dark Navy)", "☀️ نهاري رمادي مريح (Slate Day)"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
 
         st.divider()
 
@@ -575,18 +606,6 @@ else:
     if st.button("🏢 شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد", use_container_width=True):
         st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
         st.rerun()
-
-    # الشريط الإحصائي العلوي الشامل المحسن لكافة الشاشات
-    st.markdown("### 📊 المؤشرات الشاملة للشركة بكافة الفروع:")
-    st_col1, st_col2, st_col3, st_col4, st_col5, st_col6 = st.columns(6)
-    st_col1.metric("👥 إجمالي العمالة", f"{tot_emp} موظف")
-    st_col2.metric("💰 إجمالي الرواتب", f"{tot_req:,.0f} ر.س")
-    st_col3.metric("💵 إجمالي الدفعة (1)", f"{tot_p1_all:,.0f} ر.س")
-    st_col4.metric("💵 إجمالي الدفعة (2)", f"{tot_p2_all:,.0f} ر.س")
-    st_col5.metric("✂️ إجمالي الخصومات", f"{tot_ded_all:,.0f} ر.س")
-    st_col6.metric("⏳ المتبقي بالرصيد", f"{tot_rem:,.0f} ر.س")
-
-    st.write("")
 
     def generate_pretty_html_pdf(df_subset, branch_name, payment_type="جميع الدفعات"):
         output = io.BytesIO()
@@ -684,17 +703,9 @@ else:
         output.seek(0)
         return output
 
-    # 4. الواجهة الرئيسية بنمط «دفترة» (Daftra Dashboard Style)
+    # 4. الواجهة الرئيسية بالترتيب المطلوب والمعين
     if selected_option == '🏠 الرئيسية (لوحة الإحصائيات)':
-        today_str = datetime.now().strftime('%d/%m/%Y')
-        st.markdown(f"""
-            <div style="text-align: center; margin-bottom: 20px;">
-                <span style="color: #64748B; font-size: 14px; font-weight: 600;">{today_str}</span>
-                <h2 style="font-weight: 800; margin-top: 5px;">أهلاً بك، مرحباً بعودتك بالنظام المحاسبي! 👋</h2>
-            </div>
-        """, unsafe_allow_html=True)
-
-        # دمج كارت ملخص حركة الخزينة والصندوق المالي في الشاشة الرئيسية
+        # 1. كارت ملخص الصندوق والخزينة في أعلى الشاشة الرئيسية
         all_cash_db = load_cash_data()
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': []})
         
@@ -717,7 +728,7 @@ else:
         tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
         net_cash_now = opening_bal + tot_cash_in - tot_cash_out
 
-        st.markdown(f"### 🏦 ملخص النقدية وحركة الخزينة المباشرة لشهر ({month_selected}):")
+        st.markdown(f"### 🏦 1. ملخص حركة الخزينة والصندوق لشهر ({month_selected}):")
         hm1, hm2, hm3, hm4 = st.columns(4)
         hm1.metric("💵 رصيد أول الشهر (المرحل)", f"{opening_bal:,.2f} ر.س")
         hm2.metric("🟢 إجمالي المقبوضات (الوارد)", f"{tot_cash_in:,.2f} ر.س")
@@ -726,7 +737,20 @@ else:
 
         st.divider()
 
-        st.markdown("### ⚡ الوصول السريع للإجراءات اليومية:")
+        # 2. مؤشرات العمالة والمرتبات
+        st.markdown("### 👥 2. مؤشرات رواتب ومستحقات العمالة بكافة الفروع:")
+        st_col1, st_col2, st_col3, st_col4, st_col5, st_col6 = st.columns(6)
+        st_col1.metric("👥 إجمالي العمالة", f"{tot_emp} موظف")
+        st_col2.metric("💰 إجمالي الرواتب", f"{tot_req:,.0f} ر.س")
+        st_col3.metric("💵 إجمالي الدفعة (1)", f"{tot_p1_all:,.0f} ر.س")
+        st_col4.metric("💵 إجمالي الدفعة (2)", f"{tot_p2_all:,.0f} ر.س")
+        st_col5.metric("✂️ إجمالي الخصومات", f"{tot_ded_all:,.0f} ر.س")
+        st_col6.metric("⏳ المتبقي بالرصيد", f"{tot_rem:,.0f} ر.س")
+
+        st.divider()
+
+        # 3. الوصول السريع للإجراءات اليومية
+        st.markdown("### ⚡ 3. الوصول السريع للإجراءات الخاطفة:")
         q_col1, q_col2, q_col3, q_col4 = st.columns(4)
         
         with q_col1:
