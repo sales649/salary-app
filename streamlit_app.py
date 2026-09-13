@@ -161,7 +161,6 @@ def save_data(df):
     with open(DATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(data_dict, f, ensure_ascii=False, indent=4)
 
-# دالة قراءة وحفظ حركات الخزينة والصندوق
 def load_cash_data():
     if os.path.exists(CASH_FILE):
         try:
@@ -195,9 +194,37 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
+@st.dialog("✏️ تعديل حركة الخزينة والصندوق")
+def edit_cash_modal(month_name, trans_idx):
+    all_cash = load_cash_data()
+    m_cash = all_cash.get(month_name, {'opening': 0.0, 'transactions': []})
+    trans_list = m_cash.get('transactions', [])
+    
+    if trans_idx < len(trans_list):
+        curr_item = trans_list[trans_idx]
+        st.write(f"تعديل السند رقم: **#{curr_item['id']}**")
+        with st.form("edit_cash_item_form"):
+            e_type = st.selectbox("نوع الحركة:", ["سند قبض / إيراد", "سند صرف / مصروف"], index=["سند قبض / إيراد", "سند صرف / مصروف"].index(curr_item['type']))
+            e_party = st.text_input("اسم الجهة / البيان:", value=curr_item['party'])
+            e_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=float(curr_item['amount']))
+            e_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"], index=["نقداً بالصندوق", "تحويل بنكي", "شيك"].index(curr_item['method']))
+            e_notes = st.text_input("الملاحظات / الفاتورة:", value=curr_item.get('notes', ''))
+            
+            sub_e_cash = st.form_submit_button("💾 حفظ وتثبيت التعديل")
+            if sub_e_cash:
+                trans_list[trans_idx]['type'] = e_type
+                trans_list[trans_idx]['party'] = e_party
+                trans_list[trans_idx]['amount'] = e_amt
+                trans_list[trans_idx]['method'] = e_method
+                trans_list[trans_idx]['notes'] = e_notes
+                all_cash[month_name]['transactions'] = trans_list
+                save_cash_data(all_cash)
+                st.success("تم تعديل سند الخزينة بنجاح!")
+                st.rerun()
+
 @st.dialog("📊 ملخص توزيع الموظفين حسب الفروع")
 def modal_emp_summary():
-    st.write("### 🏢 توزيع العمالة والمتوسطات المالية:")
+    st.write("### 🏢 توزيع العمالة ومتوسط الرواتب:")
     df = st.session_state.payroll_df
     summary_data = []
     for b_name in ['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة']:
@@ -589,7 +616,7 @@ else:
 
                 df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
                 
-                # ترتيب الأعمدة: الخصومات بعد الدفعة الأولى والدفعة الثانية مباشرة
+                # الخصومات بعد الدفعة 1 والدفعة 2 مباشرة
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'نوع الإجراء', 'الملاحظات']
                 edited_b = st.data_editor(
                     df_b[cols_rtl],
@@ -633,7 +660,7 @@ else:
                     st.success(f"تم حفظ وثبيت تعديلات {b_name} دائماً بنجاح!")
                     st.rerun()
 
-                # شريط ملخص رقمي دقيق يظهر تحت كل جدول
+                # شريط ملخص رقمي شامل الخصومات تحت كل جدول
                 b_tot_req = edited_b['الراتب الأساسي'].sum()
                 b_tot_p1 = edited_b['الدفعة 1'].sum()
                 b_tot_p2 = edited_b['الدفعة 2'].sum()
@@ -655,12 +682,11 @@ else:
         all_cash_db = load_cash_data()
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': []})
         
-        # حساب التوازنات والترحيل بين الشهور
         months_arr = st.session_state.months_list
         curr_m_idx = months_arr.index(month_selected) if month_selected in months_arr else 0
         
-        # الرصيد المرحل من الشهر السابق إن وجد
-        opening_bal = 0.0
+        # حساب الترحيل من الشهر السابق إن وجد
+        auto_prev_opening = 0.0
         if curr_m_idx > 0:
             prev_m_name = months_arr[curr_m_idx - 1]
             prev_cash_data = all_cash_db.get(prev_m_name, {'opening': 0.0, 'transactions': []})
@@ -668,24 +694,38 @@ else:
             prev_trans = prev_cash_data.get('transactions', [])
             prev_in = sum(t['amount'] for t in prev_trans if t['type'] == 'سند قبض / إيراد')
             prev_out = sum(t['amount'] for t in prev_trans if t['type'] == 'سند صرف / مصروف')
-            opening_bal = prev_opening + prev_in - prev_out
+            auto_prev_opening = prev_opening + prev_in - prev_out
+
+        opening_bal = current_m_cash.get('opening', auto_prev_opening)
+
+        # المربع الخاص بتحديث/تعديل الرصيد الافتتاحي للصندوق
+        with st.expander("⚙️ إدخال وتعديل الرصيد الافتتاحي للصندوق (رصيد أول المدة):", expanded=False):
+            with st.form("set_opening_balance_form"):
+                new_opening_val = st.number_input("الرصيد الافتتاحي للصندوق لشهر (" + month_selected + ") (ر.س):", min_value=0.0, value=float(opening_bal))
+                sub_op = st.form_submit_button("💾 تثبيت الرصيد الافتتاحي للصندوق")
+                if sub_op:
+                    current_m_cash['opening'] = new_opening_val
+                    all_cash_db[month_selected] = current_m_cash
+                    save_cash_data(all_cash_db)
+                    st.success("تم تثبيت الرصيد الافتتاحي للصندوق بنجاح!")
+                    st.rerun()
 
         curr_trans = current_m_cash.get('transactions', [])
         tot_cash_in = sum(t['amount'] for t in curr_trans if t['type'] == 'سند قبض / إيراد')
         tot_cash_out = sum(t['amount'] for t in curr_trans if t['type'] == 'سند صرف / مصروف')
         net_cash_now = opening_bal + tot_cash_in - tot_cash_out
 
-        # الشريط الإحصائي المالي للخزينة
+        # الشريط الإحصائي المالي المباشر للخزينة
         c_m1, c_m2, c_m3, c_m4 = st.columns(4)
-        c_m1.metric("💵 رصيد أول الشهر (المرحل)", f"{opening_bal:,.2f} ر.س")
+        c_m1.metric("💵 رصيد أول الشهر (المرحل/الافتتاحي)", f"{opening_bal:,.2f} ر.س")
         c_m2.metric("🟢 إجمالي المقبوضات (الوارد)", f"{tot_cash_in:,.2f} ر.س")
         c_m3.metric("🔴 إجمالي المصروفات (المنصرف)", f"{tot_cash_out:,.2f} ر.س")
         c_m4.metric("🏦 الرصيد المتبقي بالخزينة الآن", f"{net_cash_now:,.2f} ر.س")
 
         st.divider()
 
-        # نموذج تسجيل حركة خزينة جيدة وتوليد السند
-        col_c_in1, col_c_in2 = st.columns([1, 1.5])
+        # نموذج تسجيل حركة جديدة بالصندوق
+        col_c_in1, col_c_in2 = st.columns([1, 1.6])
         with col_c_in1:
             st.markdown("### 📝 تسجيل حركة جديدة بالصندوق:")
             with st.form("add_cash_transaction_form"):
@@ -714,19 +754,24 @@ else:
                         st.rerun()
 
         with col_c_in2:
-            st.markdown("### 📑 دفتر يومية الصندوق (حركات الشهر):")
+            st.markdown("### 📑 دفتر يومية الصندوق والتعديل/الحذف:")
             if curr_trans:
-                df_cash_show = pd.DataFrame(curr_trans)
-                df_cash_show = df_cash_show.rename(columns={
-                    'id': 'رقم السند',
-                    'date': 'التاريخ',
-                    'type': 'نوع الحركة',
-                    'party': 'الجهة / البيان',
-                    'amount': 'المبلغ (ر.س)',
-                    'method': 'طريقة الدفع',
-                    'notes': 'الملاحظات'
-                })
-                st.dataframe(df_cash_show[['رقم السند', 'التاريخ', 'نوع الحركة', 'الجهة / البيان', 'المبلغ (ر.س)', 'طريقة الدفع', 'الملاحظات']], use_container_width=True, hide_index=True)
+                for t_idx, t_item in enumerate(curr_trans):
+                    tc1, tc2, tc3, tc4, tc5 = st.columns([1, 2.5, 1.5, 1, 1])
+                    tc1.write(f"#{t_item['id']}")
+                    tc2.write(f"**{t_item['party']}** ({t_item['type']})")
+                    tc3.write(f"💵 **{t_item['amount']:,.2f} ر.س**")
+                    
+                    if tc4.button("✏️ تعديل", key=f"btn_edit_cash_{t_idx}"):
+                        edit_cash_modal(month_selected, t_idx)
+                        
+                    if tc5.button("🗑️ حذف", key=f"btn_del_cash_{t_idx}"):
+                        curr_trans.pop(t_idx)
+                        all_cash_db[month_selected]['transactions'] = curr_trans
+                        save_cash_data(all_cash_db)
+                        st.success("تم حذف حركة الخزينة وتعديل الرصيد بنجاح!")
+                        st.rerun()
+                    st.divider()
             else:
                 st.info("لا توجد حركات تسوية مالية بالصندوق مسجلة لهذا الشهر حتى الآن.")
 
