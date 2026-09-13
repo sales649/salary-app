@@ -194,6 +194,50 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
+@st.dialog("🖨️ طباعة سند الخزينة والصندوق الرسمية (A4)")
+def print_cash_voucher_dialog(trans_item, month_name):
+    st.write(f"معاينة طباعة السند رقم: **#{trans_item['id']}**")
+    amt_val = trans_item['amount']
+    t_type = trans_item['type']
+    
+    html_v = f"""
+    <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; margin: 0; padding: 10px; }}
+        .voucher-box {{ border: 3px solid #1E3A8A; border-radius: 12px; padding: 20px; background: #fff; }}
+        .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 10px; }}
+        .v-title {{ text-align: center; font-size: 20px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 8px; margin: 15px 0; border-radius: 6px; }}
+        .v-table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
+        .v-table td, .v-table th {{ border: 1px solid #cbd5e1; padding: 10px; text-align: right; font-size: 14px; }}
+        .amt-tag {{ font-size: 20px; font-weight: bold; color: #047857; background: #ecfdf5; border: 2px solid #10b981; text-align: center; padding: 6px; border-radius: 6px; }}
+        .sigs {{ margin-top: 40px; display: flex; justify-content: space-between; font-weight: bold; }}
+        @media print {{ .no-p {{ display: none; }} }}
+    </style></head><body>
+        <div class="no-p" style="text-align:center; margin-bottom:15px;">
+            <button onclick="window.print()" style="background:#1E3A8A; color:white; border:none; padding:10px 20px; font-weight:bold; border-radius:6px; cursor:pointer;">🖨️ اضغط هنا للطباعة المباشرة كـ A4 أو الحفظ كـ PDF</button>
+        </div>
+        <div class="voucher-box">
+            <div class="header-logo">
+                <div>Five-M Company For Industry<br>C. R. : 1011145035</div>
+                <div style="font-size:45px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
+                <div>شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
+            </div>
+            <div class="v-title">{t_type} - شهر ({month_name}) | رقم السند المالي: #{trans_item['id']:03d}</div>
+            <table class="v-table">
+                <tr><th>التاريخ والتوقيت</th><td>{trans_item['date']}</td><th>طريقة السداد</th><td><strong>{trans_item['method']}</strong></td></tr>
+                <tr><th>صادر إلى / مستلم من</th><td colspan="3"><strong style="font-size:16px;">{trans_item['party']}</strong></td></tr>
+                <tr><th>المبلغ المسدد بالسند</th><td colspan="3"><div class="amt-tag">{amt_val:,.2f} ريال سعودي</div></td></tr>
+                <tr><th>البيان والملاحظات</th><td colspan="3">{trans_item.get('notes', 'سداد بموجب السند المعمد بالنظام')}</td></tr>
+            </table>
+            <div class="sigs">
+                <div>توقيع المستلم / الجهة: __________________</div>
+                <div>توقيع أمين الصندوق / المحاسب: __________________</div>
+            </div>
+        </div>
+    </body></html>
+    """
+    st.components.v1.html(html_v, height=450, scrolling=True)
+
 @st.dialog("✏️ تعديل حركة الخزينة والصندوق")
 def edit_cash_modal(month_name, trans_idx):
     all_cash = load_cash_data()
@@ -464,9 +508,12 @@ else:
         st.session_state.current_month = month_selected
         st.session_state.payroll_df = load_data()
 
-    # الهيدر الأزرق الملكي الفخم الممتد
+    # حساب التجميعات الشاملة لكافة الشاشات
     tot_emp = len(st.session_state.payroll_df)
     tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
+    tot_p1_all = st.session_state.payroll_df['الدفعة 1'].sum()
+    tot_p2_all = st.session_state.payroll_df['الدفعة 2'].sum()
+    tot_ded_all = st.session_state.payroll_df['الخصومات'].sum()
     tot_paid = st.session_state.payroll_df['الدفعة المدفوعة'].sum()
     tot_rem = st.session_state.payroll_df['المتبقي'].sum()
 
@@ -474,19 +521,15 @@ else:
         st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
         st.rerun()
 
-    # الكروت الإحصائية الأربعة الفاخرة
-    mc1, mc2, mc3, mc4 = st.columns(4)
-    with mc1:
-        if st.button(f"👥 إجمالي العمالة\n\n{tot_emp} موظف", use_container_width=True):
-            modal_emp_summary()
-    with mc2:
-        if st.button(f"💰 إجمالي الرواتب\n\n{tot_req:,.0f} ر.س", use_container_width=True):
-            modal_salary_summary()
-    with mc3:
-        st.button(f"✅ المصروف فعلياً\n\n{tot_paid:,.0f} ر.س", use_container_width=True, disabled=True)
-    with mc4:
-        if st.button(f"⏳ المتبقي بالرصيد\n\n{tot_rem:,.0f} ر.س", use_container_width=True):
-            modal_rem_summary()
+    # الشريط الإحصائي العلوي الشامل المحسن
+    st.markdown("### 📊 المؤشرات الشاملة للشركة بكافة الفروع:")
+    st_col1, st_col2, st_col3, st_col4, st_col5, st_col6 = st.columns(6)
+    st_col1.metric("👥 إجمالي العمالة", f"{tot_emp} موظف")
+    st_col2.metric("💰 إجمالي الرواتب", f"{tot_req:,.0f} ر.س")
+    st_col3.metric("💵 إجمالي الدفعة (1)", f"{tot_p1_all:,.0f} ر.س")
+    st_col4.metric("💵 إجمالي الدفعة (2)", f"{tot_p2_all:,.0f} ر.س")
+    st_col5.metric("✂️ إجمالي الخصومات", f"{tot_ded_all:,.0f} ر.س")
+    st_col6.metric("⏳ المتبقي بالرصيد", f"{tot_rem:,.0f} ر.س")
 
     st.write("")
 
@@ -616,7 +659,7 @@ else:
 
                 df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
                 
-                # الخصومات بعد الدفعة 1 والدفعة 2 مباشرة
+                # ترتيب الأعمدة: الخصومات بعد الدفعة الأولى والدفعة الثانية مباشرة
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'نوع الإجراء', 'الملاحظات']
                 edited_b = st.data_editor(
                     df_b[cols_rtl],
@@ -754,18 +797,21 @@ else:
                         st.rerun()
 
         with col_c_in2:
-            st.markdown("### 📑 دفتر يومية الصندوق والتعديل/الحذف:")
+            st.markdown("### 📑 دفتر يومية الصندوق والتعديل/الحذف والطباعة:")
             if curr_trans:
                 for t_idx, t_item in enumerate(curr_trans):
-                    tc1, tc2, tc3, tc4, tc5 = st.columns([1, 2.5, 1.5, 1, 1])
+                    tc1, tc2, tc3, tc4, tc5, tc6 = st.columns([0.8, 2.2, 1.5, 1, 1, 1])
                     tc1.write(f"#{t_item['id']}")
                     tc2.write(f"**{t_item['party']}** ({t_item['type']})")
                     tc3.write(f"💵 **{t_item['amount']:,.2f} ر.س**")
                     
-                    if tc4.button("✏️ تعديل", key=f"btn_edit_cash_{t_idx}"):
+                    if tc4.button("🖨️ طباعة", key=f"btn_print_cash_{t_idx}"):
+                        print_cash_voucher_dialog(t_item, month_selected)
+
+                    if tc5.button("✏️ تعديل", key=f"btn_edit_cash_{t_idx}"):
                         edit_cash_modal(month_selected, t_idx)
                         
-                    if tc5.button("🗑️ حذف", key=f"btn_del_cash_{t_idx}"):
+                    if tc6.button("🗑️ حذف", key=f"btn_del_cash_{t_idx}"):
                         curr_trans.pop(t_idx)
                         all_cash_db[month_selected]['transactions'] = curr_trans
                         save_cash_data(all_cash_db)
