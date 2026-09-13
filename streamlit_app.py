@@ -39,6 +39,7 @@ else:
     expander_bg = "#F8FAFC"
     expander_text = "#0F172A"
 
+# نظام CSS قياسي احترافي متوافق مع الماك والآيفون والـ PC
 st.markdown(f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
@@ -50,7 +51,6 @@ st.markdown(f"""
             color: {text_color} !important;
             font-family: 'Cairo', sans-serif !important;
             overflow-x: hidden !important;
-            -webkit-text-size-adjust: 100% !important;
         }}
         
         h1, h2, h3, h4, h5, h6, .stMarkdown, label, p, span, div {{
@@ -61,20 +61,18 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
+        /* تنسيق القائمة الجانبية المرن */
         [data-testid="stSidebar"] {{
-            right: 0 !important;
-            left: auto !important;
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
-            width: 280px !important;
         }}
 
         [data-testid="stSidebarContent"] {{
-            padding: 10px !important;
+            padding: 12px !important;
         }}
 
         [data-testid="stSidebar"] details {{
-            margin-bottom: 4px !important;
+            margin-bottom: 6px !important;
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
@@ -92,7 +90,7 @@ st.markdown(f"""
             font-weight: 700 !important;
             border: 1px solid #D97706 !important;
             border-radius: 8px !important;
-            padding: 6px !important;
+            padding: 6px 10px !important;
         }}
 
         [data-testid="stSidebar"] .streamlit-expanderContent {{
@@ -121,23 +119,23 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        /* معالجة وتصغير حجم خط أرقام الماك بوك لمنع قطع الأرقام */
+        /* حقول الإدخال والأرقام للماك والآيفون */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: {input_bg} !important;
             color: {input_text} !important;
             border: 1px solid #CBD5E1 !important;
             border-radius: 6px !important;
             font-weight: 700 !important;
-            font-size: 12px !important;
-            padding: 2px 6px !important;
-            height: 36px !important;
+            font-size: 13px !important;
+            padding: 4px 8px !important;
         }}
 
+        /* تصميم رفع الملفات والنسخ الاحتياطي */
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
             background-color: #1E293B !important;
             border: 1px dashed #D97706 !important;
             border-radius: 8px !important;
-            padding: 6px !important;
+            padding: 8px !important;
         }}
 
         [data-testid="stFileUploader"] button {{
@@ -182,18 +180,17 @@ st.markdown(f"""
             border: none !important;
             border-radius: 8px !important;
             font-weight: 800 !important;
-            font-size: 13px !important;
+            font-size: 14px !important;
             box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4) !important;
             white-space: normal !important;
             word-wrap: break-word !important;
-            padding-top: 5px !important;
-            padding-bottom: 5px !important;
+            padding: 6px 12px !important;
         }}
 
         .stMetric, .daftra-quick-card {{
             background-color: {bg_card} !important;
             border-radius: 12px !important;
-            padding: 10px !important;
+            padding: 12px !important;
             border: 1px solid {border_color} !important;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
             margin-bottom: 8px !important;
@@ -204,18 +201,21 @@ st.markdown(f"""
             text-align: right !important;
         }}
 
-        /* تقليل وضبط خطوط الجداول لتناسب شاشات MacBook Retina */
+        /* حماية خط الجداول وعرض الأرقام بالكامل دون اختزال */
         .stDataFrame, [data-testid="stDataEditor"] {{
             direction: rtl !important;
             text-align: right !important;
             background-color: {bg_card} !important;
+            width: 100% !important;
+            overflow-x: auto !important;
         }}
 
         .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {{
             text-align: right !important;
-            font-size: 12px !important;
-            padding: 4px 6px !important;
+            font-size: 13px !important;
+            padding: 6px 8px !important;
             color: {text_color} !important;
+            white-space: nowrap !important;
         }}
 
         .welcome-card-lux {{
@@ -288,33 +288,16 @@ st.markdown(f"""
             text-align: center !important;
         }}
 
+        /* التجاوب القياسي للآيفون والشاشات الصغيرة */
         @media screen and (max-width: 768px) {{
-            [data-testid="stSidebar"] {{
-                width: 75vw !important;
-                max-width: 75vw !important;
-                min-width: 260px !important;
-                position: fixed !important;
-                top: 0 !important;
-                right: 0 !important;
-                height: 100vh !important;
-                z-index: 999999 !important;
-                box-shadow: -5px 0 25px rgba(0,0,0,0.8) !important;
-            }}
-
-            [data-testid="stAppViewContainer"] {{
-                width: 100vw !important;
-                max-width: 100vw !important;
-            }}
-
             .main .block-container {{
-                padding-left: 10px !important;
-                padding-right: 10px !important;
-                padding-top: 50px !important;
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+                padding-top: 40px !important;
             }}
 
             [data-testid="stHorizontalBlock"] {{
                 flex-direction: column !important;
-                flex-wrap: wrap !important;
             }}
 
             [data-testid="column"], [data-testid="stColumn"] {{
