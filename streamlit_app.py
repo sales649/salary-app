@@ -8,7 +8,6 @@ from datetime import datetime
 # 1. إعداد الصفحة وتطبيق التنسيق العربي RTL
 st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
 
-# تطبيق تنسيق RTL الشامل وإجبار الجداول على المحاذاة لليمين
 st.markdown("""
     <style>
         html, body, .stApp, [data-testid="stAppViewContainer"] {
@@ -181,7 +180,7 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
 
 @st.dialog("📊 ملخص توزيع الموظفين حسب الفروع")
 def modal_emp_summary():
-    st.write("### 🏢 توزيع العمالة والمتوسطات المالية:")
+    st.write("### 🏢 توزيع العمالة ومتوسط الرواتب:")
     df = st.session_state.payroll_df
     summary_data = []
     for b_name in ['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة']:
@@ -316,7 +315,7 @@ def edit_employee_dialog(emp_idx, month_selected):
             st.success(f"تم حذف الموظف ({emp_data['الاسم']}) نهائياً!")
             st.rerun()
 
-# 2. صفحة الدخول الأولى الفخمة والحديثة المعتمدة
+# 2. صفحة الدخول الأولى الفخمة المعتمدة
 if not st.session_state.get('app_started', False):
     st.markdown("""
         <div class="welcome-card-lux">
@@ -541,7 +540,7 @@ else:
 
     elif selected_option == '📊 إدخال وتعديل الدفعات السريع':
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات السريع - ({month_selected})')
-        st.write('💡 **طريقة العمل السريعة:** عدّل أي خلية بالجدول أدناه مباشرة وسيتم حفظها آلياً!')
+        st.write('💡 **طريقة العمل السريعة:** عدّل الخلية المطلوبة بالجدول أدناه واضغط على زر الحفظ والتثبيت لضمان حفظ تعديلاتك دائمياً!')
         
         t1, t2, t3, t4 = st.tabs(['📍 مصنع ميم الخماسية الخرج', '📍 مستودع ميم الخماسية الخرج', '📍 مستودع ميم الخماسية الرياض', '📍 رواتب متنوعة'])
         branches = [('مصنع ميم الخماسية الخرج', t1), ('مستودع ميم الخماسية الخرج', t2), ('مستودع ميم الخماسية الرياض', t3), ('رواتب متنوعة', t4)]
@@ -564,7 +563,7 @@ else:
 
                 df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
                 
-                # ترتيب الأعمدة من اليمين إلى اليسار بشكل محكم
+                # ترتيب الأعمدة البرمجي المقلوب ليكون من اليمين إلى اليسار صراحة
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'نوع الإجراء', 'الملاحظات']
                 edited_b = st.data_editor(
                     df_b[cols_rtl],
@@ -583,24 +582,28 @@ else:
                     key=f"ed_{b_name}_{month_selected}"
                 )
                 
-                for idx, row in edited_b.iterrows():
-                    m_id = row['م']
-                    target_idx = st.session_state.payroll_df[st.session_state.payroll_df['م'] == m_id].index[0]
-                    p1 = row['الدفعة 1']
-                    p2 = row['الدفعة 2']
-                    sal = row['الراتب الأساسي']
-                    tot_p = p1 + p2
-                    st.session_state.payroll_df.loc[target_idx, 'الاسم'] = row['الاسم']
-                    st.session_state.payroll_df.loc[target_idx, 'الوظيفة'] = row['الوظيفة']
-                    st.session_state.payroll_df.loc[target_idx, 'الراتب الأساسي'] = sal
-                    st.session_state.payroll_df.loc[target_idx, 'الدفعة 1'] = p1
-                    st.session_state.payroll_df.loc[target_idx, 'الدفعة 2'] = p2
-                    st.session_state.payroll_df.loc[target_idx, 'الدفعة المدفوعة'] = tot_p
-                    st.session_state.payroll_df.loc[target_idx, 'المتبقي'] = sal - tot_p
-                    st.session_state.payroll_df.loc[target_idx, 'نوع الإجراء'] = row['نوع الإجراء']
-                    st.session_state.payroll_df.loc[target_idx, 'الملاحظات'] = row['الملاحظات']
-                
-                save_data(st.session_state.payroll_df)
+                # زر حفظ وتثبيت دائم وصريح لتثبيت التعديلات بالملف
+                if st.button(f"💾 حفظ وتثبيت تعديلات جدول ({b_name}) دائمياً", key=f"btn_save_ed_{b_name}"):
+                    for idx, row in edited_b.iterrows():
+                        m_id = row['م']
+                        target_idx = st.session_state.payroll_df[st.session_state.payroll_df['م'] == m_id].index[0]
+                        p1 = row['الدفعة 1']
+                        p2 = row['الدفعة 2']
+                        sal = row['الراتب الأساسي']
+                        tot_p = p1 + p2
+                        st.session_state.payroll_df.loc[target_idx, 'الاسم'] = row['الاسم']
+                        st.session_state.payroll_df.loc[target_idx, 'الوظيفة'] = row['الوظيفة']
+                        st.session_state.payroll_df.loc[target_idx, 'الراتب الأساسي'] = sal
+                        st.session_state.payroll_df.loc[target_idx, 'الدفعة 1'] = p1
+                        st.session_state.payroll_df.loc[target_idx, 'الدفعة 2'] = p2
+                        st.session_state.payroll_df.loc[target_idx, 'الدفعة المدفوعة'] = tot_p
+                        st.session_state.payroll_df.loc[target_idx, 'المتبقي'] = sal - tot_p
+                        st.session_state.payroll_df.loc[target_idx, 'نوع الإجراء'] = row['نوع الإجراء']
+                        st.session_state.payroll_df.loc[target_idx, 'الملاحظات'] = row['الملاحظات']
+                    
+                    save_data(st.session_state.payroll_df)
+                    st.success(f"تم حفظ وثبيت تعديلات {b_name} دائماً بنجاح!")
+                    st.rerun()
 
                 # شريط ملخص رقمي أزلي يظهر تحت جدول كل فرع مباشرة
                 b_tot_req = edited_b['الراتب الأساسي'].sum()
@@ -609,7 +612,7 @@ else:
                 b_tot_rem = b_tot_req - (b_tot_p1 + b_tot_p2)
 
                 st.divider()
-                st.markdown(f"#### 📊 الملخص المالي لفرع ({b_name}):")
+                st.markdown(f"#### 📊 الملخص المالي المباشر لفرع ({b_name}):")
                 s_col1, s_col2, s_col3, s_col4 = st.columns(4)
                 s_col1.metric("إجمالي الرواتب المستحقة", f"{b_tot_req:,.0f} ر.س")
                 s_col2.metric("إجمالي الدفعة الأولى", f"{b_tot_p1:,.0f} ر.س")
