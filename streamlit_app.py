@@ -58,7 +58,6 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* ضغط المسافات الفاضية بالقائمة الجانبية وجعلها ملمومة احترافياً */
         [data-testid="stSidebar"] {{
             right: 0 !important;
             left: auto !important;
@@ -136,7 +135,6 @@ st.markdown(f"""
             font-size: 14px !important;
         }}
 
-        /* تنظيف تصميم النسخ الاحتياطي ورفع الملفات */
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
             background-color: #1E293B !important;
             border: 1px dashed #D97706 !important;
@@ -290,7 +288,6 @@ st.markdown(f"""
             text-align: center !important;
         }}
 
-        /* إصلاح حاسم ومتجاوب لتطبيق الآيفون والموبايل */
         @media (max-width: 768px) {{
             [data-testid="stSidebar"] {{
                 width: 100vw !important;
@@ -701,7 +698,7 @@ if not st.session_state.get('app_started', False):
                     st.error("كلمة المرور غير صحيحة!")
 
 else:
-    # 3. القائمة الجانبية ملمومة ومضغوطة لرفع السكرول
+    # 3. القائمة الجانبية ملمومة ومحسنة
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 5px;">
@@ -756,29 +753,11 @@ else:
                     st.session_state['current_view'] = '🖨️ طباعة السندات الرسمية (A4)'
                     st.rerun()
 
-            # تصميم مبسط وعالي الوضوح للنسخ الاحتياطي بدون أزرار متداخلة
+            # القائمة المباشرة للنسخ الاحتياطي
             with st.expander("💾 النسخ الاحتياطي والأرشيف", expanded=True):
-                if 'payroll_df' in st.session_state:
-                    json_str = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
-                    st.download_button(
-                        label="📥 تنزيل نسخة احتياطية",
-                        data=json_str.encode('utf-8'),
-                        file_name=f"payroll_backup_{month_selected}.json",
-                        mime="application/json",
-                        use_container_width=True,
-                        key="dl_backup_sidebar"
-                    )
-                st.write("**📤 استيراد ورفع نسخة:**")
-                uploaded_backup = st.file_uploader("", type=['json'], key="side_uploader_backup_clean")
-                if uploaded_backup:
-                    try:
-                        imported_df = pd.DataFrame(json.load(uploaded_backup))
-                        st.session_state.payroll_df = imported_df
-                        save_data(imported_df)
-                        st.success("تم استيراد البيانات بنجاح!")
-                        st.rerun()
-                    except Exception:
-                        st.error("خطأ في القراءة.")
+                if st.button("💾 فتح مركز النسخ الاحتياطي", use_container_width=True, key="open_backup_page_btn"):
+                    st.session_state['current_view'] = '💾 مركز النسخ الاحتياطي والأرشيف'
+                    st.rerun()
 
             with st.expander("⚙️ السنة المالية والإعدادات"):
                 if st.button("🏁 الإغلاق السنوي وسنة جديدة", use_container_width=True):
@@ -983,17 +962,10 @@ else:
                     quick_cash_voucher_dialog("صرف", month_selected, "main")
 
             with q_col4:
-                st.markdown('<div class="daftra-quick-card"><h3>💾</h3><h4>نسخة احتياطية</h4></div>', unsafe_allow_html=True)
-                if 'payroll_df' in st.session_state:
-                    json_str_main = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
-                    st.download_button(
-                        label="📥 تنزيل نسخة فوراً",
-                        data=json_str_main.encode('utf-8'),
-                        file_name=f"payroll_backup_{month_selected}.json",
-                        mime="application/json",
-                        use_container_width=True,
-                        key="quick_backup_btn_main"
-                    )
+                st.markdown('<div class="daftra-quick-card"><h3>💾</h3><h4>النسخ الاحتياطي</h4></div>', unsafe_allow_html=True)
+                if st.button("💾 فتح مركز الأرشيف", use_container_width=True, key="q_btn_backup_page"):
+                    st.session_state['current_view'] = '💾 مركز النسخ الاحتياطي والأرشيف'
+                    st.rerun()
         else:
             q_col2, q_col3 = st.columns(2)
             with q_col2:
@@ -1005,6 +977,39 @@ else:
                 st.markdown('<div class="daftra-quick-card"><h3>🔴</h3><h4>سند صرف</h4></div>', unsafe_allow_html=True)
                 if st.button("💸 سند صرف سريع", use_container_width=True, key="q_btn_pay"):
                     quick_cash_voucher_dialog("صرف", month_selected, "accountant")
+
+    elif selected_option == '💾 مركز النسخ الاحتياطي والأرشيف' and st.session_state.user_role == "admin":
+        st.subheader(f'💾 مركز إدارة النسخ الاحتياطي والأرشيف المالي - ({month_selected})')
+        st.write('💡 يتيح لك هذا المركز حفظ نسخة كاملة من بيانات النظام المالية والإدارية على جهازك أو استعادتها فوراً:')
+        
+        bc1, bc2 = st.columns(2)
+        with bc1:
+            st.markdown("### 📥 1. تصدير وتنزيل نسخة احتياطية (JSON):")
+            st.info("تنزيل ملف شامل لكافة بيانات الرواتب، السجلات، والسندات المسجلة بالنظام حتى تاريخ اليوم:")
+            if 'payroll_df' in st.session_state:
+                json_str_full = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
+                st.download_button(
+                    label="💾 اضغط هنا لتنزيل النسخة الاحتياطية فوراً (JSON)",
+                    data=json_str_full.encode('utf-8'),
+                    file_name=f"payroll_backup_{month_selected}.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    key="full_backup_download_btn_page"
+                )
+                
+        with bc2:
+            st.markdown("### 📤 2. استيراد ورفع نسخة احتياطية سابقة:")
+            st.warning("رفع ملف JSON سابق سيستبدل بيانات الموظفين والرواتب بالملف المرفوع فوراً:")
+            uploaded_backup_page = st.file_uploader("اختر ملف النسخة الاحتياطية (JSON) من جهازك:", type=['json'], key="full_backup_upload_page_btn")
+            if uploaded_backup_page:
+                try:
+                    imported_df_page = pd.DataFrame(json.load(uploaded_backup_page))
+                    st.session_state.payroll_df = imported_df_page
+                    save_data(imported_df_page)
+                    st.success("تم استيراد وحفظ النسخة الاحتياطية بنجاح بنسبة 100%!")
+                    st.rerun()
+                except Exception:
+                    st.error("خطأ في قراءة ملف النسخة المرفوع.")
 
     elif selected_option == '📊 إدخال الدفعات السريع' and st.session_state.user_role == "admin":
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات السريع - ({month_selected})')
