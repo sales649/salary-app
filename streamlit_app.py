@@ -5,105 +5,76 @@ import json
 import os
 from datetime import datetime
 
-# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
+# 1. إعداد الصفحة وتحديد الثيم الافتراضي
 st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
 
-# تطبيق تنسيقات دفترة الفاخرة للقائمة الجانبية والواجهة (Daftra Sidebar Theme)
-st.markdown("""
+if 'theme_mode' not in st.session_state:
+    st.session_state['theme_mode'] = '☀️ نهاري (Soft Light)'
+
+# تطبيق التنسيقات البرمجية بناءً على خيار الوضع الليلي أو النهاري
+if '🌙' in st.session_state['theme_mode']:
+    # تنسيقات الوضع الليلي (Dark Navy Theme)
+    bg_app = "#0F172A"
+    bg_sidebar = "#1E293B"
+    text_color = "#F8FAFC"
+    card_bg = "#1E293B"
+    border_color = "#334155"
+    table_bg = "#1E293B"
+else:
+    # تنسيقات الوضع النهاري المريح (Soft Light Theme)
+    bg_app = "#F1F5F9"
+    bg_sidebar = "#FFFFFF"
+    text_color = "#1E293B"
+    card_bg = "#FFFFFF"
+    border_color = "#CBD5E1"
+    table_bg = "#FFFFFF"
+
+st.markdown(f"""
     <style>
-        html, body, .stApp, [data-testid="stAppViewContainer"] {
+        html, body, .stApp, [data-testid="stAppViewContainer"] {{
             direction: rtl !important;
             text-align: right !important;
-            background-color: #F1F5F9;
-            color: #1E293B;
+            background-color: {bg_app} !important;
+            color: {text_color} !important;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
+        }}
         
-        /* القائمة الجانبية المنسقة بنمط دفترة */
-        [data-testid="stSidebar"] {
+        [data-testid="stSidebar"] {{
             right: 0 !important;
             left: auto !important;
-            border-left: 1px solid #E2E8F0 !important;
-            background-color: #FFFFFF !important;
-            box-shadow: -2px 0 10px rgba(0, 0, 0, 0.03);
-        }
+            border-left: 1px solid {border_color} !important;
+            background-color: {bg_sidebar} !important;
+        }}
         
-        [data-testid="stSidebarContent"] {
+        [data-testid="stSidebarContent"] {{
             direction: rtl !important;
             text-align: right !important;
             padding-top: 10px;
-        }
+        }}
 
-        /* تنسيق القوائم المنسدلة الفرعية لتطابق صورة دفترة */
-        [data-testid="stSidebar"] .stMarkdown h3 {
-            color: #475569;
-            font-size: 13px !important;
-            font-weight: 700;
-            margin-top: 15px;
-            margin-bottom: 5px;
-        }
-
-        [data-testid="stSidebar"] .streamlit-expanderHeader {
-            background-color: #FFFFFF !important;
-            color: #1E3A8A !important;
-            font-weight: 700 !important;
-            font-size: 15px !important;
-            border-bottom: 1px solid #F1F5F9;
-            padding: 10px 5px !important;
-        }
-
-        [data-testid="stSidebar"] .streamlit-expanderHeader:hover {
-            color: #2563EB !important;
-            background-color: #F8FAFC !important;
-        }
-
-        /* أزرار القوائم الفرعية داخل القوائم المنسدلة */
-        [data-testid="stSidebar"] .stButton>button {
-            width: 100%;
-            text-align: right !important;
-            background-color: transparent !important;
-            color: #334155 !important;
-            border: none !important;
-            padding: 8px 12px !important;
-            font-size: 14px !important;
-            font-weight: 600 !important;
-            border-radius: 6px !important;
-            box-shadow: none !important;
-        }
-
-        [data-testid="stSidebar"] .stButton>button:hover {
-            background-color: #EFF6FF !important;
-            color: #2563EB !important;
-        }
-
-        /* محاذاة الجداول والنوافذ لليمين */
-        [data-testid="stDialog"] div[role="dialog"], .stDataFrame, [data-testid="stDataEditor"] {
+        [data-testid="stDialog"] div[role="dialog"], .stDataFrame, [data-testid="stDataEditor"] {{
             direction: rtl !important;
             text-align: right !important;
-        }
+            background-color: {table_bg} !important;
+        }}
 
-        .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {
+        .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {{
             text-align: right !important;
             font-size: 14px !important;
-        }
+            color: {text_color} !important;
+        }}
 
-        /* كروت الوصول السريع */
-        .daftra-quick-card {
-            background-color: #FFFFFF;
+        .daftra-quick-card {{
+            background-color: {card_bg};
             border-radius: 12px;
             padding: 20px;
             text-align: center;
-            border: 1px solid #E2E8F0;
+            border: 1px solid {border_color};
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             transition: all 0.2s ease-in-out;
-        }
-        .daftra-quick-card:hover {
-            transform: translateY(-3px);
-            border-color: #2563EB;
-            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1);
-        }
-
-        .daftra-header-blue {
+        }}
+        
+        .daftra-header-blue {{
             background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
             padding: 22px;
             border-radius: 14px;
@@ -111,9 +82,9 @@ st.markdown("""
             text-align: center;
             margin-bottom: 20px;
             box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.3);
-        }
+        }}
 
-        .welcome-card-lux {
+        .welcome-card-lux {{
             background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
             border-radius: 20px;
             padding: 50px 30px;
@@ -121,16 +92,18 @@ st.markdown("""
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
             margin-top: 30px;
             color: white;
-        }
+        }}
 
-        .logo-lux {
+        .logo-lux {{
             font-size: 90px;
             font-weight: 900;
             color: #EF4444;
             font-family: Arial, sans-serif;
             line-height: 1;
             margin-bottom: 10px;
-        }
+        }}
+
+        .stButton>button {{ border-radius: 8px; font-weight: 600; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -540,7 +513,11 @@ else:
         month_selected = st.selectbox('📅 شهر العمليات الحالي:', st.session_state.months_list)
         st.divider()
 
-        # أزرق الداشبورد بنمط دفترة
+        # زر النمط الداكن/النهاري داخل القائمة الجانبية
+        st.session_state['theme_mode'] = st.selectbox("🎨 نمط ألوان الواجهة:", ["☀️ نهاري (Soft Light)", "🌙 ليلي (Dark Navy)"], index=0 if "☀️" in st.session_state['theme_mode'] else 1)
+
+        st.divider()
+
         if st.button("🏠 لوحة التحكم الرئيسية", use_container_width=True):
             st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
             st.rerun()
@@ -858,7 +835,7 @@ else:
         months_arr = st.session_state.months_list
         curr_m_idx = months_arr.index(month_selected) if month_selected in months_arr else 0
         
-        # حساب التترحيل من الشهر السابق إن وجد
+        # حساب الترحيل من الشهر السابق إن وجد
         auto_prev_opening = 0.0
         if curr_m_idx > 0:
             prev_m_name = months_arr[curr_m_idx - 1]
