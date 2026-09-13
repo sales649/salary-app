@@ -200,6 +200,8 @@ def print_cash_voucher_dialog(trans_item, month_name):
     amt_val = trans_item['amount']
     t_type = trans_item['type']
     
+    party_label = "استلمنا من السيد / الشركَة:" if "قبض" in t_type else "تم الصرف للسيد / الشركَة:"
+    
     html_v = f"""
     <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
     <style>
@@ -225,7 +227,7 @@ def print_cash_voucher_dialog(trans_item, month_name):
             <div class="v-title">{t_type} - شهر ({month_name}) | رقم السند المالي: #{trans_item['id']:03d}</div>
             <table class="v-table">
                 <tr><th>التاريخ والتوقيت</th><td>{trans_item['date']}</td><th>طريقة السداد</th><td><strong>{trans_item['method']}</strong></td></tr>
-                <tr><th>صادر إلى / مستلم من</th><td colspan="3"><strong style="font-size:16px;">{trans_item['party']}</strong></td></tr>
+                <tr><th>{party_label}</th><td colspan="3"><strong style="font-size:16px;">{trans_item['party']}</strong></td></tr>
                 <tr><th>المبلغ المسدد بالسند</th><td colspan="3"><div class="amt-tag">{amt_val:,.2f} ريال سعودي</div></td></tr>
                 <tr><th>البيان والملاحظات</th><td colspan="3">{trans_item.get('notes', 'سداد بموجب السند المعمد بالنظام')}</td></tr>
             </table>
@@ -521,7 +523,7 @@ else:
         st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
         st.rerun()
 
-    # الشريط الإحصائي العلوي الشامل المحسن
+    # الشريط الإحصائي العلوي الشامل المحسن لكافة الشاشات
     st.markdown("### 📊 المؤشرات الشاملة للشركة بكافة الفروع:")
     st_col1, st_col2, st_col3, st_col4, st_col5, st_col6 = st.columns(6)
     st_col1.metric("👥 إجمالي العمالة", f"{tot_emp} موظف")
@@ -659,7 +661,7 @@ else:
 
                 df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
                 
-                # ترتيب الأعمدة: الخصومات بعد الدفعة الأولى والدفعة الثانية مباشرة
+                # ترتيب الأعمدة: الخصومات بعد الدفعة 1 والدفعة 2 مباشرة
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'نوع الإجراء', 'الملاحظات']
                 edited_b = st.data_editor(
                     df_b[cols_rtl],
@@ -768,7 +770,7 @@ else:
         st.divider()
 
         # نموذج تسجيل حركة جديدة بالصندوق
-        col_c_in1, col_c_in2 = st.columns([1, 1.6])
+        col_c_in1, col_c_in2 = st.columns([1, 1.8])
         with col_c_in1:
             st.markdown("### 📝 تسجيل حركة جديدة بالصندوق:")
             with st.form("add_cash_transaction_form"):
@@ -797,25 +799,54 @@ else:
                         st.rerun()
 
         with col_c_in2:
-            st.markdown("### 📑 دفتر يومية الصندوق والتعديل/الحذف والطباعة:")
+            st.markdown("### 📑 دفتر يومية الخزينة والصندوق (المنظم المدمج):")
             if curr_trans:
-                for t_idx, t_item in enumerate(curr_trans):
-                    tc1, tc2, tc3, tc4, tc5, tc6 = st.columns([0.8, 2.2, 1.5, 1, 1, 1])
+                # شريط الفلترة والبحث السريع المتقدم
+                cf1, cf2 = st.columns([2, 1])
+                with cf1:
+                    cash_search = st.text_input("🔍 استعلام سريع في دفتر الخزينة بالبيان أو الجهة:", key="search_cash_input")
+                with cf2:
+                    cash_filter_type = st.selectbox("تصفية بنوع الحركة:", ["جميع الحركات", "سند قبض / إيراد", "سند صرف / مصروف"], key="filter_cash_type")
+
+                # تصفية القائمة
+                filtered_cash = curr_trans.copy()
+                if cash_search:
+                    filtered_cash = [t for t in filtered_cash if cash_search.lower() in t['party'].lower()]
+                if cash_filter_type != "جميع الحركات":
+                    filtered_cash = [t for t in filtered_cash if t['type'] == cash_filter_type]
+
+                # تقسيم الصفحات (Pagination) - 10 حركات بالصفحة
+                items_per_page = 10
+                total_items = len(filtered_cash)
+                total_pages = (total_items + items_per_page - 1) // items_per_page if total_items > 0 else 1
+                
+                page_num = st.number_input(f"الصفحة (من أصل {total_pages}):", min_value=1, max_value=total_pages, value=1, step=1, key="cash_pg_num")
+                start_idx = (page_num - 1) * items_per_page
+                end_idx = start_idx + items_per_page
+                page_trans = filtered_cash[start_idx:end_idx]
+
+                # عرض الحركات في سطر مدمج ونظيف جداً
+                st.write(f"عرض الحركات من **{start_idx+1}** إلى **{min(end_idx, total_items)}** (من أصل {total_items} حركة):")
+                for t_idx, t_item in enumerate(page_trans):
+                    real_idx = curr_trans.index(t_item)
+                    tc1, tc2, tc3, tc4, tc5, tc6 = st.columns([0.6, 2.2, 1.4, 0.9, 0.9, 0.9])
                     tc1.write(f"#{t_item['id']}")
-                    tc2.write(f"**{t_item['party']}** ({t_item['type']})")
+                    
+                    t_color = "#047857" if "قبض" in t_item['type'] else "#B91C1C"
+                    tc2.write(f"**{t_item['party']}**  \n<span style='color:{t_color}; font-size:12px;'>{t_item['type']}</span>", unsafe_allow_html=True)
                     tc3.write(f"💵 **{t_item['amount']:,.2f} ر.س**")
                     
-                    if tc4.button("🖨️ طباعة", key=f"btn_print_cash_{t_idx}"):
+                    if tc4.button("🖨️ طباعة", key=f"btn_p_cash_{real_idx}"):
                         print_cash_voucher_dialog(t_item, month_selected)
 
-                    if tc5.button("✏️ تعديل", key=f"btn_edit_cash_{t_idx}"):
-                        edit_cash_modal(month_selected, t_idx)
+                    if tc5.button("✏️ تعديل", key=f"btn_e_cash_{real_idx}"):
+                        edit_cash_modal(month_selected, real_idx)
                         
-                    if tc6.button("🗑️ حذف", key=f"btn_del_cash_{t_idx}"):
-                        curr_trans.pop(t_idx)
+                    if tc6.button("🗑️ حذف", key=f"btn_d_cash_{real_idx}"):
+                        curr_trans.pop(real_idx)
                         all_cash_db[month_selected]['transactions'] = curr_trans
                         save_cash_data(all_cash_db)
-                        st.success("تم حذف حركة الخزينة وتعديل الرصيد بنجاح!")
+                        st.success("تم حذف الحركة بنجاح!")
                         st.rerun()
                     st.divider()
             else:
