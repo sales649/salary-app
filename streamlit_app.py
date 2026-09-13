@@ -883,7 +883,11 @@ else:
         total_company_cash = net_main_now + net_acc_now
 
         drivers_db = load_drivers_data()
-        open_driver_custody_sum = sum(d['given_amt'] for d in drivers_db if d['status'] == 'مفتوحة')
+        
+        # تصحيح حساب المتبقي التراكمي المترصد بذمة السائق
+        tot_given_drivers = sum(d['given_amt'] for d in drivers_db)
+        tot_spent_drivers = sum(d['spent_amt'] for d in drivers_db)
+        open_driver_custody_sum = max(0.0, tot_given_drivers - tot_spent_drivers)
 
         audit_history = load_audit_data()
         last_audit = audit_history[-1] if audit_history else None
@@ -899,8 +903,8 @@ else:
                 st.markdown("#### عُهدة المحاسب (omar):")
                 st.metric("رصيد عُهدة omar", f"{net_acc_now:,.2f} ر.س")
             with c_box3:
-                st.markdown("#### 🚚 عُهد السائقين بالخارج:")
-                st.metric("إجمالي العُهد المفتوحة", f"{open_driver_custody_sum:,.2f} ر.س")
+                st.markdown("#### 🚚 عُهد السائقين المترصدة:")
+                st.metric("إجمالي المتبقي باليد", f"{open_driver_custody_sum:,.2f} ر.س")
             with c_box4:
                 st.markdown("#### 💳 إجمالي نقدية الشركة:")
                 st.metric("مجموع الصناديق", f"{total_company_cash:,.2f} ر.س")
@@ -991,22 +995,22 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 5. موديول عُهد وتصفية السائقين المصحح 100% والمحصور على "سمان السواق"
+    # 5. موديول عُهد وتصفية السائقين المصحح والتلقائي الحساب والتسميع بصندوق omar
     elif selected_option == 'عُهد وتصفية السائقين':
         st.subheader(f'🚚 موديول إدارة عُهد وتصفية السائقين المباشر - ({month_selected})')
-        st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والمتبقي/الزيادة عند العودة:')
+        st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والمتبقي/الزيادة عند العودة والتسميع بصندوق omar:')
 
         drivers_db = load_drivers_data()
         driver_selected = "سمان السواق"
 
         tot_given_drivers = sum(d['given_amt'] for d in drivers_db)
         tot_spent_drivers = sum(d['spent_amt'] for d in drivers_db)
-        tot_open_drivers = sum(d['given_amt'] for d in drivers_db if d['status'] == 'مفتوحة')
+        open_driver_custody_sum = max(0.0, tot_given_drivers - tot_spent_drivers)
 
         sc1, sc2, sc3 = st.columns(3)
         sc1.metric("إجمالي العُهد المسلمة لـ سمان السواق", f"{tot_given_drivers:,.2f} ر.س")
         sc2.metric("إجمالي المصروفات المصفاة بالفواتير", f"{tot_spent_drivers:,.2f} ر.س")
-        sc3.metric("🔴 المتبقي بذمته (عُهد مفتوحة)", f"{tot_open_drivers:,.2f} ر.س")
+        sc3.metric("🔴 المتبقي بذمته فعلياً للآن", f"{open_driver_custody_sum:,.2f} ر.س")
 
         st.divider()
 
@@ -1029,10 +1033,32 @@ else:
                         'status': 'مفتوحة',
                         'spent_amt': 0.0,
                         'returned_amt': 0.0,
-                        'diff_amt': 0.0
+                        'diff_amt': given_amt
                     })
                     save_drivers_data(drivers_db)
-                    st.success(f"تم تسليم {given_amt:,.2f} ر.س للسائق (سمان السواق) بنجاح!")
+
+                    # تسميع فوري كـ "سند صرف مؤقت" في صندوق omar عند التسليم
+                    all_cash = load_cash_data()
+                    if month_selected not in all_cash:
+                        all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                    
+                    m_cash = all_cash[month_selected]
+                    acc_trans = m_cash.get('acc_transactions', [])
+                    acc_trans.append({
+                        'id': len(acc_trans) + 1,
+                        'code': f"DRV-OUT-{(len(acc_trans) + 1):03d}",
+                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'type': 'سند صرف / مصروف',
+                        'party': f"تسليم عُهدة حركة مؤقتة للسائق ({driver_selected})",
+                        'amount': given_amt,
+                        'method': 'نقداً بالصندوق',
+                        'notes': purpose_txt
+                    })
+                    m_cash['acc_transactions'] = acc_trans
+                    all_cash[month_selected] = m_cash
+                    save_cash_data(all_cash)
+
+                    st.success(f"تم تسليم {given_amt:,.2f} ر.س للسائق وتوثيقها بصندوق omar!")
                     st.rerun()
 
         with d_col2:
@@ -1046,7 +1072,6 @@ else:
 
                 st.info(f"المبلغ المسلم بعهدته: **{target_item['given_amt']:,.2f} ر.س** | البيان: {target_item['purpose']}")
                 
-                # Dynamic key لعدم التثبيت على الرقم القسري
                 spent_input_key = f"spent_inp_{target_id}"
                 spent_val = st.number_input("أدخل إجمالي المصروفات والفواتير بالفعل (ر.س):", min_value=0.0, value=0.0, step=10.0, key=spent_input_key)
                 settle_notes = st.text_input("تفاصيل المصروفات / أرقام الفواتير:", key=f"notes_inp_{target_id}")
@@ -1069,7 +1094,7 @@ else:
                     
                     save_drivers_data(drivers_db)
 
-                    # تأثير القيد المحاسبي المباشر بصندوق المحاسب omar
+                    # تأثير القيد والتسميع بصندوق omar
                     all_cash = load_cash_data()
                     if month_selected not in all_cash:
                         all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
@@ -1077,20 +1102,21 @@ else:
                     m_cash = all_cash[month_selected]
                     acc_trans = m_cash.get('acc_transactions', [])
                     
-                    # 1. تثبيت المصروف الفعلي
-                    acc_trans.append({
-                        'id': len(acc_trans) + 1,
-                        'code': f"DRV-EXP-{(len(acc_trans) + 1):03d}",
-                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                        'type': 'سند صرف / مصروف',
-                        'party': f"مصروفات حركة للسائق ({target_item['driver']})",
-                        'amount': spent_val,
-                        'method': 'نقداً بالصندوق',
-                        'notes': settle_notes
-                    })
-                    
-                    # 2. في حالة دفع السائق زيادة من جيبه يتم رد فرق الصرف له
-                    if diff_val < 0:
+                    # إذا أرجَع السائق متبقي (diff_val > 0) يُسجل سند قبض مرتجع لصندوق omar
+                    if diff_val > 0:
+                        acc_trans.append({
+                            'id': len(acc_trans) + 1,
+                            'code': f"DRV-RET-{(len(acc_trans) + 1):03d}",
+                            'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                            'type': 'سند قبض / إيراد',
+                            'party': f"استلام باقي عُهدة مرتجعة من السائق ({target_item['driver']})",
+                            'amount': diff_val,
+                            'method': 'نقداً بالصندوق',
+                            'notes': f"مرتجع تصفية العُهدة رقم #{target_id}"
+                        })
+
+                    # إذا صرف السائق زيادة من جيبه (diff_val < 0) يُسجل سند صرف إضافي له من صندوق omar
+                    elif diff_val < 0:
                         acc_trans.append({
                             'id': len(acc_trans) + 1,
                             'code': f"DRV-REF-{(len(acc_trans) + 1):03d}",
@@ -1106,7 +1132,7 @@ else:
                     all_cash[month_selected] = m_cash
                     save_cash_data(all_cash)
 
-                    st.success("تمت التصفية وتوثيق القيد بصندوق المحاسب بنجاح!")
+                    st.success("تمت التصفية والتسميع المباشر بصندوق omar بنجاح!")
                     st.rerun()
             else:
                 st.info("لا توجد عُهد مفتوحة حالياً لـ سمان السواق بانتظار التصفية.")
