@@ -5,10 +5,10 @@ import json
 import os
 from datetime import datetime
 
-# 1. إعداد الصفحة وتطبيق التنسيق العربي الكامل (RTL)
+# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
 st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
 
-# تطبيق تنسيق RTL الشامل لكافة عناصر الصفحة والجداول والنوافذ
+# تطبيق التنسيقات الفاخرة المحدثة
 st.markdown("""
     <style>
         html, body, .stApp, [data-testid="stAppViewContainer"] {
@@ -23,7 +23,6 @@ st.markdown("""
             right: 0 !important;
             left: auto !important;
             border-left: 1px solid #E2E8F0 !important;
-            border-right: none !important;
             background-color: #FFFFFF !important;
         }
         
@@ -32,6 +31,7 @@ st.markdown("""
             text-align: right !important;
         }
 
+        /* الجداول التفاعلية محاذاة من اليمين إلى اليسار */
         [data-testid="stDialog"] div[role="dialog"], .stDataFrame, [data-testid="stDataEditor"] {
             direction: rtl !important;
             text-align: right !important;
@@ -39,37 +39,37 @@ st.markdown("""
 
         .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {
             text-align: right !important;
+            font-size: 14px !important;
         }
 
-        .daftra-header {
-            background: linear-gradient(90deg, #1E3A8A 0%, #2563EB 100%);
-            padding: 20px 24px;
-            border-radius: 12px;
+        /* الهيدر الأزرق الفخم والمصمم خصيصاً */
+        .daftra-header-blue {
+            background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
+            padding: 22px;
+            border-radius: 14px;
             color: white;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.15);
             text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.3);
         }
 
-        .welcome-box {
+        /* الكروت الإحصائية الأنيقة والاحترافية */
+        .stat-card {
             background: #FFFFFF;
-            border-radius: 16px;
-            padding: 40px;
+            border-radius: 12px;
+            padding: 16px 20px;
             border: 1px solid #E2E8F0;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             text-align: center;
-            max-width: 800px;
-            margin: 40px auto;
+            transition: all 0.3s ease;
         }
-        
-        .logo-text {
-            font-size: 80px;
-            font-weight: 900;
-            color: #EF4444;
-            font-family: Arial, sans-serif;
-            line-height: 1;
+        .stat-card:hover {
+            border-color: #2563EB;
+            transform: translateY(-2px);
         }
-        
+        .stat-title { font-size: 13px; color: #64748B; font-weight: 600; margin-bottom: 5px; }
+        .stat-num { font-size: 22px; color: #0F172A; font-weight: 800; }
+
         .stButton>button { border-radius: 8px; font-weight: 600; }
     </style>
 """, unsafe_allow_html=True)
@@ -414,28 +414,31 @@ else:
         st.session_state.current_month = month_selected
         st.session_state.payroll_df = load_data()
 
-    # الهيدر التفاعلي العلوي (الضغط عليه يُعيدك للشاشة الرئيسية المبدئية الخفيفة)
+    # المربع الأزرق الملكي الفخم للشركة التفاعلي للعودة للرئيسية
     tot_emp = len(st.session_state.payroll_df)
     tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
     tot_paid = st.session_state.payroll_df['الدفعة المدفوعة'].sum()
     tot_rem = st.session_state.payroll_df['المتبقي'].sum()
 
-    if st.button("🏢 شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد", use_container_width=True):
-        st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
-        st.rerun()
+    st.markdown(f"""
+        <div class="daftra-header-blue">
+            <h2 style="margin:0; color: white; font-weight: 800;">🏢 شركة ميم الخماسية للتصنيع</h2>
+            <p style="margin:5px 0 0 0; opacity: 0.9;">النظام المحاسبي الموحد لإدارة الرواتب والمستحقات المالية - ({month_selected})</p>
+        </div>
+    """, unsafe_allow_html=True)
 
-    # الكروت الإحصائية الأربعة التفاعلية
+    # الكروت الإحصائية الأربعة الفاخرة
     mc1, mc2, mc3, mc4 = st.columns(4)
     with mc1:
-        if st.button(f"👥 إجمالي العمالة: {tot_emp} موظف", use_container_width=True):
+        if st.button(f"👥 إجمالي العمالة\n\n{tot_emp} موظف", use_container_width=True):
             modal_emp_summary()
     with mc2:
-        if st.button(f"💰 إجمالي الرواتب: {tot_req:,.0f} ر.س", use_container_width=True):
+        if st.button(f"💰 إجمالي الرواتب\n\n{tot_req:,.0f} ر.س", use_container_width=True):
             modal_salary_summary()
     with mc3:
-        st.button(f"✅ المصروف: {tot_paid:,.0f} ر.س", use_container_width=True, disabled=True)
+        st.button(f"✅ المصروف فعلياً\n\n{tot_paid:,.0f} ر.س", use_container_width=True, disabled=True)
     with mc4:
-        if st.button(f"⏳ المتبقي: {tot_rem:,.0f} ر.س", use_container_width=True):
+        if st.button(f"⏳ المتبقي بالرصيد\n\n{tot_rem:,.0f} ر.س", use_container_width=True):
             modal_rem_summary()
 
     st.write("")
@@ -538,7 +541,7 @@ else:
 
     # 4. الشاشات المباشرة عند الطلب
     if selected_option == '🏠 الرئيسية (لوحة الإحصائيات)':
-        st.info("💡 مرحباً بك في الواجهة الرئيسية. اختر القسم المطلوب العمل عليه من القائمة الجانبية على اليمين.")
+        st.info("💡 مرحباً بك في الواجهة الرئيسية للنظام المحاسبي والإداري. اختر القسم المطلوب العمل عليه من القائمة الجانبية على اليمين.")
 
     elif selected_option == '📊 إدخال وتعديل الدفعات السريع':
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات السريع - ({month_selected})')
@@ -564,10 +567,12 @@ else:
                         st.rerun()
 
                 df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
+                
+                # ترتيب الأعمدة من اليمين إلى اليسار بشكل محكم
                 edited_b = st.data_editor(
                     df_b[['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'نوع الإجراء', 'الملاحظات']],
                     column_config={
-                        "م": st.column_config.NumberColumn("م", disabled=True),
+                        "م": st.column_config.NumberColumn("مسلسل", disabled=True),
                         "الاسم": st.column_config.TextColumn("اسم الموظف"),
                         "الوظيفة": st.column_config.TextColumn("الوظيفة"),
                         "الراتب الأساسي": st.column_config.NumberColumn("الراتب المستحق", min_value=0, format="%d ر.س"),
@@ -769,7 +774,7 @@ else:
         for _, r in st.session_state.payroll_df.iterrows():
             yrs, grat, leave_allow = calculate_saudi_gratuity_and_leave(r['الراتب الأساسي'], r.get('تاريخ بداية العمل', '2024-01-01'))
             saudi_reports.append({
-                'م': r['م'],
+                'مسلسل': r['م'],
                 'اسم الموظف': r['الاسم'],
                 'الفرع': r['الفرع'],
                 'تاريخ بداية العمل': r.get('تاريخ بداية العمل', '2024-01-01'),
