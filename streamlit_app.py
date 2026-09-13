@@ -47,6 +47,7 @@ st.markdown(f"""
             background-color: {bg_app} !important;
             color: {text_color} !important;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            overflow-x: hidden !important;
         }}
         
         h1, h2, h3, h4, h5, h6, .stMarkdown, label, p, span, div {{
@@ -54,6 +55,7 @@ st.markdown(f"""
             text-align: right !important;
             color: {text_color} !important;
             font-weight: 600 !important;
+            word-wrap: break-word !important;
         }}
 
         [data-testid="stSidebar"], [data-testid="stSidebarContent"] {{
@@ -61,6 +63,7 @@ st.markdown(f"""
             left: auto !important;
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
+            max-width: 85vw !important;
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
@@ -117,14 +120,14 @@ st.markdown(f"""
 
         /* إبراز مخصص لمربع رفع النسخ الاحتياطي */
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
-            background-color: #1E293B !important;
+            background-color: {bg_card} !important;
             border: 2px dashed #D97706 !important;
             border-radius: 12px !important;
             padding: 12px !important;
         }}
 
         [data-testid="stFileUploader"] button, [data-testid="stFileUploader"] span, [data-testid="stFileUploader"] label {{
-            color: #FFFFFF !important;
+            color: {text_color} !important;
             font-weight: bold !important;
         }}
 
@@ -132,6 +135,8 @@ st.markdown(f"""
             background-color: {modal_bg} !important;
             border: 3px solid #D97706 !important;
             border-radius: 16px !important;
+            width: 95vw !important;
+            max-width: 600px !important;
         }}
 
         [data-testid="stDialog"] div[role="dialog"] label, 
@@ -154,6 +159,8 @@ st.markdown(f"""
             font-weight: 800 !important;
             font-size: 15px !important;
             box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4) !important;
+            white-space: normal !important;
+            word-wrap: break-word !important;
         }}
 
         .stMetric, .daftra-quick-card {{
@@ -162,6 +169,7 @@ st.markdown(f"""
             padding: 15px !important;
             border: 1px solid {border_color} !important;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+            margin-bottom: 10px !important;
         }}
 
         .stMetric * {{
@@ -184,20 +192,20 @@ st.markdown(f"""
         .welcome-card-lux {{
             background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
             border-radius: 20px;
-            padding: 40px 30px;
+            padding: 30px 15px;
             text-align: center !important;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-            margin-top: 20px;
+            margin-top: 10px;
             border: 2px solid #D97706;
         }}
 
         .title-company-huge {{
-            font-size: 40px !important;
+            font-size: 28px !important;
             font-weight: 900 !important;
             background: linear-gradient(135deg, #FFF 0%, #F59E0B 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-top: 15px;
+            margin-top: 10px;
             margin-bottom: 10px;
             text-align: center !important;
         }}
@@ -206,15 +214,15 @@ st.markdown(f"""
             background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%);
             border: 2px solid #D97706;
             border-radius: 16px;
-            padding: 18px 25px;
+            padding: 15px 15px;
             text-align: center !important;
             margin-top: 5px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
         }}
 
         .company-header-inner-title {{
-            font-size: 30px !important;
+            font-size: 24px !important;
             font-weight: 900 !important;
             color: #F59E0B !important;
             margin: 0 !important;
@@ -222,7 +230,7 @@ st.markdown(f"""
         }}
 
         .logo-lux {{
-            font-size: 90px;
+            font-size: 70px;
             font-weight: 900;
             color: #EF4444 !important;
             font-family: Arial, sans-serif;
@@ -235,14 +243,30 @@ st.markdown(f"""
             display: inline-block;
             background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
             color: #FFFFFF !important;
-            padding: 6px 24px;
+            padding: 6px 18px;
             border-radius: 30px;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 800;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.3);
             text-align: center !important;
+        }}
+
+        @media (max-width: 768px) {{
+            .title-company-huge {{
+                font-size: 24px !important;
+            }}
+            .company-header-inner-title {{
+                font-size: 20px !important;
+            }}
+            .logo-lux {{
+                font-size: 60px !important;
+            }}
+            [data-testid="column"] {{
+                width: 100% !important;
+                flex: 1 1 100% !important;
+            }}
         }}
     </style>
 """, unsafe_allow_html=True)
@@ -693,6 +717,7 @@ else:
                     st.session_state['current_view'] = '🖨️ طباعة السندات الرسمية (A4)'
                     st.rerun()
 
+            # إجبار فتح قسم النسخ الاحتياطي بالكامل بشكل دائم وحصري لـ wahby
             with st.expander("💾 النسخ الاحتياطي والأرشيف", expanded=True):
                 if 'payroll_df' in st.session_state:
                     json_str = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
@@ -703,7 +728,7 @@ else:
                         mime="application/json",
                         use_container_width=True
                     )
-                uploaded_backup = st.file_uploader("📤 استيراد ورفع نسخة:", type=['json'])
+                uploaded_backup = st.file_uploader("📤 استيراد ورفع نسخة:", type=['json'], key="side_uploader_backup")
                 if uploaded_backup:
                     try:
                         imported_df = pd.DataFrame(json.load(uploaded_backup))
@@ -900,7 +925,7 @@ else:
         st.markdown("### ⚡ إجراءات خاطفة")
         
         if st.session_state.user_role == "admin":
-            q_col1, q_col2, q_col3 = st.columns(3)
+            q_col1, q_col2, q_col3, q_col4 = st.columns(4)
             with q_col1:
                 st.markdown('<div class="daftra-quick-card"><h3>👤</h3><h4>إضافة موظف</h4></div>', unsafe_allow_html=True)
                 if st.button("➕ إضافة موظف", use_container_width=True, key="q_btn_add_emp"):
@@ -915,6 +940,19 @@ else:
                 st.markdown('<div class="daftra-quick-card"><h3>🔴</h3><h4>سند صرف</h4></div>', unsafe_allow_html=True)
                 if st.button("💸 سند صرف سريع", use_container_width=True, key="q_btn_pay"):
                     quick_cash_voucher_dialog("صرف", month_selected, "main")
+
+            with q_col4:
+                st.markdown('<div class="daftra-quick-card"><h3>💾</h3><h4>نسخة احتياطية</h4></div>', unsafe_allow_html=True)
+                if 'payroll_df' in st.session_state:
+                    json_str_main = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
+                    st.download_button(
+                        label="📥 حفظ نسخة فوراً",
+                        data=json_str_main.encode('utf-8'),
+                        file_name=f"payroll_backup_{month_selected}.json",
+                        mime="application/json",
+                        use_container_width=True,
+                        key="quick_backup_btn_main"
+                    )
         else:
             q_col2, q_col3 = st.columns(2)
             with q_col2:
