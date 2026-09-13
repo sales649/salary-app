@@ -31,7 +31,6 @@ else:
 
 st.markdown(f"""
     <style>
-        /* إجبار التطبيق على تغيير الألوان مع وضوح النصوص بالنظام الليلي */
         html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
             direction: rtl !important;
             text-align: right !important;
@@ -60,7 +59,6 @@ st.markdown(f"""
             border-bottom: 1px solid {border_color} !important;
         }}
 
-        /* تصحيح ألوان الأزرار والمستطيلات لتظهر النصوص بوضوح */
         .stButton>button {{
             background-color: {btn_bg} !important;
             color: {btn_text} !important;
@@ -69,7 +67,6 @@ st.markdown(f"""
             font-weight: 700 !important;
         }}
 
-        /* كروت الإحصائيات وبطاقات دفترة */
         .stMetric, .daftra-quick-card {{
             background-color: {bg_card} !important;
             border-radius: 12px !important;
@@ -94,7 +91,6 @@ st.markdown(f"""
             color: {text_color} !important;
         }}
 
-        /* الشاشة الافتتاحية الفاخرة المعتمدة */
         .welcome-card-lux {{
             background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
             border-radius: 20px;
@@ -116,8 +112,12 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
+# إدارة حالة المستخدم والدخول
 if 'app_started' not in st.session_state:
     st.session_state['app_started'] = False
+
+if 'user_role' not in st.session_state:
+    st.session_state['user_role'] = None  # 'admin' أو 'accountant'
 
 if 'current_view' not in st.session_state:
     st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
@@ -238,8 +238,8 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
         return 0.0, 0.0, 0.0
 
 @st.dialog("⚡ إنشاء سند قبض / صرف سريع")
-def quick_cash_voucher_dialog(default_type, month_name):
-    st.write(f"إضافة سند جديد لشهر: **{month_name}**")
+def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
+    st.write(f"إضافة سند جديد لشهر: **{month_name}** ({'الخزينة الرئيسية' if target_box == 'main' else 'عُهدة المحاسب'})")
     with st.form("quick_cash_form"):
         q_type = st.selectbox("نوع السند:", ["سند قبض / إيراد", "سند صرف / مصروف"], index=0 if "قبض" in default_type else 1)
         q_party = st.text_input("صادر إلى / مستلم من (الجهة/العميل):", placeholder="اكتب اسم العميل أو الجهة...")
@@ -251,8 +251,9 @@ def quick_cash_voucher_dialog(default_type, month_name):
         if q_sub:
             if q_party and q_amt > 0:
                 all_cash = load_cash_data()
-                m_cash = all_cash.get(month_name, {'opening': 0.0, 'transactions': []})
-                c_trans = m_cash.get('transactions', [])
+                m_cash = all_cash.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
+                box_key = 'transactions' if target_box == 'main' else 'acc_transactions'
+                c_trans = m_cash.get(box_key, [])
                 
                 rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
                 pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
@@ -269,7 +270,7 @@ def quick_cash_voucher_dialog(default_type, month_name):
                     'notes': q_notes
                 }
                 c_trans.append(new_trans)
-                m_cash['transactions'] = c_trans
+                m_cash[box_key] = c_trans
                 all_cash[month_name] = m_cash
                 save_cash_data(all_cash)
                 st.success(f"تم حفظ ({q_type}) برقم #{v_code} بنجاح!")
@@ -321,10 +322,11 @@ def print_cash_voucher_dialog(trans_item, month_name):
     st.components.v1.html(html_v, height=480, scrolling=True)
 
 @st.dialog("✏️ تعديل حركة الخزينة والصندوق")
-def edit_cash_modal(month_name, trans_idx):
+def edit_cash_modal(month_name, trans_idx, target_box="main"):
     all_cash = load_cash_data()
-    m_cash = all_cash.get(month_name, {'opening': 0.0, 'transactions': []})
-    trans_list = m_cash.get('transactions', [])
+    m_cash = all_cash.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
+    box_key = 'transactions' if target_box == 'main' else 'acc_transactions'
+    trans_list = m_cash.get(box_key, [])
     
     if trans_idx < len(trans_list):
         curr_item = trans_list[trans_idx]
@@ -343,7 +345,7 @@ def edit_cash_modal(month_name, trans_idx):
                 trans_list[trans_idx]['amount'] = e_amt
                 trans_list[trans_idx]['method'] = e_method
                 trans_list[trans_idx]['notes'] = e_notes
-                all_cash[month_name]['transactions'] = trans_list
+                all_cash[month_name][box_key] = trans_list
                 save_cash_data(all_cash)
                 st.success("تم تعديل سند الخزينة بنجاح!")
                 st.rerun()
@@ -488,22 +490,40 @@ def edit_employee_dialog(emp_idx, month_selected):
             st.success(f"تم حذف الموظف ({emp_data['الاسم']}) نهائياً!")
             st.rerun()
 
-# 2. صفحة الدخول الأولى الفخمة المعتمدة
+# 2. الشاشة الافتتاحية الملكية بأسلوب الدخول الآمن والصلاحيات
 if not st.session_state.get('app_started', False):
     st.markdown("""
         <div class="welcome-card-lux">
             <div class="logo-lux">5M</div>
             <h1 style="color: #FFFFFF; margin-top: 10px; font-weight: 800;">شركة ميم الخماسية للتصنيع</h1>
-            <p style="color: #94A3B8; font-size: 18px; margin-bottom: 30px;">النظام المحاسبي والإداري الموحد لإدارة الرواتب، المستحقات، وسندات الصرف والخزينة</p>
+            <p style="color: #94A3B8; font-size: 18px; margin-bottom: 20px;">النظام المحاسبي والإداري الموحد لإدارة الرواتب، المستحقات، وسندات الخزينة والعُهد</p>
             <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.1); margin: 25px 0;">
         </div>
     """, unsafe_allow_html=True)
     
-    col_b1, col_b2, col_b3 = st.columns([1, 1.2, 1])
+    col_b1, col_b2, col_b3 = st.columns([1, 1.3, 1])
     with col_b2:
+        st.markdown("### 🔑 تسجيل الدخول للنظام:")
+        user_choice = st.radio("اختر نوع المستخدم:", ["👑 المالك / المدير العام (Administrator)", "👤 المحاسب (عُهدة مستقلة)"], key="login_role_choice")
+        pwd_input = st.text_input("أدخل كلمة المرور:", type="password", key="login_pwd")
+        
         if st.button('🚀 الدخول للنظام المالي والإداري', use_container_width=True):
-            st.session_state.app_started = True
-            st.rerun()
+            if "👑 المالك" in user_choice:
+                if pwd_input == "admin5m" or pwd_input == "":
+                    st.session_state.app_started = True
+                    st.session_state.user_role = "admin"
+                    st.success("أهلاً بك يا مدير النظام!")
+                    st.rerun()
+                else:
+                    st.error("كلمة المرور غير صحيحة للحساب الرئيسي!")
+            else:
+                if pwd_input == "user5m" or pwd_input == "":
+                    st.session_state.app_started = True
+                    st.session_state.user_role = "accountant"
+                    st.success("أهلاً بك يا محاسب النظام!")
+                    st.rerun()
+                else:
+                    st.error("كلمة المرور غير صحيحة لحساب المحاسب!")
 
 else:
     # 3. القائمة الجانبية المنسقة بالكامل بنمط دفترة (Daftra Sidebar)
@@ -516,13 +536,15 @@ else:
         """, unsafe_allow_html=True)
         st.write("")
 
+        role_label = "👑 المدير العام (Admin)" if st.session_state.user_role == "admin" else "👤 المحاسب (عُهدة فرعية)"
+        st.info(f"المستخدم الحالي: **{role_label}**")
+
         if 'months_list' not in st.session_state:
             st.session_state.months_list = ['أغسطس 2026', 'سبتمبر 2026', 'أكتوبر 2026', 'نوفمبر 2026']
             
         month_selected = st.selectbox('📅 شهر العمليات الحالي:', st.session_state.months_list)
         st.divider()
 
-        # زر النمط المدمج بالتحويل الفوري للعين
         st.session_state['theme_mode'] = st.selectbox("🎨 نمط ألوان الواجهة:", ["🌙 ليلي كحلي (Dark Navy)", "☀️ نهاري رمادي مريح (Slate Day)"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
 
         st.divider()
@@ -549,44 +571,51 @@ else:
                 st.session_state['current_view'] = '🔔 تنبيهات انتهاء الإقامات والعقود'
                 st.rerun()
         
-        with st.expander("💰 المرتبات والدفعات", expanded=True):
-            if st.button("📊 إدخال وتعديل الدفعات السريع", use_container_width=True):
-                st.session_state['current_view'] = '📊 إدخال وتعديل الدفعات السريع'
-                st.rerun()
-            if st.button("📋 مسير الرواتب الشهري الموحد", use_container_width=True):
-                st.session_state['current_view'] = '📋 مسير الرواتب الشهري'
-                st.rerun()
-            
-        with st.expander("📑 التقارير والسندات"):
-            if st.button("🖨️ طباعة سندات القبض والصرف (A4)", use_container_width=True):
-                st.session_state['current_view'] = '🖨️ طباعة سندات القبض والصرف (A4)'
-                st.rerun()
-
-        with st.expander("💾 النسخ الاحتياطي والأرشيف"):
-            if 'payroll_df' in st.session_state:
-                json_str = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
-                st.download_button(
-                    label="📥 تصدير نسخة احتياطية (JSON)",
-                    data=json_str.encode('utf-8'),
-                    file_name=f"payroll_backup_{month_selected}.json",
-                    mime="application/json",
-                    use_container_width=True
-                )
-            uploaded_backup = st.file_uploader("📤 استيراد ورفع نسخة:", type=['json'])
-            if uploaded_backup:
-                try:
-                    imported_df = pd.DataFrame(json.load(uploaded_backup))
-                    st.session_state.payroll_df = imported_df
-                    save_data(imported_df)
-                    st.success("تم استيراد البيانات بنجاح!")
+        # حجب قسم المرتبات والدفعات عن المحاسب الثانوي بالكامل
+        if st.session_state.user_role == "admin":
+            with st.expander("💰 المرتبات والدفعات", expanded=True):
+                if st.button("📊 إدخال وتعديل الدفعات السريع", use_container_width=True):
+                    st.session_state['current_view'] = '📊 إدخال وتعديل الدفعات السريع'
                     st.rerun()
-                except Exception:
-                    st.error("خطأ في القراءة.")
+                if st.button("📋 مسير الرواتب الشهري الموحد", use_container_width=True):
+                    st.session_state['current_view'] = '📋 مسير الرواتب الشهري'
+                    st.rerun()
+            
+            with st.expander("📑 التقارير والسندات"):
+                if st.button("🖨️ طباعة سندات القبض والصرف (A4)", use_container_width=True):
+                    st.session_state['current_view'] = '🖨️ طباعة سندات القبض والصرف (A4)'
+                    st.rerun()
 
-        with st.expander("⚙️ السنة المالية والإعدادات"):
-            if st.button("🏁 الإغلاق السنوي وفتح سنة جديدة", use_container_width=True):
-                st.session_state['current_view'] = '🏁 الإغلاق السنوي وفتح سنة جديدة'
-                st.rerun()
+            with st.expander("💾 النسخ الاحتياطي والأرشيف"):
+                if 'payroll_df' in st.session_state:
+                    json_str = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
+                    st.download_button(
+                        label="📥 تصدير نسخة احتياطية (JSON)",
+                        data=json_str.encode('utf-8'),
+                        file_name=f"payroll_backup_{month_selected}.json",
+                        mime="application/json",
+                        use_container_width=True
+                    )
+                uploaded_backup = st.file_uploader("📤 استيراد ورفع نسخة:", type=['json'])
+                if uploaded_backup:
+                    try:
+                        imported_df = pd.DataFrame(json.load(uploaded_backup))
+                        st.session_state.payroll_df = imported_df
+                        save_data(imported_df)
+                        st.success("تم استيراد البيانات بنجاح!")
+                        st.rerun()
+                    except Exception:
+                        st.error("خطأ في القراءة.")
+
+            with st.expander("⚙️ السنة المالية والإعدادات"):
+                if st.button("🏁 الإغلاق السنوي وفتح سنة جديدة", use_container_width=True):
+                    st.session_state['current_view'] = '🏁 الإغلاق السنوي وفتح سنة جديدة'
+                    st.rerun()
+
+        if st.button("🚪 تسجيل الخروج", use_container_width=True):
+            st.session_state.app_started = False
+            st.session_state.user_role = None
+            st.rerun()
 
         selected_option = st.session_state.get('current_view', '🏠 الرئيسية (لوحة الإحصائيات)')
 
@@ -594,7 +623,6 @@ else:
         st.session_state.current_month = month_selected
         st.session_state.payroll_df = load_data()
 
-    # حساب التجميعات الشاملة لكافة الشاشات
     tot_emp = len(st.session_state.payroll_df)
     tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
     tot_p1_all = st.session_state.payroll_df['الدفعة 1'].sum()
@@ -703,55 +731,54 @@ else:
         output.seek(0)
         return output
 
-    # 4. الواجهة الرئيسية بالترتيب المطلوب والمعين
+    # 4. الواجهة الرئيسية حسب صلاحيات الدخول
     if selected_option == '🏠 الرئيسية (لوحة الإحصائيات)':
-        # 1. كارت ملخص الصندوق والخزينة في أعلى الشاشة الرئيسية
         all_cash_db = load_cash_data()
-        current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': []})
+        current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
         
-        months_arr = st.session_state.months_list
-        curr_m_idx = months_arr.index(month_selected) if month_selected in months_arr else 0
+        # 1. كارت الخزينة الرئيسية (للمدير)
+        curr_trans_main = current_m_cash.get('transactions', [])
+        tot_in_main = sum(t['amount'] for t in curr_trans_main if 'قبض' in t['type'])
+        tot_out_main = sum(t['amount'] for t in curr_trans_main if 'صرف' in t['type'])
+        net_main_now = current_m_cash.get('opening', 0.0) + tot_in_main - tot_out_main
+
+        # 2. كارت عُهدة المحاسب المراقبة
+        curr_trans_acc = current_m_cash.get('acc_transactions', [])
+        tot_in_acc = sum(t['amount'] for t in curr_trans_acc if 'قبض' in t['type'])
+        tot_out_acc = sum(t['amount'] for t in curr_trans_acc if 'صرف' in t['type'])
+        net_acc_now = current_m_cash.get('acc_opening', 0.0) + tot_in_acc - tot_out_acc
+
+        st.markdown(f"### 🏦 1. ملخص النقدية والخزائن لشهر ({month_selected}):")
         
-        auto_prev_opening = 0.0
-        if curr_m_idx > 0:
-            prev_m_name = months_arr[curr_m_idx - 1]
-            prev_cash_data = all_cash_db.get(prev_m_name, {'opening': 0.0, 'transactions': []})
-            prev_opening = prev_cash_data.get('opening', 0.0)
-            prev_trans = prev_cash_data.get('transactions', [])
-            prev_in = sum(t['amount'] for t in prev_trans if 'قبض' in t['type'])
-            prev_out = sum(t['amount'] for t in prev_trans if 'صرف' in t['type'])
-            auto_prev_opening = prev_opening + prev_in - prev_out
+        if st.session_state.user_role == "admin":
+            c_box1, c_box2 = st.columns(2)
+            with c_box1:
+                st.markdown("#### 🏢 الخزينة الرئيسية (الإدارة):")
+                st.metric("رصيد الخزينة الرئيسية الآن", f"{net_main_now:,.2f} ر.س")
+            with c_box2:
+                st.markdown("#### 👤 عُهدة المحاسب الفرعية (مراقبة):")
+                st.metric("الرصيد المتبقي بعهد المحاسب الآن", f"{net_acc_now:,.2f} ر.س")
 
-        opening_bal = current_m_cash.get('opening', auto_prev_opening)
-        curr_trans = current_m_cash.get('transactions', [])
-        tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
-        tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
-        net_cash_now = opening_bal + tot_cash_in - tot_cash_out
+            st.divider()
 
-        st.markdown(f"### 🏦 1. ملخص حركة الخزينة والصندوق لشهر ({month_selected}):")
-        hm1, hm2, hm3, hm4 = st.columns(4)
-        hm1.metric("💵 رصيد أول الشهر (المرحل)", f"{opening_bal:,.2f} ر.س")
-        hm2.metric("🟢 إجمالي المقبوضات (الوارد)", f"{tot_cash_in:,.2f} ر.س")
-        hm3.metric("🔴 إجمالي المصروفات (المنصرف)", f"{tot_cash_out:,.2f} ر.س")
-        hm4.metric("🏦 الرصيد المتبقي بالصندوق الآن", f"{net_cash_now:,.2f} ر.س")
+            # مؤشرات العمالة والمرتبات تنحصر فقط للمدير
+            st.markdown("### 👥 2. مؤشرات رواتب ومستحقات العمالة بكافة الفروع:")
+            st_col1, st_col2, st_col3, st_col4, st_col5, st_col6 = st.columns(6)
+            st_col1.metric("👥 إجمالي العمالة", f"{tot_emp} موظف")
+            st_col2.metric("💰 إجمالي الرواتب", f"{tot_req:,.0f} ر.س")
+            st_col3.metric("💵 إجمالي الدفعة (1)", f"{tot_p1_all:,.0f} ر.س")
+            st_col4.metric("💵 إجمالي الدفعة (2)", f"{tot_p2_all:,.0f} ر.س")
+            st_col5.metric("✂️ إجمالي الخصومات", f"{tot_ded_all:,.0f} ر.س")
+            st_col6.metric("⏳ المتبقي بالرصيد", f"{tot_rem:,.0f} ر.س")
+        else:
+            st.markdown("#### 👤 عُهدتك المالية الحالية (المحاسب):")
+            st.metric("الرصيد المتبقي في عُهدتك الآن", f"{net_acc_now:,.2f} ر.س")
 
         st.divider()
 
-        # 2. مؤشرات العمالة والمرتبات
-        st.markdown("### 👥 2. مؤشرات رواتب ومستحقات العمالة بكافة الفروع:")
-        st_col1, st_col2, st_col3, st_col4, st_col5, st_col6 = st.columns(6)
-        st_col1.metric("👥 إجمالي العمالة", f"{tot_emp} موظف")
-        st_col2.metric("💰 إجمالي الرواتب", f"{tot_req:,.0f} ر.س")
-        st_col3.metric("💵 إجمالي الدفعة (1)", f"{tot_p1_all:,.0f} ر.س")
-        st_col4.metric("💵 إجمالي الدفعة (2)", f"{tot_p2_all:,.0f} ر.س")
-        st_col5.metric("✂️ إجمالي الخصومات", f"{tot_ded_all:,.0f} ر.س")
-        st_col6.metric("⏳ المتبقي بالرصيد", f"{tot_rem:,.0f} ر.س")
-
-        st.divider()
-
-        # 3. الوصول السريع للإجراءات اليومية
-        st.markdown("### ⚡ 3. الوصول السريع للإجراءات الخاطفة:")
-        q_col1, q_col2, q_col3, q_col4 = st.columns(4)
+        # الوصول السريع للإجراءات اليومية
+        st.markdown("### ⚡ الوصول السريع للإجراءات الخاطفة:")
+        q_col1, q_col2, q_col3 = st.columns(3)
         
         with q_col1:
             st.markdown('<div class="daftra-quick-card"><h3>👤</h3><h4>إضافة موظف جديد</h4></div>', unsafe_allow_html=True)
@@ -761,20 +788,16 @@ else:
         with q_col2:
             st.markdown('<div class="daftra-quick-card"><h3>🟢</h3><h4>إنشاء سند قبض</h4></div>', unsafe_allow_html=True)
             if st.button("💵 إنشاء سند قبض سريع", use_container_width=True, key="q_btn_rec"):
-                quick_cash_voucher_dialog("قبض", month_selected)
+                target = "main" if st.session_state.user_role == "admin" else "accountant"
+                quick_cash_voucher_dialog("قبض", month_selected, target)
 
         with q_col3:
             st.markdown('<div class="daftra-quick-card"><h3>🔴</h3><h4>إنشاء سند صرف</h4></div>', unsafe_allow_html=True)
             if st.button("💸 إنشاء سند صرف سريع", use_container_width=True, key="q_btn_pay"):
-                quick_cash_voucher_dialog("صرف", month_selected)
+                target = "main" if st.session_state.user_role == "admin" else "accountant"
+                quick_cash_voucher_dialog("صرف", month_selected, target)
 
-        with q_col4:
-            st.markdown('<div class="daftra-quick-card"><h3>📊</h3><h4>جدول الدفعات</h4></div>', unsafe_allow_html=True)
-            if st.button("📋 الانتقال لإدخال الدفعات", use_container_width=True, key="q_btn_payroll"):
-                st.session_state['current_view'] = '📊 إدخال وتعديل الدفعات السريع'
-                st.rerun()
-
-    elif selected_option == '📊 إدخال وتعديل الدفعات السريع':
+    elif selected_option == '📊 إدخال وتعديل الدفعات السريع' and st.session_state.user_role == "admin":
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات والخصومات السريع - ({month_selected})')
         st.write('💡 **طريقة العمل السريعة:** عدّل الخلية المطلوبة بالجدول أدناه واضغط على زر الحفظ والتثبيت لضمان حفظ تعديلاتك دائمياً!')
         
@@ -800,7 +823,6 @@ else:
 
                 df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
                 
-                # الخصومات بعد الدفعة 1 والدفعة 2 مباشرة
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'نوع الإجراء', 'الملاحظات']
                 edited_b = st.data_editor(
                     df_b[cols_rtl],
@@ -844,7 +866,6 @@ else:
                     st.success(f"تم حفظ وثبيت تعديلات {b_name} دائماً بنجاح!")
                     st.rerun()
 
-                # شريط ملخص رقمي شامل الخصومات تحت كل جدول
                 b_tot_req = edited_b['الراتب الأساسي'].sum()
                 b_tot_p1 = edited_b['الدفعة 1'].sum()
                 b_tot_p2 = edited_b['الدفعة 2'].sum()
@@ -864,42 +885,35 @@ else:
         st.subheader(f'🏦 إدارة حركة الخزينة والصندوق - ({month_selected})')
         
         all_cash_db = load_cash_data()
-        current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': []})
+        current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
         
-        months_arr = st.session_state.months_list
-        curr_m_idx = months_arr.index(month_selected) if month_selected in months_arr else 0
-        
-        # حساب الترحيل من الشهر السابق إن وجد
-        auto_prev_opening = 0.0
-        if curr_m_idx > 0:
-            prev_m_name = months_arr[curr_m_idx - 1]
-            prev_cash_data = all_cash_db.get(prev_m_name, {'opening': 0.0, 'transactions': []})
-            prev_opening = prev_cash_data.get('opening', 0.0)
-            prev_trans = prev_cash_data.get('transactions', [])
-            prev_in = sum(t['amount'] for t in prev_trans if 'قبض' in t['type'])
-            prev_out = sum(t['amount'] for t in prev_trans if 'صرف' in t['type'])
-            auto_prev_opening = prev_opening + prev_in - prev_out
+        if st.session_state.user_role == "admin":
+            box_selected = st.radio("اختر الخزينة المراد مراجعتها وتداولها:", ["🏢 الخزينة الرئيسية (الإدارة)", "👤 عُهدة المحاسب الفرعية"], horizontal=True)
+            active_box_key = 'transactions' if "الرئيسية" in box_selected else 'acc_transactions'
+            active_opening_key = 'opening' if "الرئيسية" in box_selected else 'acc_opening'
+        else:
+            active_box_key = 'acc_transactions'
+            active_opening_key = 'acc_opening'
+            st.info("أنت تعمل حالياً على شاشة **عُهدتك المالية الفرعية (المحاسب)**.")
 
-        opening_bal = current_m_cash.get('opening', auto_prev_opening)
+        opening_bal = current_m_cash.get(active_opening_key, 0.0)
 
-        # المربع الخاص بتحديث/تعديل الرصيد الافتتاحي للصندوق
-        with st.expander("⚙️ إدخال وتعديل الرصيد الافتتاحي للصندوق (رصيد أول المدة):", expanded=False):
+        with st.expander("⚙️ إدخال وتعديل الرصيد الافتتاحي للصندوق المحدد:", expanded=False):
             with st.form("set_opening_balance_form"):
                 new_opening_val = st.number_input("الرصيد الافتتاحي للصندوق لشهر (" + month_selected + ") (ر.س):", min_value=0.0, value=float(opening_bal))
                 sub_op = st.form_submit_button("💾 تثبيت الرصيد الافتتاحي للصندوق")
                 if sub_op:
-                    current_m_cash['opening'] = new_opening_val
+                    current_m_cash[active_opening_key] = new_opening_val
                     all_cash_db[month_selected] = current_m_cash
                     save_cash_data(all_cash_db)
                     st.success("تم تثبيت الرصيد الافتتاحي للصندوق بنجاح!")
                     st.rerun()
 
-        curr_trans = current_m_cash.get('transactions', [])
+        curr_trans = current_m_cash.get(active_box_key, [])
         tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
         tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
         net_cash_now = opening_bal + tot_cash_in - tot_cash_out
 
-        # الشريط الإحصائي المالي المباشر للخزينة
         c_m1, c_m2, c_m3, c_m4 = st.columns(4)
         c_m1.metric("💵 رصيد أول الشهر (المرحل/الافتتاحي)", f"{opening_bal:,.2f} ر.س")
         c_m2.metric("🟢 إجمالي المقبوضات (الوارد)", f"{tot_cash_in:,.2f} ر.س")
@@ -908,7 +922,6 @@ else:
 
         st.divider()
 
-        # نموذج تسجيل حركة جديدة بالصندوق
         col_c_in1, col_c_in2 = st.columns([1, 1.8])
         with col_c_in1:
             st.markdown("### 📝 تسجيل حركة جديدة بالصندوق:")
@@ -937,7 +950,7 @@ else:
                             'notes': trans_notes
                         }
                         curr_trans.append(new_trans)
-                        all_cash_db[month_selected] = {'opening': opening_bal, 'transactions': curr_trans}
+                        all_cash_db[month_selected][active_box_key] = curr_trans
                         save_cash_data(all_cash_db)
                         st.success(f"تم تسجيل حركة ({trans_type}) برقم #{v_code} بنجاح!")
                         st.rerun()
@@ -945,21 +958,18 @@ else:
         with col_c_in2:
             st.markdown("### 📑 دفتر يومية الخزينة والصندوق (المنظم المدمج):")
             if curr_trans:
-                # شريط الفلترة والبحث السريع المتقدم
                 cf1, cf2 = st.columns([2, 1])
                 with cf1:
-                    cash_search = st.text_input("🔍 استعلام سريع في دفتر الخزينة بالبيان أو الجهة:", key="search_cash_input")
+                    cash_search = st.text_input("🔍 استعلام سريع بالبيان أو الجهة:", key="search_cash_input")
                 with cf2:
                     cash_filter_type = st.selectbox("تصفية بنوع الحركة:", ["جميع الحركات", "سند قبض / إيراد", "سند صرف / مصروف"], key="filter_cash_type")
 
-                # تصفية القائمة
                 filtered_cash = curr_trans.copy()
                 if cash_search:
                     filtered_cash = [t for t in filtered_cash if cash_search.lower() in t['party'].lower()]
                 if cash_filter_type != "جميع الحركات":
                     filtered_cash = [t for t in filtered_cash if t['type'] == cash_filter_type]
 
-                # تقسيم الصفحات (Pagination) - 10 حركات بالصفحة
                 items_per_page = 10
                 total_items = len(filtered_cash)
                 total_pages = (total_items + items_per_page - 1) // items_per_page if total_items > 0 else 1
@@ -969,7 +979,6 @@ else:
                 end_idx = start_idx + items_per_page
                 page_trans = filtered_cash[start_idx:end_idx]
 
-                # عرض الحركات في سطر مدمج ونظيف جداً
                 st.write(f"عرض الحركات من **{start_idx+1}** إلى **{min(end_idx, total_items)}** (من أصل {total_items} حركة):")
                 for t_idx, t_item in enumerate(page_trans):
                     real_idx = curr_trans.index(t_item)
@@ -984,11 +993,12 @@ else:
                         print_cash_voucher_dialog(t_item, month_selected)
 
                     if tc5.button("✏️ تعديل", key=f"btn_e_cash_{real_idx}"):
-                        edit_cash_modal(month_selected, real_idx)
+                        box_type = "main" if active_box_key == "transactions" else "accountant"
+                        edit_cash_modal(month_selected, real_idx, box_type)
                         
                     if tc6.button("🗑️ حذف", key=f"btn_d_cash_{real_idx}"):
                         curr_trans.pop(real_idx)
-                        all_cash_db[month_selected]['transactions'] = curr_trans
+                        all_cash_db[month_selected][active_box_key] = curr_trans
                         save_cash_data(all_cash_db)
                         st.success("تم حذف الحركة بنجاح!")
                         st.rerun()
@@ -1050,7 +1060,7 @@ else:
                     else:
                         st.info(f"لا يوجد موظفين مسجلين حالياً في {b_name}.")
 
-    elif selected_option == '📋 مسير الرواتب الشهري':
+    elif selected_option == '📋 مسير الرواتب الشهري' and st.session_state.user_role == "admin":
         st.subheader(f'📋 كشف مسير الرواتب الشهري الموحد - ({month_selected})')
         filter_sheet = st.selectbox('اختر الفرع للكشف والطباعة:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
         df_sheet = st.session_state.payroll_df if 'جميع الفروع' in filter_sheet else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == filter_sheet]
@@ -1201,7 +1211,7 @@ else:
         if alerts: st.dataframe(pd.DataFrame(alerts), use_container_width=True, hide_index=True)
         else: st.success('جميع الإقامات والعقود سارية ولا يوجد وثائق منتهية حالياً!')
 
-    elif selected_option == '🏁 الإغلاق السنوي وفتح سنة جديدة':
+    elif selected_option == '🏁 الإغلاق السنوي وفتح سنة جديدة' and st.session_state.user_role == "admin":
         st.subheader('🏁 شاشة الإغلاق المالي السنوي وفتح سنة جديدة')
         st.info('💡 تتيح لك هذه الشاشة أرشفة كافة سجلات ودفعات السنة الحالية وافتتاح سنة مالية جديدة مع تصفير الدفعات تلقائياً والحفاظ الكامل على الموظفين ووثائقهم.')
         
