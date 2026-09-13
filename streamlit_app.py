@@ -12,14 +12,14 @@ ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
 
 if 'theme_mode' not in st.session_state:
-    st.session_state['theme_mode'] = '🌙 ليلي رمادي داكن (Slate Dark)'
+    st.session_state['theme_mode'] = '🌙 ليلي ذهبي نحاسي (Copper Gold Dark)'
 
 if '🌙' in st.session_state['theme_mode']:
     bg_app = "#0F172A"
     bg_card = "#1E293B"
     bg_sidebar = "#1E293B"
     text_color = "#FFFFFF"
-    border_color = "#334155"
+    border_color = "#D97706"  # لون نحاسي فاخر للحدود
     input_bg = "#F1F5F9"
     input_text = "#0F172A"
 else:
@@ -27,7 +27,7 @@ else:
     bg_card = "#FFFFFF"
     bg_sidebar = "#F8FAFC"
     text_color = "#0F172A"
-    border_color = "#CBD5E1"
+    border_color = "#D97706"
     input_bg = "#F1F5F9"
     input_text = "#0F172A"
 
@@ -59,14 +59,15 @@ st.markdown(f"""
             font-weight: 700 !important;
         }}
 
+        /* ألوان القوائم المنسدلة النحاسية الذهبية */
         [data-testid="stSidebar"] .streamlit-expanderHeader,
         [data-testid="stSidebar"] details[open] summary,
         [data-testid="stSidebar"] details summary:hover,
         [data-testid="stSidebar"] details summary:focus {{
             background-color: #1E293B !important;
-            color: #38BDF8 !important;
+            color: #F59E0B !important;
             font-weight: 700 !important;
-            border: 1px solid #334155 !important;
+            border: 1px solid #D97706 !important;
             border-radius: 8px !important;
         }}
 
@@ -75,14 +76,14 @@ st.markdown(f"""
             color: #FFFFFF !important;
             border-radius: 0 0 8px 8px !important;
             padding: 10px !important;
-            border: 1px solid #334155 !important;
+            border: 1px solid #D97706 !important;
             border-top: none !important;
         }}
 
         ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"] div {{
             background-color: #F1F5F9 !important;
             color: #0F172A !important;
-            border: 1px solid #38BDF8 !important;
+            border: 1px solid #D97706 !important;
         }}
 
         li[role="option"] {{
@@ -91,11 +92,10 @@ st.markdown(f"""
         }}
 
         li[role="option"]:hover {{
-            background-color: #2563EB !important;
+            background-color: #D97706 !important;
             color: #FFFFFF !important;
         }}
 
-        /* إصلاح حقول الإدخال لتصبح رمادية فاتحة مع خط أسود واضح جداً */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: #F1F5F9 !important;
             color: #0F172A !important;
@@ -105,10 +105,10 @@ st.markdown(f"""
             font-size: 15px !important;
         }}
 
-        /* وضوح العناوين والتسميات فوق مربعات السندات وفي النوافذ المنبثقة */
+        /* النوافذ المنبثقة والسندات باللون الذهبي النحاسي */
         [data-testid="stDialog"] div[role="dialog"] {{
             background-color: #FFFFFF !important;
-            border: 2px solid #2563EB !important;
+            border: 3px solid #D97706 !important;
             border-radius: 12px !important;
         }}
 
@@ -125,7 +125,7 @@ st.markdown(f"""
 
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
             background-color: #1E293B !important;
-            border: 2px dashed #38BDF8 !important;
+            border: 2px dashed #D97706 !important;
             border-radius: 10px !important;
             padding: 10px !important;
         }}
@@ -135,12 +135,13 @@ st.markdown(f"""
         }}
 
         .stButton>button, .stDownloadButton>button {{
-            background-color: #2563EB !important;
+            background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
             color: #FFFFFF !important;
             border: none !important;
             border-radius: 8px !important;
             font-weight: 700 !important;
             font-size: 15px !important;
+            box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.3) !important;
         }}
 
         .stMetric, .daftra-quick-card {{
@@ -190,17 +191,18 @@ st.markdown(f"""
             margin-bottom: 10px;
         }}
 
+        /* تصميم شريط التاريخ الجمالي باللون الذهبي النحاسي */
         .date-badge-lux {{
             display: inline-block;
-            background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
+            background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
             color: #FFFFFF !important;
-            padding: 8px 25px;
+            padding: 8px 28px;
             border-radius: 30px;
             font-size: 16px;
             font-weight: 800;
             margin-bottom: 15px;
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 15px rgba(217, 119, 6, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }}
     </style>
 """, unsafe_allow_html=True)
@@ -451,7 +453,7 @@ def edit_cash_modal(month_name, trans_idx, target_box="main"):
 
 @st.dialog("📊 ملخص توزيع الموظفين حسب الفروع")
 def modal_emp_summary():
-    st.write("### 🏢 توزيع العمالة والمتوسطات:")
+    st.write("### 🏢 توزيع العمالة ومتوسط الرواتب:")
     df = st.session_state.payroll_df
     summary_data = []
     for b_name in ['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة']:
@@ -645,7 +647,7 @@ else:
         month_selected = st.selectbox('📅 شهر العمليات الحالي:', st.session_state.months_list)
         st.divider()
 
-        st.session_state['theme_mode'] = st.selectbox("🎨 نمط ألوان الواجهة:", ["🌙 ليلي رمادي داكن (Slate Dark)", "☀️ نهاري رمادي مريح (Slate Day)"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
+        st.session_state['theme_mode'] = st.selectbox("🎨 نمط ألوان الواجهة:", ["🌙 ليلي ذهبي نحاسي (Copper Dark)", "☀️ نهاري رمادي مريح (Slate Day)"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
 
         st.divider()
 
@@ -660,7 +662,6 @@ else:
                 st.session_state['current_view'] = '💵 حركة الصندوق وتوليد السندات'
                 st.rerun()
 
-        # الموظفين والرواتب تنحصر حساباتها على wahby فقط
         if st.session_state.user_role == "admin":
             with st.expander("👥 الموظفين"):
                 if st.button("👤 دليل الموظفين والملفات الإدارية", use_container_width=True):
