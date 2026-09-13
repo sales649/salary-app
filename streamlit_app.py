@@ -8,12 +8,13 @@ from datetime import datetime
 # 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
 st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
 
+# تطبيق تنسيقات دفترة الفاخرة (Daftra Theme CSS)
 st.markdown("""
     <style>
         html, body, .stApp, [data-testid="stAppViewContainer"] {
             direction: rtl !important;
             text-align: right !important;
-            background-color: #F8FAFC;
+            background-color: #F1F5F9;
             color: #1E293B;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
@@ -21,7 +22,7 @@ st.markdown("""
         [data-testid="stSidebar"] {
             right: 0 !important;
             left: auto !important;
-            border-left: 1px solid #E2E8F0 !important;
+            border-left: 1px solid #CBD5E1 !important;
             background-color: #FFFFFF !important;
         }
         
@@ -38,6 +39,22 @@ st.markdown("""
         .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {
             text-align: right !important;
             font-size: 14px !important;
+        }
+
+        /* كروت الوصول السريع بنمط دفترة */
+        .daftra-quick-card {
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #E2E8F0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease-in-out;
+        }
+        .daftra-quick-card:hover {
+            transform: translateY(-3px);
+            border-color: #2563EB;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.1);
         }
 
         .daftra-header-blue {
@@ -194,12 +211,52 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
+# 2. النافذة المنبثقة الخاطفة لإنشاء سند قبض/صرف من الشاشة الرئيسية مباشرة
+@st.dialog("⚡ إنشاء سند قبض / صرف سريع")
+def quick_cash_voucher_dialog(default_type, month_name):
+    st.write(f"إضافة سند جديد لشهر: **{month_name}**")
+    with st.form("quick_cash_form"):
+        q_type = st.selectbox("نوع السند:", ["سند قبض / إيراد", "سند صرف / مصروف"], index=0 if "قبض" in default_type else 1)
+        q_party = st.text_input("صادر إلى / مستلم من (الجهة/العميل):", placeholder="اكتب اسم العميل أو الجهة...")
+        q_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=1000.0)
+        q_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
+        q_notes = st.text_input("البيان والملاحظات:")
+        
+        q_sub = st.form_submit_button("💾 حفظ السند وتحديث الخزينة")
+        if q_sub:
+            if q_party and q_amt > 0:
+                all_cash = load_cash_data()
+                m_cash = all_cash.get(month_name, {'opening': 0.0, 'transactions': []})
+                c_trans = m_cash.get('transactions', [])
+                
+                # حساب التسلسل المنفصل لكل نوع سند
+                rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
+                pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
+                
+                v_code = f"REC-{(rec_count + 1):03d}" if "قبض" in q_type else f"PAY-{(pay_count + 1):03d}"
+                
+                new_trans = {
+                    'id': len(c_trans) + 1,
+                    'code': v_code,
+                    'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                    'type': q_type,
+                    'party': q_party,
+                    'amount': q_amt,
+                    'method': q_method,
+                    'notes': q_notes
+                }
+                c_trans.append(new_trans)
+                m_cash['transactions'] = c_trans
+                all_cash[month_name] = m_cash
+                save_cash_data(all_cash)
+                st.success(f"تم حفظ ({q_type}) برقم #{v_code} وتحديث الخزينة بنجاح!")
+                st.rerun()
+
 @st.dialog("🖨️ طباعة سند الخزينة والصندوق الرسمية (A4)")
 def print_cash_voucher_dialog(trans_item, month_name):
-    st.write(f"معاينة طباعة السند رقم: **#{trans_item['id']}**")
+    st.write(f"معاينة طباعة السند رقم: **#{trans_item.get('code', trans_item['id'])}**")
     amt_val = trans_item['amount']
     t_type = trans_item['type']
-    
     party_label = "استلمنا من السيد / الشركَة:" if "قبض" in t_type else "تم الصرف للسيد / الشركَة:"
     
     html_v = f"""
@@ -208,28 +265,28 @@ def print_cash_voucher_dialog(trans_item, month_name):
         body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; margin: 0; padding: 10px; }}
         .voucher-box {{ border: 3px solid #1E3A8A; border-radius: 12px; padding: 20px; background: #fff; }}
         .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 10px; }}
-        .v-title {{ text-align: center; font-size: 20px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 8px; margin: 15px 0; border-radius: 6px; }}
+        .v-title {{ text-align: center; font-size: 22px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 10px; margin: 15px 0; border-radius: 6px; }}
         .v-table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
-        .v-table td, .v-table th {{ border: 1px solid #cbd5e1; padding: 10px; text-align: right; font-size: 14px; }}
-        .amt-tag {{ font-size: 20px; font-weight: bold; color: #047857; background: #ecfdf5; border: 2px solid #10b981; text-align: center; padding: 6px; border-radius: 6px; }}
-        .sigs {{ margin-top: 40px; display: flex; justify-content: space-between; font-weight: bold; }}
+        .v-table td, .v-table th {{ border: 1px solid #cbd5e1; padding: 12px; text-align: right; font-size: 15px; }}
+        .amt-tag {{ font-size: 22px; font-weight: bold; color: #047857; background: #ecfdf5; border: 2px solid #10b981; text-align: center; padding: 8px; border-radius: 6px; }}
+        .sigs {{ margin-top: 50px; display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; }}
         @media print {{ .no-p {{ display: none; }} }}
     </style></head><body>
         <div class="no-p" style="text-align:center; margin-bottom:15px;">
-            <button onclick="window.print()" style="background:#1E3A8A; color:white; border:none; padding:10px 20px; font-weight:bold; border-radius:6px; cursor:pointer;">🖨️ اضغط هنا للطباعة المباشرة كـ A4 أو الحفظ كـ PDF</button>
+            <button onclick="window.print()" style="background:#1E3A8A; color:white; border:none; padding:12px 25px; font-weight:bold; font-size:16px; border-radius:6px; cursor:pointer;">🖨️ اضغط هنا للطباعة المباشرة كـ A4 أو الحفظ كـ PDF</button>
         </div>
         <div class="voucher-box">
             <div class="header-logo">
-                <div>Five-M Company For Industry<br>C. R. : 1011145035</div>
-                <div style="font-size:45px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
-                <div>شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
+                <div style="font-size:13px; font-weight:bold;">Five-M Company For Industry<br>C. R. : 1011145035</div>
+                <div style="font-size:50px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
+                <div style="font-size:13px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
             </div>
-            <div class="v-title">{t_type} - شهر ({month_name}) | رقم السند المالي: #{trans_item['id']:03d}</div>
+            <div class="v-title">{t_type} - شهر ({month_name}) | رقم السند: #{trans_item.get('code', trans_item['id'])}</div>
             <table class="v-table">
-                <tr><th>التاريخ والتوقيت</th><td>{trans_item['date']}</td><th>طريقة السداد</th><td><strong>{trans_item['method']}</strong></td></tr>
-                <tr><th>{party_label}</th><td colspan="3"><strong style="font-size:16px;">{trans_item['party']}</strong></td></tr>
+                <tr><th>التاريخ والتوقيت</th><td style="font-size:16px; font-weight:bold;">{trans_item['date']}</td><th>طريقة السداد</th><td><strong>{trans_item['method']}</strong></td></tr>
+                <tr><th>{party_label}</th><td colspan="3"><strong style="font-size:18px; color:#1E3A8A;">{trans_item['party']}</strong></td></tr>
                 <tr><th>المبلغ المسدد بالسند</th><td colspan="3"><div class="amt-tag">{amt_val:,.2f} ريال سعودي</div></td></tr>
-                <tr><th>البيان والملاحظات</th><td colspan="3">{trans_item.get('notes', 'سداد بموجب السند المعمد بالنظام')}</td></tr>
+                <tr><th>البيان والملاحظات</th><td colspan="3" style="font-size:15px;">{trans_item.get('notes', 'سداد بموجب السند المعمد بالنظام')}</td></tr>
             </table>
             <div class="sigs">
                 <div>توقيع المستلم / الجهة: __________________</div>
@@ -238,7 +295,7 @@ def print_cash_voucher_dialog(trans_item, month_name):
         </div>
     </body></html>
     """
-    st.components.v1.html(html_v, height=450, scrolling=True)
+    st.components.v1.html(html_v, height=480, scrolling=True)
 
 @st.dialog("✏️ تعديل حركة الخزينة والصندوق")
 def edit_cash_modal(month_name, trans_idx):
@@ -248,7 +305,7 @@ def edit_cash_modal(month_name, trans_idx):
     
     if trans_idx < len(trans_list):
         curr_item = trans_list[trans_idx]
-        st.write(f"تعديل السند رقم: **#{curr_item['id']}**")
+        st.write(f"تعديل السند رقم: **#{curr_item.get('code', curr_item['id'])}**")
         with st.form("edit_cash_item_form"):
             e_type = st.selectbox("نوع الحركة:", ["سند قبض / إيراد", "سند صرف / مصروف"], index=["سند قبض / إيراد", "سند صرف / مصروف"].index(curr_item['type']))
             e_party = st.text_input("اسم الجهة / البيان:", value=curr_item['party'])
@@ -631,9 +688,39 @@ else:
         output.seek(0)
         return output
 
-    # 4. الشاشات المباشرة عند الطلب
+    # 4. الواجهة الرئيسية بنمط «دفترة» (Daftra Dashboard Style)
     if selected_option == '🏠 الرئيسية (لوحة الإحصائيات)':
-        st.info("💡 مرحباً بك في الواجهة الرئيسية للنظام المحاسبي والإداري. اختر القسم المطلوب العمل عليه من القائمة الجانبية على اليمين.")
+        today_str = datetime.now().strftime('%d/%m/%Y')
+        st.markdown(f"""
+            <div style="text-align: center; margin-bottom: 20px;">
+                <span style="color: #64748B; font-size: 14px; font-weight: 600;">{today_str}</span>
+                <h2 style="color: #1E293B; font-weight: 800; margin-top: 5px;">أهلاً بك، مرحباً بعودتك بالنظام المحاسبي! 👋</h2>
+            </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("### ⚡ الوصول السريع للإجراءات اليومية:")
+        q_col1, q_col2, q_col3, q_col4 = st.columns(4)
+        
+        with q_col1:
+            st.markdown('<div class="daftra-quick-card"><h3>👤</h3><h4>إضافة موظف جديد</h4></div>', unsafe_allow_html=True)
+            if st.button("➕ إضافة موظف فوراً", use_container_width=True, key="q_btn_add_emp"):
+                add_employee_dialog('مصنع ميم الخماسية الخرج')
+
+        with q_col2:
+            st.markdown('<div class="daftra-quick-card"><h3>🟢</h3><h4>إنشاء سند قبض</h4></div>', unsafe_allow_html=True)
+            if st.button("💵 إنشاء سند قبض سريع", use_container_width=True, key="q_btn_rec"):
+                quick_cash_voucher_dialog("قبض", month_selected)
+
+        with q_col3:
+            st.markdown('<div class="daftra-quick-card"><h3>🔴</h3><h4>إنشاء سند صرف</h4></div>', unsafe_allow_html=True)
+            if st.button("💸 إنشاء سند صرف سريع", use_container_width=True, key="q_btn_pay"):
+                quick_cash_voucher_dialog("صرف", month_selected)
+
+        with q_col4:
+            st.markdown('<div class="daftra-quick-card"><h3>📊</h3><h4>جدول الدفعات</h4></div>', unsafe_allow_html=True)
+            if st.button("📋 الانتقال لإدخال الدفعات", use_container_width=True, key="q_btn_payroll"):
+                st.session_state['current_view'] = '📊 إدخال وتعديل الدفعات السريع'
+                st.rerun()
 
     elif selected_option == '📊 إدخال وتعديل الدفعات السريع':
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات والخصومات السريع - ({month_selected})')
@@ -661,7 +748,7 @@ else:
 
                 df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
                 
-                # ترتيب الأعمدة: الخصومات بعد الدفعة 1 والدفعة 2 مباشرة
+                # الخصومات بعد الدفعة 1 والدفعة 2 مباشرة
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'نوع الإجراء', 'الملاحظات']
                 edited_b = st.data_editor(
                     df_b[cols_rtl],
@@ -737,8 +824,8 @@ else:
             prev_cash_data = all_cash_db.get(prev_m_name, {'opening': 0.0, 'transactions': []})
             prev_opening = prev_cash_data.get('opening', 0.0)
             prev_trans = prev_cash_data.get('transactions', [])
-            prev_in = sum(t['amount'] for t in prev_trans if t['type'] == 'سند قبض / إيراد')
-            prev_out = sum(t['amount'] for t in prev_trans if t['type'] == 'سند صرف / مصروف')
+            prev_in = sum(t['amount'] for t in prev_trans if 'قبض' in t['type'])
+            prev_out = sum(t['amount'] for t in prev_trans if 'صرف' in t['type'])
             auto_prev_opening = prev_opening + prev_in - prev_out
 
         opening_bal = current_m_cash.get('opening', auto_prev_opening)
@@ -756,8 +843,8 @@ else:
                     st.rerun()
 
         curr_trans = current_m_cash.get('transactions', [])
-        tot_cash_in = sum(t['amount'] for t in curr_trans if t['type'] == 'سند قبض / إيراد')
-        tot_cash_out = sum(t['amount'] for t in curr_trans if t['type'] == 'سند صرف / مصروف')
+        tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
+        tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
         net_cash_now = opening_bal + tot_cash_in - tot_cash_out
 
         # الشريط الإحصائي المالي المباشر للخزينة
@@ -783,8 +870,13 @@ else:
                 sub_cash = st.form_submit_button("💾 حفظ الحركة وتحديث الخزينة")
                 if sub_cash:
                     if trans_party and trans_amt > 0:
+                        rec_cnt = sum(1 for t in curr_trans if "قبض" in t['type'])
+                        pay_cnt = sum(1 for t in curr_trans if "صرف" in t['type'])
+                        v_code = f"REC-{(rec_cnt + 1):03d}" if "قبض" in trans_type else f"PAY-{(pay_cnt + 1):03d}"
+                        
                         new_trans = {
                             'id': len(curr_trans) + 1,
+                            'code': v_code,
                             'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
                             'type': trans_type,
                             'party': trans_party,
@@ -795,7 +887,7 @@ else:
                         curr_trans.append(new_trans)
                         all_cash_db[month_selected] = {'opening': opening_bal, 'transactions': curr_trans}
                         save_cash_data(all_cash_db)
-                        st.success(f"تم تسجيل حركة ({trans_type}) بمبلغ {trans_amt:,.2f} ر.س بنجاح!")
+                        st.success(f"تم تسجيل حركة ({trans_type}) برقم #{v_code} بنجاح!")
                         st.rerun()
 
         with col_c_in2:
@@ -829,8 +921,8 @@ else:
                 st.write(f"عرض الحركات من **{start_idx+1}** إلى **{min(end_idx, total_items)}** (من أصل {total_items} حركة):")
                 for t_idx, t_item in enumerate(page_trans):
                     real_idx = curr_trans.index(t_item)
-                    tc1, tc2, tc3, tc4, tc5, tc6 = st.columns([0.6, 2.2, 1.4, 0.9, 0.9, 0.9])
-                    tc1.write(f"#{t_item['id']}")
+                    tc1, tc2, tc3, tc4, tc5, tc6 = st.columns([0.8, 2.0, 1.4, 0.9, 0.9, 0.9])
+                    tc1.write(f"#{t_item.get('code', t_item['id'])}")
                     
                     t_color = "#047857" if "قبض" in t_item['type'] else "#B91C1C"
                     tc2.write(f"**{t_item['party']}**  \n<span style='color:{t_color}; font-size:12px;'>{t_item['type']}</span>", unsafe_allow_html=True)
