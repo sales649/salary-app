@@ -118,16 +118,25 @@ st.markdown(f"""
             font-size: 15px !important;
         }}
 
-        /* إبراز مخصص لمربع رفع النسخ الاحتياطي */
+        /* إصلاح واستبدال تصميم زر وحقل رفع النسخة الاحتياطية بالكامل */
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
-            background-color: {bg_card} !important;
+            background-color: #1E293B !important;
             border: 2px dashed #D97706 !important;
             border-radius: 12px !important;
-            padding: 12px !important;
+            padding: 8px !important;
         }}
 
-        [data-testid="stFileUploader"] button, [data-testid="stFileUploader"] span, [data-testid="stFileUploader"] label {{
-            color: {text_color} !important;
+        [data-testid="stFileUploader"] button {{
+            background-color: #D97706 !important;
+            color: #FFFFFF !important;
+            border: none !important;
+            border-radius: 6px !important;
+            font-weight: bold !important;
+            padding: 5px 15px !important;
+        }}
+
+        [data-testid="stFileUploader"] span, [data-testid="stFileUploader"] label, [data-testid="stFileUploader"] small {{
+            color: #FFFFFF !important;
             font-weight: bold !important;
         }}
 
@@ -717,16 +726,17 @@ else:
                     st.session_state['current_view'] = '🖨️ طباعة السندات الرسمية (A4)'
                     st.rerun()
 
-            # إجبار فتح قسم النسخ الاحتياطي بالكامل بشكل دائم وحصري لـ wahby
+            # إجبار إظهار وفتح قسم النسخ الاحتياطي في القائمة الجانبية بوضوح صريح
             with st.expander("💾 النسخ الاحتياطي والأرشيف", expanded=True):
                 if 'payroll_df' in st.session_state:
                     json_str = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
                     st.download_button(
-                        label="📥 تصدير نسخة احتياطية (JSON)",
+                        label="📥 تصدير نسخة (JSON)",
                         data=json_str.encode('utf-8'),
                         file_name=f"payroll_backup_{month_selected}.json",
                         mime="application/json",
-                        use_container_width=True
+                        use_container_width=True,
+                        key="sidebar_dl_backup_btn"
                     )
                 uploaded_backup = st.file_uploader("📤 استيراد ورفع نسخة:", type=['json'], key="side_uploader_backup")
                 if uploaded_backup:
