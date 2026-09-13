@@ -24,8 +24,6 @@ if '🌙' in st.session_state['theme_mode']:
     input_text = "#0F172A"
     modal_bg = "#1E293B"
     modal_text = "#FFFFFF"
-    expander_bg = "#0F172A"
-    expander_text = "#FFFFFF"
 else:
     bg_app = "#F1F5F9"
     bg_card = "#FFFFFF"
@@ -36,8 +34,6 @@ else:
     input_text = "#0F172A"
     modal_bg = "#FFFFFF"
     modal_text = "#0F172A"
-    expander_bg = "#F8FAFC"
-    expander_text = "#0F172A"
 
 st.markdown(f"""
     <style>
@@ -61,27 +57,15 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* إصلاح حاسم وعريض للقائمة الجانبية للماك والكمبيوتر */
+        /* تصميم نظيف للقائمة الجانبية مخصص لمنع تداخل النصوص */
         [data-testid="stSidebar"] {{
-            right: 0 !important;
-            left: auto !important;
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
-            min-width: 310px !important;
-            width: 320px !important;
         }}
 
         [data-testid="stSidebarContent"] {{
-            padding-top: 15px !important;
-            padding-bottom: 20px !important;
-            padding-left: 16px !important;
-            padding-right: 16px !important;
+            padding: 12px !important;
             box-sizing: border-box !important;
-        }}
-
-        [data-testid="stSidebar"] details {{
-            margin-bottom: 8px !important;
-            width: 100% !important;
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
@@ -90,29 +74,24 @@ st.markdown(f"""
             font-weight: 700 !important;
         }}
 
-        [data-testid="stSidebar"] .streamlit-expanderHeader,
-        [data-testid="stSidebar"] details[open] summary,
-        [data-testid="stSidebar"] details summary:hover,
-        [data-testid="stSidebar"] details summary:focus {{
-            background-color: {bg_card} !important;
+        /* أزرار التنقل القائمة الجانبية */
+        [data-testid="stSidebar"] .stButton>button {{
+            width: 100% !important;
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
             color: #F59E0B !important;
-            font-weight: 700 !important;
             border: 1px solid #D97706 !important;
             border-radius: 8px !important;
-            padding: 8px 12px !important;
-            width: 100% !important;
-            box-sizing: border-box !important;
+            font-weight: 700 !important;
+            font-size: 13px !important;
+            padding: 8px 10px !important;
+            margin-bottom: 4px !important;
+            text-align: right !important;
+            box-shadow: none !important;
         }}
 
-        [data-testid="stSidebar"] .streamlit-expanderContent {{
-            background-color: {expander_bg} !important;
-            color: {expander_text} !important;
-            border-radius: 0 0 8px 8px !important;
-            padding: 10px !important;
-            border: 1px solid #D97706 !important;
-            border-top: none !important;
-            width: 100% !important;
-            box-sizing: border-box !important;
+        [data-testid="stSidebar"] .stButton>button:hover {{
+            background: #D97706 !important;
+            color: #FFFFFF !important;
         }}
 
         ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"] div {{
@@ -143,7 +122,7 @@ st.markdown(f"""
             padding: 4px 8px !important;
         }}
 
-        /* تصحيح خطوط كروت الملاحظات والإحصائيات لمنع اختفاء الأرقام */
+        /* تصحيح خطوط كروت الملاحظات والإحصائيات */
         [data-testid="stMetricValue"] div {{
             font-size: 16px !important;
             font-weight: 800 !important;
@@ -736,7 +715,7 @@ if not st.session_state.get('app_started', False):
                     st.error("كلمة المرور غير صحيحة!")
 
 else:
-    # 3. القائمة الجانبية ملمومة ونظيفة مع هوامش مريحة
+    # 3. القائمة الجانبية المباشرة والنظيفة (بدون expanders لتجنب الشفرات المتداخلة)
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 5px;">
@@ -755,53 +734,52 @@ else:
 
         st.session_state['theme_mode'] = st.selectbox("نمط الألوان:", ["🌙 وضع ليلي", "☀️ وضع نهاري"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
 
-        if st.button("لوحة التحكم الرئيسية", use_container_width=True):
+        st.divider()
+
+        if st.button("🏠 الرئيسية", use_container_width=True):
             st.session_state['current_view'] = 'الرئيسية'
             st.rerun()
 
-        st.markdown("### القوائم والتطبيقات:")
-
-        with st.expander("حركة الصندوق"):
-            if st.button("حركة الصندوق والسندات", use_container_width=True):
-                st.session_state['current_view'] = 'حركة الصندوق والسندات'
-                st.rerun()
+        if st.button("🏦 حركة الصندوق والسندات", use_container_width=True):
+            st.session_state['current_view'] = 'حركة الصندوق والسندات'
+            st.rerun()
 
         if st.session_state.user_role == "admin":
-            with st.expander("الموظفين"):
-                if st.button("دليل الموظفين", use_container_width=True):
-                    st.session_state['current_view'] = 'دليل الموظفين'
-                    st.rerun()
-                if st.button("حاسبة نهاية الخدمة", use_container_width=True):
-                    st.session_state['current_view'] = 'حاسبة نهاية الخدمة'
-                    st.rerun()
-                if st.button("تنبيهات الإقامات والعقود", use_container_width=True):
-                    st.session_state['current_view'] = 'تنبيهات الإقامات والعقود'
-                    st.rerun()
-            
-            with st.expander("المرتبات والدفعات", expanded=True):
-                if st.button("إدخال الدفعات السريع", use_container_width=True):
-                    st.session_state['current_view'] = 'إدخال الدفعات السريع'
-                    st.rerun()
-                if st.button("مسير الرواتب الشهري", use_container_width=True):
-                    st.session_state['current_view'] = 'مسير الرواتب الشهري'
-                    st.rerun()
-            
-            with st.expander("التقارير والسندات"):
-                if st.button("طباعة السندات الرسمية (A4)", use_container_width=True):
-                    st.session_state['current_view'] = 'طباعة السندات الرسمية (A4)'
-                    st.rerun()
+            if st.button("📊 إدخال الدفعات السريع", use_container_width=True):
+                st.session_state['current_view'] = 'إدخال الدفعات السريع'
+                st.rerun()
 
-            with st.expander("النسخ الاحتياطي والأرشيف", expanded=True):
-                if st.button("فتح مركز النسخ الاحتياطي", use_container_width=True, key="open_backup_page_btn"):
-                    st.session_state['current_view'] = 'مركز النسخ الاحتياطي والأرشيف'
-                    st.rerun()
+            if st.button("📋 مسير الرواتب الشهري", use_container_width=True):
+                st.session_state['current_view'] = 'مسير الرواتب الشهري'
+                st.rerun()
 
-            with st.expander("السنة المالية والإعدادات"):
-                if st.button("الإغلاق السنوي وسنة جديدة", use_container_width=True):
-                    st.session_state['current_view'] = 'الإغلاق السنوي وسنة جديدة'
-                    st.rerun()
+            if st.button("👤 دليل الموظفين والملفات", use_container_width=True):
+                st.session_state['current_view'] = 'دليل الموظفين'
+                st.rerun()
 
-        if st.button("تسجيل الخروج", use_container_width=True):
+            if st.button("🖨️ طباعة السندات الرسمية A4", use_container_width=True):
+                st.session_state['current_view'] = 'طباعة السندات الرسمية (A4)'
+                st.rerun()
+
+            if st.button("💾 مركز النسخ الاحتياطي", use_container_width=True):
+                st.session_state['current_view'] = 'مركز النسخ الاحتياطي والأرشيف'
+                st.rerun()
+
+            if st.button("🇸🇦 حاسبة نهاية الخدمة", use_container_width=True):
+                st.session_state['current_view'] = 'حاسبة نهاية الخدمة'
+                st.rerun()
+
+            if st.button("🔔 تنبيهات الإقامات والعقود", use_container_width=True):
+                st.session_state['current_view'] = 'تنبيهات الإقامات والعقود'
+                st.rerun()
+
+            if st.button("🏁 الإغلاق السنوي وسنة جديدة", use_container_width=True):
+                st.session_state['current_view'] = 'الإغلاق السنوي وسنة جديدة'
+                st.rerun()
+
+        st.divider()
+
+        if st.button("🚪 تسجيل الخروج", use_container_width=True):
             st.session_state.app_started = False
             st.session_state.user_role = None
             st.rerun()
