@@ -115,15 +115,17 @@ st.markdown(f"""
             font-size: 15px !important;
         }}
 
+        /* إبراز مخصص لمربع رفع النسخ الاحتياطي */
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
-            background-color: {bg_card} !important;
+            background-color: #1E293B !important;
             border: 2px dashed #D97706 !important;
-            border-radius: 10px !important;
-            padding: 10px !important;
+            border-radius: 12px !important;
+            padding: 12px !important;
         }}
 
         [data-testid="stFileUploader"] button, [data-testid="stFileUploader"] span, [data-testid="stFileUploader"] label {{
-            color: {text_color} !important;
+            color: #FFFFFF !important;
+            font-weight: bold !important;
         }}
 
         [data-testid="stDialog"] div[role="dialog"] {{
@@ -691,7 +693,7 @@ else:
                     st.session_state['current_view'] = '🖨️ طباعة السندات الرسمية (A4)'
                     st.rerun()
 
-            with st.expander("💾 النسخ الاحتياطي والأرشيف"):
+            with st.expander("💾 النسخ الاحتياطي والأرشيف", expanded=True):
                 if 'payroll_df' in st.session_state:
                     json_str = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
                     st.download_button(
@@ -1067,7 +1069,7 @@ else:
                     if trans_party and trans_amt > 0:
                         rec_cnt = sum(1 for t in curr_trans if "قبض" in t['type'])
                         pay_cnt = sum(1 for t in curr_trans if "صرف" in t['type'])
-                        v_code = f"REC-{(rec_cnt + 1):03d}" if "قبض" in trans_type else f"PAY-{(pay_count + 1):03d}"
+                        v_code = f"REC-{(rec_cnt + 1):03d}" if "قبض" in trans_type else f"PAY-{(pay_cnt + 1):03d}"
                         
                         new_trans = {
                             'id': len(curr_trans) + 1,
