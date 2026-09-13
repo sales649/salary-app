@@ -96,7 +96,7 @@ st.markdown(f"""
         }}
 
         /* إصلاح حقول الإدخال لتصبح رمادية فاتحة مع خط أسود واضح جداً */
-        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {{
+        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: #F1F5F9 !important;
             color: #0F172A !important;
             border: 1px solid #CBD5E1 !important;
@@ -105,18 +105,36 @@ st.markdown(f"""
             font-size: 15px !important;
         }}
 
-        /* وضوح النص داخل النوافذ المنبثقة والسندات */
+        /* وضوح العناوين والتسميات فوق مربعات السندات وفي النوافذ المنبثقة */
         [data-testid="stDialog"] div[role="dialog"] {{
             background-color: #FFFFFF !important;
             border: 2px solid #2563EB !important;
             border-radius: 12px !important;
         }}
 
-        [data-testid="stDialog"] div[role="dialog"] * {{
+        [data-testid="stDialog"] div[role="dialog"] label, 
+        [data-testid="stDialog"] div[role="dialog"] p, 
+        [data-testid="stDialog"] div[role="dialog"] span,
+        [data-testid="stDialog"] div[role="dialog"] h1,
+        [data-testid="stDialog"] div[role="dialog"] h2,
+        [data-testid="stDialog"] div[role="dialog"] h3,
+        [data-testid="stDialog"] div[role="dialog"] div {{
             color: #0F172A !important;
+            font-weight: 700 !important;
         }}
 
-        .stButton>button {{
+        [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
+            background-color: #1E293B !important;
+            border: 2px dashed #38BDF8 !important;
+            border-radius: 10px !important;
+            padding: 10px !important;
+        }}
+
+        [data-testid="stFileUploader"] button, [data-testid="stFileUploader"] span {{
+            color: #FFFFFF !important;
+        }}
+
+        .stButton>button, .stDownloadButton>button {{
             background-color: #2563EB !important;
             color: #FFFFFF !important;
             border: none !important;
@@ -170,6 +188,19 @@ st.markdown(f"""
             font-family: Arial, sans-serif;
             line-height: 1;
             margin-bottom: 10px;
+        }}
+
+        .date-badge-lux {{
+            display: inline-block;
+            background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 100%);
+            color: #FFFFFF !important;
+            padding: 8px 25px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }}
     </style>
 """, unsafe_allow_html=True)
@@ -700,6 +731,15 @@ else:
     tot_paid = st.session_state.payroll_df['الدفعة المدفوعة'].sum()
     tot_rem = st.session_state.payroll_df['المتبقي'].sum()
 
+    now_dt = datetime.now()
+    days_ar = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"]
+    months_ar = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
+    
+    day_name = days_ar[(now_dt.weekday() + 1) % 7]
+    date_formatted = f"📅 {day_name}، {now_dt.day} {months_ar[now_dt.month - 1]} {now_dt.year}"
+    
+    st.markdown(f'<div style="text-align: center;"><div class="date-badge-lux">{date_formatted}</div></div>', unsafe_allow_html=True)
+
     if st.button("🏢 شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد", use_container_width=True):
         st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
         st.rerun()
@@ -815,16 +855,21 @@ else:
         tot_out_acc = sum(t['amount'] for t in curr_trans_acc if 'صرف' in t['type'])
         net_acc_now = current_m_cash.get('acc_opening', 0.0) + tot_in_acc - tot_out_acc
 
-        st.markdown(f"### 🏦 1. ملخص حركة الصندوق لشهر ({month_selected}):")
+        total_company_cash = net_main_now + net_acc_now
+
+        st.markdown(f"### 🏦 1. ملخص حركة الصندوق والعُهد لشهر ({month_selected}):")
         
         if st.session_state.user_role == "admin":
-            c_box1, c_box2 = st.columns(2)
+            c_box1, c_box2, c_box3 = st.columns(3)
             with c_box1:
                 st.markdown("#### 🏢 الخزينة الرئيسية (wahby):")
                 st.metric("رصيد الخزينة الرئيسية الآن", f"{net_main_now:,.2f} ر.س")
             with c_box2:
                 st.markdown("#### 👤 عُهدة المحاسب (omar):")
-                st.metric("الرصيد المتبقي بعهد المحاسب (omar) الآن", f"{net_acc_now:,.2f} ر.س")
+                st.metric("الرصيد المتبقي لدى omar الآن", f"{net_acc_now:,.2f} ر.س")
+            with c_box3:
+                st.markdown("#### 💳 إجمالي النقدية بالشركة بالكامل:")
+                st.metric("مجموع العُهد والصناديق الآن", f"{total_company_cash:,.2f} ر.س")
 
             st.divider()
 
