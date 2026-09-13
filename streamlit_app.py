@@ -61,18 +61,27 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* إصلاح القائمة الجانبية لمنع تداخل الشفرات النصية */
+        /* إصلاح حاسم وعريض للقائمة الجانبية للماك والكمبيوتر */
         [data-testid="stSidebar"] {{
+            right: 0 !important;
+            left: auto !important;
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
+            min-width: 310px !important;
+            width: 320px !important;
         }}
 
         [data-testid="stSidebarContent"] {{
-            padding: 8px !important;
+            padding-top: 15px !important;
+            padding-bottom: 20px !important;
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+            box-sizing: border-box !important;
         }}
 
         [data-testid="stSidebar"] details {{
-            margin-bottom: 4px !important;
+            margin-bottom: 8px !important;
+            width: 100% !important;
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
@@ -90,16 +99,20 @@ st.markdown(f"""
             font-weight: 700 !important;
             border: 1px solid #D97706 !important;
             border-radius: 8px !important;
-            padding: 6px 10px !important;
+            padding: 8px 12px !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
         }}
 
         [data-testid="stSidebar"] .streamlit-expanderContent {{
             background-color: {expander_bg} !important;
             color: {expander_text} !important;
             border-radius: 0 0 8px 8px !important;
-            padding: 8px !important;
+            padding: 10px !important;
             border: 1px solid #D97706 !important;
             border-top: none !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
         }}
 
         ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"] div {{
@@ -723,7 +736,7 @@ if not st.session_state.get('app_started', False):
                     st.error("كلمة المرور غير صحيحة!")
 
 else:
-    # 3. القائمة الجانبية الملمومة والمحسنة بدون أكواد معقدة
+    # 3. القائمة الجانبية ملمومة ونظيفة مع هوامش مريحة
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 5px;">
