@@ -39,7 +39,7 @@ else:
     expander_bg = "#F8FAFC"
     expander_text = "#0F172A"
 
-# نظام CSS قياسي احترافي متوافق مع الماك والآيفون والـ PC
+# إجبار كسر التخزين المؤقت وحظر الكاش المزدوج بالماك والآيفون
 st.markdown(f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
@@ -51,6 +51,7 @@ st.markdown(f"""
             color: {text_color} !important;
             font-family: 'Cairo', sans-serif !important;
             overflow-x: hidden !important;
+            -webkit-text-size-adjust: 100% !important;
         }}
         
         h1, h2, h3, h4, h5, h6, .stMarkdown, label, p, span, div {{
@@ -61,18 +62,18 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* تنسيق القائمة الجانبية المرن */
+        /* معالجة استجابة القائمة الجانبية للماك والآيفون */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
         }}
 
         [data-testid="stSidebarContent"] {{
-            padding: 12px !important;
+            padding: 10px !important;
         }}
 
         [data-testid="stSidebar"] details {{
-            margin-bottom: 6px !important;
+            margin-bottom: 4px !important;
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
@@ -90,7 +91,7 @@ st.markdown(f"""
             font-weight: 700 !important;
             border: 1px solid #D97706 !important;
             border-radius: 8px !important;
-            padding: 6px 10px !important;
+            padding: 6px !important;
         }}
 
         [data-testid="stSidebar"] .streamlit-expanderContent {{
@@ -119,7 +120,6 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        /* حقول الإدخال والأرقام للماك والآيفون */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: {input_bg} !important;
             color: {input_text} !important;
@@ -130,12 +130,11 @@ st.markdown(f"""
             padding: 4px 8px !important;
         }}
 
-        /* تصميم رفع الملفات والنسخ الاحتياطي */
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
             background-color: #1E293B !important;
             border: 1px dashed #D97706 !important;
             border-radius: 8px !important;
-            padding: 8px !important;
+            padding: 6px !important;
         }}
 
         [data-testid="stFileUploader"] button {{
@@ -201,7 +200,6 @@ st.markdown(f"""
             text-align: right !important;
         }}
 
-        /* حماية خط الجداول وعرض الأرقام بالكامل دون اختزال */
         .stDataFrame, [data-testid="stDataEditor"] {{
             direction: rtl !important;
             text-align: right !important;
@@ -212,7 +210,7 @@ st.markdown(f"""
 
         .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {{
             text-align: right !important;
-            font-size: 13px !important;
+            font-size: 12px !important;
             padding: 6px 8px !important;
             color: {text_color} !important;
             white-space: nowrap !important;
@@ -288,7 +286,6 @@ st.markdown(f"""
             text-align: center !important;
         }}
 
-        /* التجاوب القياسي للآيفون والشاشات الصغيرة */
         @media screen and (max-width: 768px) {{
             .main .block-container {{
                 padding-left: 8px !important;
