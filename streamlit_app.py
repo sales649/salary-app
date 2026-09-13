@@ -340,6 +340,8 @@ if 'current_view' not in st.session_state:
 DATA_FILE = 'payroll_data.json'
 CASH_FILE = 'cashbox_data.json'
 AUDIT_FILE = 'audit_history.json'
+DRIVERS_FILE = 'driver_custody.json'
+APPROVED_DRIVERS_FILE = 'approved_drivers.json'
 
 initial_data = [
     {'م': 1, 'الاسم': 'مد ساجد ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01', 'الخصومات': 0.0, 'الدفعة 1': 3000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 5000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
@@ -357,7 +359,7 @@ initial_data = [
     {'م': 13, 'الاسم': 'محمد فوزي', 'الوظيفة': 'عامل', 'الراتب الأساسي': 3000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-03-01', 'تاريخ انتهاء العقد': '2027-05-01', 'الخصومات': 0.0, 'الدفعة 1': 2000.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 3000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 14, 'الاسم': 'إبراهيم السيد', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-11-15', 'تاريخ انتهاء العقد': '2027-02-01', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 15, 'الاسم': 'مصطفي عماد', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-01-20', 'تاريخ انتهاء العقد': '2027-03-15', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
-    {'م': 16, 'الاسم': 'محمد شريف ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2200.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-12-10', 'تاريخ انتهاء العقد': '2027-2-28', 'الخصومات': 0.0, 'الدفعة 1': 1200.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2200.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
+    {'م': 16, 'الاسم': 'محمد شريف ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2200.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-12-10', 'تاريخ انتهاء العقد': '2027-02-28', 'الخصومات': 0.0, 'الدفعة 1': 1200.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2200.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 17, 'الاسم': 'محمد رضا', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-02-15', 'تاريخ انتهاء العقد': '2027-04-30', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 18, 'الاسم': 'محمد ابو نهي ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 4000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-05', 'تاريخ انتهاء العقد': '2026-12-15', 'الخصومات': 0.0, 'الدفعة 1': 2000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 4000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 19, 'الاسم': 'محمد ابو صبري ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-04-01', 'تاريخ انتهاء العقد': '2027-06-15', 'الخصومات': 0.0, 'الدفعة 1': 3000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 5000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
@@ -391,7 +393,7 @@ initial_data = [
     {'م': 52, 'الاسم': 'عبد الرحمن محمد', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مستودع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-03-30', 'تاريخ انتهاء العقد': '2027-05-25', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 36, 'الاسم': 'ابون', 'الوظيفة': 'عامل', 'الراتب الأساسي': 3000.0, 'الفرع': 'مستودع ميم الخماسية الرياض', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-12-12', 'تاريخ انتهاء العقد': '2027-04-01', 'الخصومات': 0.0, 'الدفعة 1': 2000.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 3000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 37, 'الاسم': 'محمد علي', 'الوظيفة': 'عامل', 'الراتب الأساسي': 0.0, 'الفرع': 'مستودع ميم الخماسية الرياض', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-02-05', 'تاريخ انتهاء العقد': '2027-04-10', 'الخصومات': 0.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
-    {'م': 38, 'الاسم': 'سمان السواق', 'الوظيفة': 'عامل', 'الراتب الأساسي': 3500.0, 'الفرع': 'مستودع ميم الخماسية الرياض', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-11-25', 'تاريخ انتهاء العقد': '2027-01-30', 'الخصومات': 500.0, 'الدفعة 1': 3000.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 3000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
+    {'م': 38, 'الاسم': 'سمان السواق', 'الوظيفة': 'سائق', 'الراتب الأساسي': 3500.0, 'الفرع': 'مستودع ميم الخماسية الرياض', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-11-25', 'تاريخ انتهاء العقد': '2027-01-30', 'الخصومات': 500.0, 'الدفعة 1': 3000.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 3000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 39, 'الاسم': 'عمر رشدي', 'الوظيفة': 'محاسب', 'الراتب الأساسي': 4000.0, 'الفرع': 'مستودع ميم الخماسية الرياض', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-01-20', 'تاريخ انتهاء العقد': '2027-01-20', 'الخصومات': 0.0, 'الدفعة 1': 2000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 4000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 40, 'الاسم': 'إبراهيم جمال', 'الوظيفة': 'عامل', 'الراتب الأساسي': 3000.0, 'الفرع': 'مستودع ميم الخماسية الرياض', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-03-15', 'تاريخ انتهاء العقد': '2027-05-18', 'الخصومات': 0.0, 'الدفعة 1': 2000.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 3000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 53, 'الاسم': 'موظف متنوع 1', 'الوظيفة': 'متنوع', 'الراتب الأساسي': 0.0, 'الفرع': 'رواتب متنوعة', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-01-01', 'تاريخ انتهاء العقد': '2027-01-01', 'الخصومات': 0.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
@@ -446,6 +448,32 @@ def save_audit_data(data):
     with open(AUDIT_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
 
+def load_drivers_data():
+    if os.path.exists(DRIVERS_FILE):
+        try:
+            with open(DRIVERS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return []
+    return []
+
+def save_drivers_data(data):
+    with open(DRIVERS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+def load_approved_drivers():
+    if os.path.exists(APPROVED_DRIVERS_FILE):
+        try:
+            with open(APPROVED_DRIVERS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return ["سمان السواق"]
+    return ["سمان السواق"]
+
+def save_approved_drivers(data):
+    with open(APPROVED_DRIVERS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
 def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     try:
         start_d = datetime.strptime(str(start_date_str), '%Y-%m-%d').date()
@@ -470,7 +498,7 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
 def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
     st.write(f"إضافة سند لشهر: **{month_name}** ({'الرئيسية' if target_box == 'main' else 'omar'})")
     with st.form("quick_cash_form"):
-        q_type = st.selectbox("نوع السند:", ["سند قبض / إيراد", "سند صرف / مصروف"], index=0 if "قبض" in default_type else 1)
+        q_type = st.selectbox("نوع السند:", ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (omar)"], index=0 if "قبض" in default_type else 1)
         q_party = st.text_input("صادر إلى / مستلم من:", placeholder="اسم الجهة...")
         q_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
         q_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
@@ -490,25 +518,57 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                     
                 c_trans = m_cash[box_key]
                 
-                rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
-                pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
-                v_code = f"REC-{(rec_count + 1):03d}" if "قبض" in q_type else f"PAY-{(pay_count + 1):03d}"
-                
-                new_trans = {
-                    'id': len(c_trans) + 1,
-                    'code': v_code,
-                    'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                    'type': q_type,
-                    'party': q_party,
-                    'amount': q_amt,
-                    'method': q_method,
-                    'notes': q_notes
-                }
-                c_trans.append(new_trans)
+                if "تحويل عُهدة" in q_type and target_box == "main":
+                    rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
+                    pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
+                    v_code = f"TRF-{(pay_count + 1):03d}"
+                    
+                    c_trans.append({
+                        'id': len(c_trans) + 1,
+                        'code': v_code,
+                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'type': 'سند صرف / مصروف',
+                        'party': f"تحويل عُهدة إلى المحاسب (omar) - {q_party}",
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
+                    
+                    if 'acc_transactions' not in m_cash:
+                        m_cash['acc_transactions'] = []
+                    
+                    acc_trans = m_cash['acc_transactions']
+                    acc_trans.append({
+                        'id': len(acc_trans) + 1,
+                        'code': f"REC-TRF-{(len(acc_trans) + 1):03d}",
+                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'type': 'سند قبض / إيراد',
+                        'party': f"استلام عُهدة محولة من الخزينة الرئيسية (wahby)",
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
+                    m_cash['acc_transactions'] = acc_trans
+                else:
+                    rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
+                    pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
+                    v_code = f"REC-{(rec_count + 1):03d}" if "قبض" in q_type else f"PAY-{(pay_count + 1):03d}"
+                    
+                    c_trans.append({
+                        'id': len(c_trans) + 1,
+                        'code': v_code,
+                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'type': q_type,
+                        'party': q_party,
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
+
                 m_cash[box_key] = c_trans
                 all_cash[month_name] = m_cash
                 save_cash_data(all_cash)
-                st.success(f"تم الحفظ برقم #{v_code}!")
+                st.success(f"تم الحفظ بنجاح برقم #{v_code}!")
                 st.rerun()
 
 @st.dialog("طباعة سند الصندوق A4")
@@ -757,11 +817,19 @@ else:
             st.session_state['current_view'] = 'حركة الصندوق'
             st.rerun()
 
+        if st.button("🚚 عُهد وتصفية السائقين", use_container_width=True):
+            st.session_state['current_view'] = 'عُهد وتصفية السائقين'
+            st.rerun()
+
         if st.button("🔍 جرد الخزينة", use_container_width=True):
             st.session_state['current_view'] = 'جرد الخزينة'
             st.rerun()
 
         if st.session_state.user_role == "admin":
+            if st.button("🚚 إدارة واعتماد السائقين", use_container_width=True):
+                st.session_state['current_view'] = 'إدارة واعتماد السائقين'
+                st.rerun()
+
             if st.button("📊 إدخال الدفعات السريع", use_container_width=True):
                 st.session_state['current_view'] = 'إدخال الدفعات السريع'
                 st.rerun()
@@ -944,13 +1012,16 @@ else:
 
         total_company_cash = net_main_now + net_acc_now
 
+        drivers_db = load_drivers_data()
+        open_driver_custody_sum = sum(d['given_amt'] for d in drivers_db if d['status'] == 'مفتوحة')
+
         audit_history = load_audit_data()
         last_audit = audit_history[-1] if audit_history else None
 
         st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
         
         if st.session_state.user_role == "admin":
-            c_box1, c_box2, c_box3 = st.columns(3)
+            c_box1, c_box2, c_box3, c_box4 = st.columns(4)
             with c_box1:
                 st.markdown("#### الخزينة الرئيسية (wahby):")
                 st.metric("رصيد الخزينة الرئيسية", f"{net_main_now:,.2f} ر.س")
@@ -958,7 +1029,10 @@ else:
                 st.markdown("#### عُهدة المحاسب (omar):")
                 st.metric("رصيد عُهدة omar", f"{net_acc_now:,.2f} ر.س")
             with c_box3:
-                st.markdown("#### إجمالي نقدية الشركة:")
+                st.markdown("#### 🚚 عُهد السائقين بالخارج:")
+                st.metric("إجمالي العُهد المفتوحة", f"{open_driver_custody_sum:,.2f} ر.س")
+            with c_box4:
+                st.markdown("#### 💳 إجمالي نقدية الشركة:")
                 st.metric("مجموع الصناديق", f"{total_company_cash:,.2f} ر.س")
 
             st.divider()
@@ -988,10 +1062,9 @@ else:
         if st.session_state.user_role == "admin":
             q_col1, q_col2, q_col3, q_col4 = st.columns(4)
             with q_col1:
-                st.markdown('<div class="daftra-quick-card"><h3>🔍</h3><h4>جرد الخزينة</h4></div>', unsafe_allow_html=True)
-                if st.button("جرد الصندوق الآن", use_container_width=True, key="q_btn_audit_cash"):
-                    st.session_state['current_view'] = 'جرد الخزينة'
-                    st.rerun()
+                st.markdown('<div class="daftra-quick-card"><h3>🔄</h3><h4>تحويل عُهدة</h4></div>', unsafe_allow_html=True)
+                if st.button("تحويل عُهدة إلى omar", use_container_width=True, key="q_btn_trf_cash"):
+                    quick_cash_voucher_dialog("تحويل عُهدة إلى (omar)", month_selected, "main")
 
             with q_col2:
                 st.markdown('<div class="daftra-quick-card"><h3>🟢</h3><h4>سند قبض</h4></div>', unsafe_allow_html=True)
@@ -1004,9 +1077,9 @@ else:
                     quick_cash_voucher_dialog("صرف", month_selected, "main")
 
             with q_col4:
-                st.markdown('<div class="daftra-quick-card"><h3>💾</h3><h4>النسخ الاحتياطي</h4></div>', unsafe_allow_html=True)
-                if st.button("فتح مركز الأرشيف", use_container_width=True, key="q_btn_backup_page"):
-                    st.session_state['current_view'] = 'النسخ الاحتياطي'
+                st.markdown('<div class="daftra-quick-card"><h3>🚚</h3><h4>تصفية السائقين</h4></div>', unsafe_allow_html=True)
+                if st.button("فتح موديول السائقين", use_container_width=True, key="q_btn_driver_page"):
+                    st.session_state['current_view'] = 'عُهد وتصفية السائقين'
                     st.rerun()
         else:
             q_col2, q_col3 = st.columns(2)
@@ -1016,11 +1089,178 @@ else:
                     quick_cash_voucher_dialog("قبض", month_selected, "accountant")
 
             with q_col3:
-                st.markdown('<div class="daftra-quick-card"><h3>🔴</h3><h4>سند صرف</h4></div>', unsafe_allow_html=True)
-                if st.button("سند صرف سريع", use_container_width=True, key="q_btn_pay"):
-                    quick_cash_voucher_dialog("صرف", month_selected, "accountant")
+                st.markdown('<div class="daftra-quick-card"><h3>🚚</h3><h4>تصفية السائقين</h4></div>', unsafe_allow_html=True)
+                if st.button("تصفية عُهدة سائق", use_container_width=True, key="q_btn_driver_page_acc"):
+                    st.session_state['current_view'] = 'عُهد وتصفية السائقين'
+                    st.rerun()
 
-    # 5. موديول جرد الخزينة المحدث بمبالغ الفئات المباشرة بالريال
+    # 5. شاشة إدارة واعتماد السائقين المصرح لهم (خاصة بـ wahby)
+    elif selected_option == 'إدارة واعتماد السائقين' and st.session_state.user_role == "admin":
+        st.subheader('🚚 شاشة إدارة واعتماد السائقين المصرح لهم باستلام عُهد')
+        st.write('قم بتحديد واعتتماد الموظفين المصرح لهم باستلام عُهد حركة، لتظهر أسماؤهم تلقائياً لدى المحاسب (omar):')
+
+        approved_drivers = load_approved_drivers()
+        df_payroll_all = st.session_state.payroll_df
+
+        col_adm_d1, col_adm_d2 = st.columns([1.2, 1])
+        with col_adm_d1:
+            st.markdown("### ➕ اعتماد سائق جديد من دليل الموظفين:")
+            all_emp_names = df_payroll_all['الاسم'].tolist()
+            unapproved = [e for e in all_emp_names if e not in approved_drivers]
+
+            if unapproved:
+                selected_emp_to_approve = st.selectbox("اختر الموظف المراد اعتماده كسائق بالنظام:", unapproved)
+                if st.button("✅ اعتماد الموظف كسائق عُهد", use_container_width=True):
+                    approved_drivers.append(selected_emp_to_approve)
+                    save_approved_drivers(approved_drivers)
+                    st.success(f"تم اعتماد الموظف ({selected_emp_to_approve}) كسائق رسمياً!")
+                    st.rerun()
+            else:
+                st.info("جميع الموظفين المسجلين بدليل الموظفين معتمدون بالفعل كـ سائقين.")
+
+        with col_adm_d2:
+            st.markdown("### 📋 قائمة السائقين المعتمدين حالياً بالنظام:")
+            for ad_idx, ad_name in enumerate(approved_drivers):
+                col_d_list1, col_d_list2 = st.columns([3, 1])
+                col_d_list1.write(f"🚚 **{ad_name}**")
+                if col_d_list2.button("🗑️ إلغاء", key=f"del_driver_app_{ad_idx}"):
+                    approved_drivers.pop(ad_idx)
+                    save_approved_drivers(approved_drivers)
+                    st.success("تم إلغاء اعتماد السائق!")
+                    st.rerun()
+                st.divider()
+
+    # 6. موديول عُهد وتصفية السائقين
+    elif selected_option == 'عُهد وتصفية السائقين':
+        st.subheader(f'🚚 موديول إدارة عُهد وتصفية السائقين المباشر - ({month_selected})')
+        st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائقين المعتمدين وتصفية الفواتير والمتبقي/الزيادة عند العودة:')
+
+        drivers_db = load_drivers_data()
+        approved_drivers = load_approved_drivers()
+
+        tot_given_drivers = sum(d['given_amt'] for d in drivers_db)
+        tot_spent_drivers = sum(d['spent_amt'] for d in drivers_db)
+        tot_open_drivers = sum(d['given_amt'] for d in drivers_db if d['status'] == 'مفتوحة')
+
+        sc1, sc2, sc3 = st.columns(3)
+        sc1.metric("إجمالي العُهد المسلمة للسائقين", f"{tot_given_drivers:,.2f} ر.س")
+        sc2.metric("إجمالي المصروفات المصفاة بالفواتير", f"{tot_spent_drivers:,.2f} ر.س")
+        sc3.metric("🔴 المتبقي بذمة السائقين (عُهد مفتوحة)", f"{tot_open_drivers:,.2f} ر.س")
+
+        st.divider()
+
+        d_col1, d_col2 = st.columns([1, 1.2])
+        with d_col1:
+            st.markdown("### 📝 1. تسليم عُهدة موقتة لسائق:")
+            with st.form("add_driver_custody_form"):
+                driver_selected = st.selectbox("اختر السائق المعتمد بالنظام:", approved_drivers)
+                given_amt = st.number_input("المبلغ المسلم لسائق كعُهدة (ر.س):", min_value=0.0, value=200.0, step=50.0)
+                purpose_txt = st.text_input("البيان / الغرض من العُهدة:", "مصاريف نقل وبنزين")
+                
+                sub_d = st.form_submit_button("تسليم وتأكيد العُهدة")
+                if sub_d and given_amt > 0 and driver_selected:
+                    drivers_db.append({
+                        'id': len(drivers_db) + 1,
+                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'driver': driver_selected,
+                        'given_amt': given_amt,
+                        'purpose': purpose_txt,
+                        'status': 'مفتوحة',
+                        'spent_amt': 0.0,
+                        'returned_amt': 0.0,
+                        'diff_amt': 0.0
+                    })
+                    save_drivers_data(drivers_db)
+                    st.success(f"تم تسليم {given_amt:,.2f} ر.س للسائق ({driver_selected}) بنجاح!")
+                    st.rerun()
+
+        with d_col2:
+            st.markdown("### 🏁 2. تصفية عُهدة سائق بالعودة:")
+            open_custodies = [d for d in drivers_db if d['status'] == 'مفتوحة']
+            
+            if open_custodies:
+                selected_custody_id = st.selectbox("اختر العُهدة المراد تصفيتها للعودة:", [f"#{d['id']} - {d['driver']} ({d['given_amt']} ر.س) - {d['date']}" for d in open_custodies])
+                target_id = int(selected_custody_id.split('#')[1].split(' ')[0])
+                target_item = [d for d in open_custodies if d['id'] == target_id][0]
+
+                st.info(f"المبلغ المسلم بعهدته: **{target_item['given_amt']:,.2f} ر.س** | البيان: {target_item['purpose']}")
+                
+                with st.form("settle_driver_form"):
+                    spent_val = st.number_input("إجمالي الفواتير والمصروفات الفعلية (ر.س):", min_value=0.0, value=float(target_item['given_amt']), step=10.0)
+                    settle_notes = st.text_input("تفاصيل المصروفات / أرقام الفواتير:")
+                    
+                    diff_val = target_item['given_amt'] - spent_val
+                    if diff_val > 0:
+                        st.success(f"🟢 **متبقي مع السائق ليرده للصندوق: {diff_val:,.2f} ر.س**")
+                    elif diff_val < 0:
+                        st.error(f"🔴 **السائق صرف زيادة من جيبه يستحق ردها: ({abs(diff_val):,.2f} ر.س)**")
+                    else:
+                        st.info("🟢 **المطابقة تامة! المصروفات تتطابق مع العُهدة.**")
+
+                    sub_settle = st.form_submit_button("🏁 اعتماد تصفية العُهدة وتسوية الخزينة")
+                    if sub_settle:
+                        target_item['status'] = 'تمت التصفية'
+                        target_item['spent_amt'] = spent_val
+                        target_item['diff_amt'] = diff_val
+                        target_item['settle_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
+                        target_item['settle_notes'] = settle_notes
+                        
+                        save_drivers_data(drivers_db)
+
+                        # تأثير القيد المحاسبي المباشر بصندوق المحاسب omar
+                        all_cash = load_cash_data()
+                        if month_selected not in all_cash:
+                            all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                        
+                        m_cash = all_cash[month_selected]
+                        acc_trans = m_cash.get('acc_transactions', [])
+                        
+                        # 1. تثبيت المصروف الفعلي
+                        acc_trans.append({
+                            'id': len(acc_trans) + 1,
+                            'code': f"DRV-EXP-{(len(acc_trans) + 1):03d}",
+                            'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                            'type': 'سند صرف / مصروف',
+                            'party': f"مصروفات حركة للسائق ({target_item['driver']})",
+                            'amount': spent_val,
+                            'method': 'نقداً بالصندوق',
+                            'notes': settle_notes
+                        })
+                        
+                        # 2. في حالة دفع السائق زيادة من جيبه يتم رد فرق الصرف له
+                        if diff_val < 0:
+                            acc_trans.append({
+                                'id': len(acc_trans) + 1,
+                                'code': f"DRV-REF-{(len(acc_trans) + 1):03d}",
+                                'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                                'type': 'سند صرف / مصروف',
+                                'party': f"سداد فرق زيادة مصروفات بالسند للسائق ({target_item['driver']})",
+                                'amount': abs(diff_val),
+                                'method': 'نقداً بالصندوق',
+                                'notes': 'سداد فرق تصفية'
+                            })
+
+                        m_cash['acc_transactions'] = acc_trans
+                        all_cash[month_selected] = m_cash
+                        save_cash_data(all_cash)
+
+                        st.success("تمت التصفية وتوثيق القيد بصندوق المحاسب بنجاح!")
+                        st.rerun()
+            else:
+                st.info("لا توجد عُهد مفتوحة حالياً بانتظار التصفية.")
+
+        st.divider()
+        st.markdown("### 📑 سجل كشف حساب وتصفية السائقين الشامل (رؤية wahby و omar):")
+        if drivers_db:
+            filter_driver_name = st.selectbox("تصفية الكشف حسب السائق:", ["جميع السائقين"] + approved_drivers)
+            filtered_drivers_list = drivers_db if filter_driver_name == "جميع السائقين" else [d for d in drivers_db if d['driver'] == filter_driver_name]
+            
+            df_drivers = pd.DataFrame(filtered_drivers_list)
+            st.dataframe(df_drivers[['id', 'date', 'driver', 'given_amt', 'spent_amt', 'diff_amt', 'status', 'purpose']], use_container_width=True, hide_index=True)
+        else:
+            st.info("لا يوجد سجل عُهد سابق للسائقين.")
+
+    # 7. موديول جرد الخزينة المحدث
     elif selected_option == 'جرد الخزينة':
         st.subheader(f'🔍 موديول جرد الخزينة ومطابقة النقدية الفعلي - ({month_selected})')
         st.write('قم بمطابقة المبالغ النقدية الموجودة بيدك داخل الصندوق مع الرصيد الدفتري المسجل بالنظام واحتساب العجز أو الزيادة فوراً:')
@@ -1043,7 +1283,7 @@ else:
         col_aud1, col_aud2 = st.columns([1.2, 1])
         with col_aud1:
             st.markdown("### 💵 1. حاسبة مبالغ الفئات بالخزينة (بالريال):")
-            st.write("أدخل **إجمالي المبلغ الموجود بيدك** لكل فئة نقدية بالريال مباشرة:")
+            st.write("أدخل **إجمالي المبلغ الموجود بيدك** لكل فئة نقدية بالريال مباشرة (مثلاً: إجمالي الـ 500 = 5000):")
             
             c_f1, c_f2 = st.columns(2)
             with c_f1:
@@ -1101,8 +1341,23 @@ else:
         st.markdown("### 📑 سجل تسويات وجرد الخزينة التاريخي:")
         audit_history = load_audit_data()
         if audit_history:
-            df_audit = pd.DataFrame(audit_history)
-            st.dataframe(df_audit[['id', 'date', 'box_name', 'month', 'book_bal', 'actual_cash', 'diff', 'notes']], use_container_width=True, hide_index=True)
+            for a_idx, a_item in enumerate(reversed(audit_history)):
+                real_a_idx = len(audit_history) - 1 - a_idx
+                col_rec1, col_rec2, col_rec3, col_rec4, col_rec5 = st.columns([1, 2, 2, 2, 1])
+                col_rec1.write(f"#{a_item['id']}")
+                col_rec2.write(f"📅 **{a_item['date']}**\n{a_item['box_name']}")
+                
+                diff_val = a_item['diff']
+                diff_str = "🟢 مطابقة" if diff_val == 0 else (f"🔴 عجز ({abs(diff_val):,.2f} ر.س)" if diff_val < 0 else f"🔵 زيادة ({diff_val:,.2f} ر.س)")
+                col_rec3.write(f"الفعلي: {a_item['actual_cash']:,.2f} ر.س\nالدفتري: {a_item['book_bal']:,.2f} ر.س")
+                col_rec4.write(f"الحالة: **{diff_str}**\nالملاحظات: {a_item.get('notes', 'لا يوجد')}")
+                
+                if col_rec5.button("🗑️ حذف", key=f"del_audit_btn_{real_a_idx}"):
+                    audit_history.pop(real_a_idx)
+                    save_audit_data(audit_history)
+                    st.success("تم حذف سجل الجرد بنجاح!")
+                    st.rerun()
+                st.divider()
         else:
             st.info("لا توجد جلسات جرد سابقة محفوظة بالنظام.")
 
@@ -1270,7 +1525,7 @@ else:
         with col_c_in1:
             st.markdown("### تسجيل حركة بالصندوق:")
             with st.form("add_cash_transaction_form"):
-                trans_type = st.selectbox("نوع الحركة:", ["سند قبض / إيراد", "سند صرف / مصروف"])
+                trans_type = st.selectbox("نوع الحركة:", ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (omar)"])
                 trans_party = st.text_input("اسم الجهة / البيان:", placeholder="مثلاً: العميل / شراء مواد خام")
                 trans_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
                 trans_pay_method = st.selectbox("طريقة السداد:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
@@ -1279,24 +1534,53 @@ else:
                 sub_cash = st.form_submit_button("حفظ الحركة")
                 if sub_cash:
                     if trans_party and trans_amt > 0:
-                        rec_cnt = sum(1 for t in curr_trans if "قبض" in t['type'])
-                        pay_cnt = sum(1 for t in curr_trans if "صرف" in t['type'])
-                        v_code = f"REC-{(rec_cnt + 1):03d}" if "قبض" in trans_type else f"PAY-{(pay_cnt + 1):03d}"
-                        
-                        new_trans = {
-                            'id': len(curr_trans) + 1,
-                            'code': v_code,
-                            'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                            'type': trans_type,
-                            'party': trans_party,
-                            'amount': trans_amt,
-                            'method': trans_pay_method,
-                            'notes': trans_notes
-                        }
-                        curr_trans.append(new_trans)
+                        if "تحويل عُهدة" in trans_type and st.session_state.user_role == "admin":
+                            rec_cnt = sum(1 for t in curr_trans if "قبض" in t['type'])
+                            pay_cnt = sum(1 for t in curr_trans if "صرف" in t['type'])
+                            v_code = f"TRF-{(pay_cnt + 1):03d}"
+                            
+                            curr_trans.append({
+                                'id': len(curr_trans) + 1,
+                                'code': v_code,
+                                'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                                'type': 'سند صرف / مصروف',
+                                'party': f"تحويل عُهدة إلى المحاسب (omar) - {trans_party}",
+                                'amount': trans_amt,
+                                'method': trans_pay_method,
+                                'notes': trans_notes
+                            })
+                            
+                            acc_trans = current_m_cash.get('acc_transactions', [])
+                            acc_trans.append({
+                                'id': len(acc_trans) + 1,
+                                'code': f"REC-TRF-{(len(acc_trans) + 1):03d}",
+                                'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                                'type': 'سند قبض / إيراد',
+                                'party': f"استلام عُهدة محولة من الخزينة الرئيسية (wahby)",
+                                'amount': trans_amt,
+                                'method': trans_pay_method,
+                                'notes': trans_notes
+                            })
+                            current_m_cash['acc_transactions'] = acc_trans
+                        else:
+                            rec_cnt = sum(1 for t in curr_trans if "قبض" in t['type'])
+                            pay_cnt = sum(1 for t in curr_trans if "صرف" in t['type'])
+                            v_code = f"REC-{(rec_cnt + 1):03d}" if "قبض" in trans_type else f"PAY-{(pay_cnt + 1):03d}"
+                            
+                            curr_trans.append({
+                                'id': len(curr_trans) + 1,
+                                'code': v_code,
+                                'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                                'type': trans_type,
+                                'party': trans_party,
+                                'amount': trans_amt,
+                                'method': trans_pay_method,
+                                'notes': trans_notes
+                            })
+
                         all_cash_db[month_selected][active_box_key] = curr_trans
                         save_cash_data(all_cash_db)
-                        st.success(f"تم التسجيل برقم #{v_code}!")
+                        st.success(f"تم التسجيل بنجاح!")
                         st.rerun()
 
         with col_c_in2:
