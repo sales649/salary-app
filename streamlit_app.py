@@ -483,8 +483,15 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
 @st.dialog("إنشاء سند جديد")
 def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
     st.write(f"إضافة سند لشهر: **{month_name}** ({'الرئيسية' if target_box == 'main' else 'omar'})")
+    
+    # تحسين خيارات تحويل العُهدة حسب المستخدم
+    if target_box == "main":
+        type_options = ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (omar)"]
+    else:
+        type_options = ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (wahby)"]
+
     with st.form("quick_cash_form"):
-        q_type = st.selectbox("نوع السند:", ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (omar)"], index=0 if "قبض" in default_type else 1)
+        q_type = st.selectbox("نوع السند:", type_options, index=0 if "قبض" in default_type else 1)
         q_party = st.text_input("صادر إلى / مستلم من:", placeholder="اسم الجهة...")
         q_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
         q_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
@@ -504,11 +511,9 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                     
                 c_trans = m_cash[box_key]
                 
-                if "تحويل عُهدة" in q_type and target_box == "main":
-                    rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
-                    pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
-                    v_code = f"TRF-{(pay_count + 1):03d}"
-                    
+                # 1. تحويل عُهدة من wahby إلى omar
+                if "تحويل عُهدة إلى (omar)" in q_type and target_box == "main":
+                    v_code = f"TRF-{(len(c_trans) + 1):03d}"
                     c_trans.append({
                         'id': len(c_trans) + 1,
                         'code': v_code,
@@ -522,7 +527,6 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                     
                     if 'acc_transactions' not in m_cash:
                         m_cash['acc_transactions'] = []
-                    
                     acc_trans = m_cash['acc_transactions']
                     acc_trans.append({
                         'id': len(acc_trans) + 1,
@@ -535,6 +539,36 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                         'notes': q_notes
                     })
                     m_cash['acc_transactions'] = acc_trans
+
+                # 2. تحويل عُهدة من omar إلى wahby (استرداد نقدية)
+                elif "تحويل عُهدة إلى (wahby)" in q_type and target_box == "accountant":
+                    v_code = f"TRF-ACC-{(len(c_trans) + 1):03d}"
+                    c_trans.append({
+                        'id': len(c_trans) + 1,
+                        'code': v_code,
+                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'type': 'سند صرف / مصروف',
+                        'party': f"تحويل نقدية واسترداد إلى الخزينة الرئيسية (wahby) - {q_party}",
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
+                    
+                    if 'transactions' not in m_cash:
+                        m_cash['transactions'] = []
+                    main_trans = m_cash['transactions']
+                    main_trans.append({
+                        'id': len(main_trans) + 1,
+                        'code': f"REC-TRF-{(len(main_trans) + 1):03d}",
+                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'type': 'سند قبض / إيراد',
+                        'party': f"استلام نقدية محولة من عُهدة المحاسب (omar)",
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
+                    m_cash['transactions'] = main_trans
+
                 else:
                     rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
                     pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
@@ -995,10 +1029,10 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 5. موديول عُهد وتصفية السائقين المصحح والتلقائي الحساب والتسميع بصندوق omar
+    # 5. موديول عُهد وتصفية السائقين التراكمي والمباشر مع التسميع بصندوق omar
     elif selected_option == 'عُهد وتصفية السائقين':
         st.subheader(f'🚚 موديول إدارة عُهد وتصفية السائقين المباشر - ({month_selected})')
-        st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والمتبقي/الزيادة عند العودة والتسميع بصندوق omar:')
+        st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والتسميع التراكمي المباشر بصندوق omar:')
 
         drivers_db = load_drivers_data()
         driver_selected = "سمان السواق"
@@ -1014,12 +1048,15 @@ else:
 
         st.divider()
 
-        d_col1, d_col2 = st.columns([1, 1.2])
+        d_col1, d_col2 = st.columns([1, 1.8])
         with d_col1:
-            st.markdown("### 📝 1. تسليم عُهدة موقتة لـ (سمان السواق):")
+            st.markdown("### 📝 1. تسليم عُهدة جديدة لـ (سمان السواق):")
+            if open_driver_custody_sum > 0:
+                st.warning(f"💡 المتبقي المترصد في جيب السائق حالياً من العُهد السابقة: **{open_driver_custody_sum:,.2f} ر.س**")
+
             with st.form("add_driver_custody_form"):
                 st.text_input("اسم السائق:", "سمان السواق", disabled=True)
-                given_amt = st.number_input("المبلغ المسلم كعُهدة (ر.س):", min_value=0.0, value=200.0, step=50.0)
+                given_amt = st.number_input("المبلغ الجديد المسلم كعُهدة (ر.س):", min_value=0.0, value=0.0, step=50.0)
                 purpose_txt = st.text_input("البيان / الغرض من العُهدة:", "مصاريف نقل وبنزين")
                 
                 sub_d = st.form_submit_button("تسليم وتأكيد العُهدة")
@@ -1037,7 +1074,7 @@ else:
                     })
                     save_drivers_data(drivers_db)
 
-                    # تسميع فوري كـ "سند صرف مؤقت" في صندوق omar عند التسليم
+                    # تسميع فوري كـ "سند صرف" مبسط بصندوق omar عند التسليم
                     all_cash = load_cash_data()
                     if month_selected not in all_cash:
                         all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
@@ -1049,7 +1086,7 @@ else:
                         'code': f"DRV-OUT-{(len(acc_trans) + 1):03d}",
                         'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
                         'type': 'سند صرف / مصروف',
-                        'party': f"تسليم عُهدة حركة مؤقتة للسائق ({driver_selected})",
+                        'party': f"عُهدة سمان السواق",
                         'amount': given_amt,
                         'method': 'نقداً بالصندوق',
                         'notes': purpose_txt
@@ -1079,7 +1116,7 @@ else:
                 diff_val = target_item['given_amt'] - spent_val
                 st.divider()
                 if diff_val > 0:
-                    st.success(f"🟢 **متبقي مع السائق ليرده للصندوق: {diff_val:,.2f} ر.س**")
+                    st.success(f"🟢 **متبقي بجراب السائق لليوم القادم: {diff_val:,.2f} ر.س** (تترحل تلقائياً بذمته)")
                 elif diff_val < 0:
                     st.error(f"🔴 **السائق صرف زيادة من جيبه يستحق ردها: ({abs(diff_val):,.2f} ر.س)**")
                 else:
@@ -1094,45 +1131,31 @@ else:
                     
                     save_drivers_data(drivers_db)
 
-                    # تأثير القيد والتسميع بصندوق omar
-                    all_cash = load_cash_data()
-                    if month_selected not in all_cash:
-                        all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
-                    
-                    m_cash = all_cash[month_selected]
-                    acc_trans = m_cash.get('acc_transactions', [])
-                    
-                    # إذا أرجَع السائق متبقي (diff_val > 0) يُسجل سند قبض مرتجع لصندوق omar
-                    if diff_val > 0:
-                        acc_trans.append({
-                            'id': len(acc_trans) + 1,
-                            'code': f"DRV-RET-{(len(acc_trans) + 1):03d}",
-                            'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                            'type': 'سند قبض / إيراد',
-                            'party': f"استلام باقي عُهدة مرتجعة من السائق ({target_item['driver']})",
-                            'amount': diff_val,
-                            'method': 'نقداً بالصندوق',
-                            'notes': f"مرتجع تصفية العُهدة رقم #{target_id}"
-                        })
-
-                    # إذا صرف السائق زيادة من جيبه (diff_val < 0) يُسجل سند صرف إضافي له من صندوق omar
-                    elif diff_val < 0:
+                    # تسميع الفرق فقط في صندوق omar إذا قام السائق بصرف زيادة من جيبه
+                    if diff_val < 0:
+                        all_cash = load_cash_data()
+                        if month_selected not in all_cash:
+                            all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                        
+                        m_cash = all_cash[month_selected]
+                        acc_trans = m_cash.get('acc_transactions', [])
+                        
                         acc_trans.append({
                             'id': len(acc_trans) + 1,
                             'code': f"DRV-REF-{(len(acc_trans) + 1):03d}",
                             'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
                             'type': 'سند صرف / مصروف',
-                            'party': f"سداد فرق زيادة مصروفات بالسند للسائق ({target_item['driver']})",
+                            'party': f"عُهدة سمان السواق - سداد فرق مصروفات زيادة",
                             'amount': abs(diff_val),
                             'method': 'نقداً بالصندوق',
-                            'notes': 'سداد فرق تصفية'
+                            'notes': settle_notes
                         })
 
-                    m_cash['acc_transactions'] = acc_trans
-                    all_cash[month_selected] = m_cash
-                    save_cash_data(all_cash)
+                        m_cash['acc_transactions'] = acc_trans
+                        all_cash[month_selected] = m_cash
+                        save_cash_data(all_cash)
 
-                    st.success("تمت التصفية والتسميع المباشر بصندوق omar بنجاح!")
+                    st.success("تمت التصفية والتسميع المباشر بنجاح!")
                     st.rerun()
             else:
                 st.info("لا توجد عُهد مفتوحة حالياً لـ سمان السواق بانتظار التصفية.")
@@ -1428,8 +1451,10 @@ else:
         col_c_in1, col_c_in2 = st.columns([1, 1.8])
         with col_c_in1:
             st.markdown("### تسجيل حركة بالصندوق:")
+            type_select_options = ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (omar)"] if st.session_state.user_role == "admin" else ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (wahby)"]
+            
             with st.form("add_cash_transaction_form"):
-                trans_type = st.selectbox("نوع الحركة:", ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (omar)"])
+                trans_type = st.selectbox("نوع الحركة:", type_select_options)
                 trans_party = st.text_input("اسم الجهة / البيان:", placeholder="مثلاً: العميل / شراء مواد خام")
                 trans_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
                 trans_pay_method = st.selectbox("طريقة السداد:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
@@ -1438,11 +1463,8 @@ else:
                 sub_cash = st.form_submit_button("حفظ الحركة")
                 if sub_cash:
                     if trans_party and trans_amt > 0:
-                        if "تحويل عُهدة" in trans_type and st.session_state.user_role == "admin":
-                            rec_cnt = sum(1 for t in curr_trans if "قبض" in t['type'])
-                            pay_cnt = sum(1 for t in curr_trans if "صرف" in t['type'])
-                            v_code = f"TRF-{(pay_cnt + 1):03d}"
-                            
+                        if "تحويل عُهدة إلى (omar)" in trans_type and st.session_state.user_role == "admin":
+                            v_code = f"TRF-{(len(curr_trans) + 1):03d}"
                             curr_trans.append({
                                 'id': len(curr_trans) + 1,
                                 'code': v_code,
@@ -1466,6 +1488,33 @@ else:
                                 'notes': trans_notes
                             })
                             current_m_cash['acc_transactions'] = acc_trans
+
+                        elif "تحويل عُهدة إلى (wahby)" in trans_type and st.session_state.user_role != "admin":
+                            v_code = f"TRF-ACC-{(len(curr_trans) + 1):03d}"
+                            curr_trans.append({
+                                'id': len(curr_trans) + 1,
+                                'code': v_code,
+                                'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                                'type': 'سند صرف / مصروف',
+                                'party': f"تحويل نقدية واسترداد إلى الخزينة الرئيسية (wahby) - {trans_party}",
+                                'amount': trans_amt,
+                                'method': trans_pay_method,
+                                'notes': trans_notes
+                            })
+                            
+                            main_trans = current_m_cash.get('transactions', [])
+                            main_trans.append({
+                                'id': len(main_trans) + 1,
+                                'code': f"REC-TRF-{(len(main_trans) + 1):03d}",
+                                'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                                'type': 'سند قبض / إيراد',
+                                'party': f"استلام نقدية محولة من عُهدة المحاسب (omar)",
+                                'amount': trans_amt,
+                                'method': trans_pay_method,
+                                'notes': trans_notes
+                            })
+                            current_m_cash['transactions'] = main_trans
+
                         else:
                             rec_cnt = sum(1 for t in curr_trans if "قبض" in t['type'])
                             pay_cnt = sum(1 for t in curr_trans if "صرف" in t['type'])
