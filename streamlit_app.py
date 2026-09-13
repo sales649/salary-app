@@ -11,23 +11,23 @@ st.set_page_config(page_title='شركة ميم الخماسية للتصنيع -
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = '🌙 ليلي كحلي (Dark Navy)'
 
-# تطبيق التنسيقات البرمجية الصريحة بناءً على الاختيار
+# تطبيق التنسيقات البرمجية المباشرة وضبط التباين العالي للنصوص
 if '🌙' in st.session_state['theme_mode']:
     bg_app = "#0F172A"
     bg_card = "#1E293B"
     bg_sidebar = "#1E293B"
-    text_color = "#FFFFFF"
+    text_color = "#F8FAFC"
     border_color = "#334155"
-    btn_bg = "#334155"
-    btn_text = "#FFFFFF"
+    input_bg = "#334155"
+    input_text = "#FFFFFF"
 else:
     bg_app = "#E2E8F0"
     bg_card = "#FFFFFF"
     bg_sidebar = "#F8FAFC"
     text_color = "#0F172A"
     border_color = "#CBD5E1"
-    btn_bg = "#FFFFFF"
-    btn_text = "#1E293B"
+    input_bg = "#FFFFFF"
+    input_text = "#1E293B"
 
 st.markdown(f"""
     <style>
@@ -46,10 +46,10 @@ st.markdown(f"""
             background-color: {bg_sidebar} !important;
         }}
 
-        [data-testid="stSidebar"] .stMarkdown h3 {{
+        [data-testid="stSidebar"] .stMarkdown h3, [data-testid="stSidebar"] label {{
             color: {text_color} !important;
-            font-size: 13px !important;
-            font-weight: 700;
+            font-size: 14px !important;
+            font-weight: 700 !important;
         }}
 
         [data-testid="stSidebar"] .streamlit-expanderHeader {{
@@ -59,10 +59,19 @@ st.markdown(f"""
             border-bottom: 1px solid {border_color} !important;
         }}
 
-        .stButton>button {{
-            background-color: {btn_bg} !important;
-            color: {btn_text} !important;
+        /* تصحيح وضوح المستطيلات ومربعات الإدخال بالكامل */
+        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {{
+            background-color: {input_bg} !important;
+            color: {input_text} !important;
             border: 1px solid {border_color} !important;
+            border-radius: 6px !important;
+            font-weight: 600 !important;
+        }}
+
+        .stButton>button {{
+            background-color: #2563EB !important;
+            color: #FFFFFF !important;
+            border: none !important;
             border-radius: 8px !important;
             font-weight: 700 !important;
         }}
@@ -94,15 +103,15 @@ st.markdown(f"""
         .welcome-card-lux {{
             background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
             border-radius: 20px;
-            padding: 50px 30px;
+            padding: 40px 30px;
             text-align: center;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
-            margin-top: 30px;
+            margin-top: 20px;
             color: white;
         }}
 
         .logo-lux {{
-            font-size: 90px;
+            font-size: 80px;
             font-weight: 900;
             color: #EF4444;
             font-family: Arial, sans-serif;
@@ -112,12 +121,12 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# إدارة حالة المستخدم والدخول
+# إدارة تسجيل الدخول والصلاحيات
 if 'app_started' not in st.session_state:
     st.session_state['app_started'] = False
 
 if 'user_role' not in st.session_state:
-    st.session_state['user_role'] = None  # 'admin' أو 'accountant'
+    st.session_state['user_role'] = None
 
 if 'current_view' not in st.session_state:
     st.session_state['current_view'] = '🏠 الرئيسية (لوحة الإحصائيات)'
@@ -251,7 +260,10 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
         if q_sub:
             if q_party and q_amt > 0:
                 all_cash = load_cash_data()
-                m_cash = all_cash.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
+                if month_name not in all_cash:
+                    all_cash[month_name] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                
+                m_cash = all_cash[month_name]
                 box_key = 'transactions' if target_box == 'main' else 'acc_transactions'
                 c_trans = m_cash.get(box_key, [])
                 
@@ -490,7 +502,7 @@ def edit_employee_dialog(emp_idx, month_selected):
             st.success(f"تم حذف الموظف ({emp_data['الاسم']}) نهائياً!")
             st.rerun()
 
-# 2. الشاشة الافتتاحية الملكية بأسلوب الدخول الآمن والصلاحيات
+# 2. الشاشة الافتتاحية الملكية بأسلوب الدخول الآمن والصلاحيات المصممة
 if not st.session_state.get('app_started', False):
     st.markdown("""
         <div class="welcome-card-lux">
@@ -504,26 +516,28 @@ if not st.session_state.get('app_started', False):
     col_b1, col_b2, col_b3 = st.columns([1, 1.3, 1])
     with col_b2:
         st.markdown("### 🔑 تسجيل الدخول للنظام:")
-        user_choice = st.radio("اختر نوع المستخدم:", ["👑 المالك / المدير العام (Administrator)", "👤 المحاسب (عُهدة مستقلة)"], key="login_role_choice")
+        username_input = st.text_input("اسم المستخدم (wahby / omar):", key="login_username")
         pwd_input = st.text_input("أدخل كلمة المرور:", type="password", key="login_pwd")
         
         if st.button('🚀 الدخول للنظام المالي والإداري', use_container_width=True):
-            if "👑 المالك" in user_choice:
+            if username_input.lower() == "wahby":
                 if pwd_input == "admin5m" or pwd_input == "":
                     st.session_state.app_started = True
                     st.session_state.user_role = "admin"
-                    st.success("أهلاً بك يا مدير النظام!")
+                    st.success("أهلاً بك يا مدير النظام (wahby)!")
                     st.rerun()
                 else:
-                    st.error("كلمة المرور غير صحيحة للحساب الرئيسي!")
-            else:
+                    st.error("كلمة المرور غير صحيحة للحساب الرئيسي (wahby)!")
+            elif username_input.lower() == "omar":
                 if pwd_input == "user5m" or pwd_input == "":
                     st.session_state.app_started = True
                     st.session_state.user_role = "accountant"
-                    st.success("أهلاً بك يا محاسب النظام!")
+                    st.success("أهلاً بك يا محاسب النظام (omar)!")
                     st.rerun()
                 else:
-                    st.error("كلمة المرور غير صحيحة لحساب المحاسب!")
+                    st.error("كلمة المرور غير صحيحة لحساب المحاسب (omar)!")
+            else:
+                st.error("اسم المستخدم غير مسجل بالنظام!")
 
 else:
     # 3. القائمة الجانبية المنسقة بالكامل بنمط دفترة (Daftra Sidebar)
@@ -536,7 +550,7 @@ else:
         """, unsafe_allow_html=True)
         st.write("")
 
-        role_label = "👑 المدير العام (Admin)" if st.session_state.user_role == "admin" else "👤 المحاسب (عُهدة فرعية)"
+        role_label = "👑 المالك (wahby)" if st.session_state.user_role == "admin" else "👤 المحاسب (omar)"
         st.info(f"المستخدم الحالي: **{role_label}**")
 
         if 'months_list' not in st.session_state:
@@ -560,19 +574,19 @@ else:
                 st.session_state['current_view'] = '💵 حركة الخزينة وتوليد السندات'
                 st.rerun()
 
-        with st.expander("👥 الموظفين"):
-            if st.button("👤 دليل الموظفين والملفات الإدارية", use_container_width=True):
-                st.session_state['current_view'] = '👤 دليل الموظفين والملفات الإدارية'
-                st.rerun()
-            if st.button("🇸🇦 حاسبة نهاية الخدمة والإجازات", use_container_width=True):
-                st.session_state['current_view'] = '🇸🇦 حاسبة مكافأة نهاية الخدمة والإجازات'
-                st.rerun()
-            if st.button("🔔 تنبيهات انتهاء الإقامات والعقود", use_container_width=True):
-                st.session_state['current_view'] = '🔔 تنبيهات انتهاء الإقامات والعقود'
-                st.rerun()
-        
-        # حجب قسم المرتبات والدفعات عن المحاسب الثانوي بالكامل
+        # الموظفين والرواتب تنحصر حساباتها على wahby فقط
         if st.session_state.user_role == "admin":
+            with st.expander("👥 الموظفين"):
+                if st.button("👤 دليل الموظفين والملفات الإدارية", use_container_width=True):
+                    st.session_state['current_view'] = '👤 دليل الموظفين والملفات الإدارية'
+                    st.rerun()
+                if st.button("🇸🇦 حاسبة نهاية الخدمة والإجازات", use_container_width=True):
+                    st.session_state['current_view'] = '🇸🇦 حاسبة مكافأة نهاية الخدمة والإجازات'
+                    st.rerun()
+                if st.button("🔔 تنبيهات انتهاء الإقامات والعقود", use_container_width=True):
+                    st.session_state['current_view'] = '🔔 تنبيهات انتهاء الإقامات والعقود'
+                    st.rerun()
+            
             with st.expander("💰 المرتبات والدفعات", expanded=True):
                 if st.button("📊 إدخال وتعديل الدفعات السريع", use_container_width=True):
                     st.session_state['current_view'] = '📊 إدخال وتعديل الدفعات السريع'
@@ -736,13 +750,11 @@ else:
         all_cash_db = load_cash_data()
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
         
-        # 1. كارت الخزينة الرئيسية (للمدير)
         curr_trans_main = current_m_cash.get('transactions', [])
         tot_in_main = sum(t['amount'] for t in curr_trans_main if 'قبض' in t['type'])
         tot_out_main = sum(t['amount'] for t in curr_trans_main if 'صرف' in t['type'])
         net_main_now = current_m_cash.get('opening', 0.0) + tot_in_main - tot_out_main
 
-        # 2. كارت عُهدة المحاسب المراقبة
         curr_trans_acc = current_m_cash.get('acc_transactions', [])
         tot_in_acc = sum(t['amount'] for t in curr_trans_acc if 'قبض' in t['type'])
         tot_out_acc = sum(t['amount'] for t in curr_trans_acc if 'صرف' in t['type'])
@@ -761,7 +773,6 @@ else:
 
             st.divider()
 
-            # مؤشرات العمالة والمرتبات تنحصر فقط للمدير
             st.markdown("### 👥 2. مؤشرات رواتب ومستحقات العمالة بكافة الفروع:")
             st_col1, st_col2, st_col3, st_col4, st_col5, st_col6 = st.columns(6)
             st_col1.metric("👥 إجمالي العمالة", f"{tot_emp} موظف")
@@ -771,31 +782,41 @@ else:
             st_col5.metric("✂️ إجمالي الخصومات", f"{tot_ded_all:,.0f} ر.س")
             st_col6.metric("⏳ المتبقي بالرصيد", f"{tot_rem:,.0f} ر.س")
         else:
-            st.markdown("#### 👤 عُهدتك المالية الحالية (المحاسب):")
+            st.markdown("#### 👤 عُهدتك المالية الحالية (المحاسب omar):")
             st.metric("الرصيد المتبقي في عُهدتك الآن", f"{net_acc_now:,.2f} ر.س")
 
         st.divider()
 
-        # الوصول السريع للإجراءات اليومية
+        # الوصول السريع المخصص للكل
         st.markdown("### ⚡ الوصول السريع للإجراءات الخاطفة:")
-        q_col1, q_col2, q_col3 = st.columns(3)
         
-        with q_col1:
-            st.markdown('<div class="daftra-quick-card"><h3>👤</h3><h4>إضافة موظف جديد</h4></div>', unsafe_allow_html=True)
-            if st.button("➕ إضافة موظف فوراً", use_container_width=True, key="q_btn_add_emp"):
-                add_employee_dialog('مصنع ميم الخماسية الخرج')
+        if st.session_state.user_role == "admin":
+            q_col1, q_col2, q_col3 = st.columns(3)
+            with q_col1:
+                st.markdown('<div class="daftra-quick-card"><h3>👤</h3><h4>إضافة موظف جديد</h4></div>', unsafe_allow_html=True)
+                if st.button("➕ إضافة موظف فوراً", use_container_width=True, key="q_btn_add_emp"):
+                    add_employee_dialog('مصنع ميم الخماسية الخرج')
 
-        with q_col2:
-            st.markdown('<div class="daftra-quick-card"><h3>🟢</h3><h4>إنشاء سند قبض</h4></div>', unsafe_allow_html=True)
-            if st.button("💵 إنشاء سند قبض سريع", use_container_width=True, key="q_btn_rec"):
-                target = "main" if st.session_state.user_role == "admin" else "accountant"
-                quick_cash_voucher_dialog("قبض", month_selected, target)
+            with q_col2:
+                st.markdown('<div class="daftra-quick-card"><h3>🟢</h3><h4>إنشاء سند قبض</h4></div>', unsafe_allow_html=True)
+                if st.button("💵 إنشاء سند قبض سريع", use_container_width=True, key="q_btn_rec"):
+                    quick_cash_voucher_dialog("قبض", month_selected, "main")
 
-        with q_col3:
-            st.markdown('<div class="daftra-quick-card"><h3>🔴</h3><h4>إنشاء سند صرف</h4></div>', unsafe_allow_html=True)
-            if st.button("💸 إنشاء سند صرف سريع", use_container_width=True, key="q_btn_pay"):
-                target = "main" if st.session_state.user_role == "admin" else "accountant"
-                quick_cash_voucher_dialog("صرف", month_selected, target)
+            with q_col3:
+                st.markdown('<div class="daftra-quick-card"><h3>🔴</h3><h4>إنشاء سند صرف</h4></div>', unsafe_allow_html=True)
+                if st.button("💸 إنشاء سند صرف سريع", use_container_width=True, key="q_btn_pay"):
+                    quick_cash_voucher_dialog("صرف", month_selected, "main")
+        else:
+            q_col2, q_col3 = st.columns(2)
+            with q_col2:
+                st.markdown('<div class="daftra-quick-card"><h3>🟢</h3><h4>إنشاء سند قبض</h4></div>', unsafe_allow_html=True)
+                if st.button("💵 إنشاء سند قبض سريع", use_container_width=True, key="q_btn_rec"):
+                    quick_cash_voucher_dialog("قبض", month_selected, "accountant")
+
+            with q_col3:
+                st.markdown('<div class="daftra-quick-card"><h3>🔴</h3><h4>إنشاء سند صرف</h4></div>', unsafe_allow_html=True)
+                if st.button("💸 إنشاء سند صرف سريع", use_container_width=True, key="q_btn_pay"):
+                    quick_cash_voucher_dialog("صرف", month_selected, "accountant")
 
     elif selected_option == '📊 إدخال وتعديل الدفعات السريع' and st.session_state.user_role == "admin":
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات والخصومات السريع - ({month_selected})')
@@ -894,7 +915,7 @@ else:
         else:
             active_box_key = 'acc_transactions'
             active_opening_key = 'acc_opening'
-            st.info("أنت تعمل حالياً على شاشة **عُهدتك المالية الفرعية (المحاسب)**.")
+            st.info("أنت تعمل حالياً على شاشة **عُهدتك المالية الفرعية (المحاسب omar)**.")
 
         opening_bal = current_m_cash.get(active_opening_key, 0.0)
 
@@ -1006,7 +1027,7 @@ else:
             else:
                 st.info("لا توجد حركات تسوية مالية بالصندوق مسجلة لهذا الشهر حتى الآن.")
 
-    elif selected_option == '👤 دليل الموظفين والملفات الإدارية':
+    elif selected_option == '👤 دليل الموظفين والملفات الإدارية' and st.session_state.user_role == "admin":
         st.subheader('👤 دليل الموظفين والملفات الإدارية')
         
         search_kw = st.text_input("🔍 استعلام سريع باسم الموظف أو الوظيفة في جميع الفروع:", placeholder="اكتب جزءاً من الاسم...")
@@ -1152,7 +1173,7 @@ else:
             mime="text/html"
         )
 
-    elif selected_option == '🖨️ طباعة سندات القبض والصرف (A4)':
+    elif selected_option == '🖨️ طباعة سندات القبض والصرف (A4)' and st.session_state.user_role == "admin":
         st.subheader(f'🖨️ طباعة سندات القبض والصرف الرسمية A4 - ({month_selected})')
         col_p1, col_p2 = st.columns(2)
         with col_p1:
@@ -1171,7 +1192,7 @@ else:
             mime="text/html"
         )
 
-    elif selected_option == '🇸🇦 حاسبة مكافأة نهاية الخدمة والإجازات':
+    elif selected_option == '🇸🇦 حاسبة مكافأة نهاية الخدمة والإجازات' and st.session_state.user_role == "admin":
         st.subheader('🇸🇦 حاسبة مستحقات نهاية الخدمة وبدل الإجازات (نظام العمل السعودي)')
         st.write('تعتمد الحاسبة التلقائية على تاريخ بداية العمل والراتب الأساسي الحالي لكل موظف:')
         saudi_reports = []
@@ -1191,7 +1212,7 @@ else:
         df_saudi = pd.DataFrame(saudi_reports)
         st.dataframe(df_saudi, use_container_width=True, hide_index=True)
 
-    elif selected_option == '🔔 تنبيهات انتهاء الإقامات والعقود':
+    elif selected_option == '🔔 تنبيهات انتهاء الإقامات والعقود' and st.session_state.user_role == "admin":
         st.subheader('🔔 مركز تنبيهات انتهاء الإقامات وعقود العمل')
         today = datetime.now().date()
         alerts = []
