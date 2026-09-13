@@ -59,7 +59,6 @@ st.markdown(f"""
             font-weight: 700 !important;
         }}
 
-        /* ألوان القوائم المنسدلة النحاسية الذهبية وتثبيت الألوان */
         [data-testid="stSidebar"] .streamlit-expanderHeader,
         [data-testid="stSidebar"] details[open] summary,
         [data-testid="stSidebar"] details summary:hover,
@@ -76,13 +75,13 @@ st.markdown(f"""
             color: #FFFFFF !important;
             border-radius: 0 0 8px 8px !important;
             padding: 10px !important;
-            border: 1px solid #D97706 !important;
+            border: 1px solid #334155 !important;
             border-top: none !important;
         }}
 
-        /* تصحيح وضوح خطوط القوائم المنسدلة عند الفتح */
         ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"] div {{
             background-color: #1E293B !important;
+            color: #FFFFFF !important;
             border: 1px solid #D97706 !important;
         }}
 
@@ -107,7 +106,24 @@ st.markdown(f"""
             font-size: 15px !important;
         }}
 
-        /* إصلاح حقل رفع الملفات والنسخ الاحتياطي بالكامل */
+        /* إصلاح النوافذ المنبثقة والسندات بالكامل باللون الكحلي الداكن والأبيض */
+        [data-testid="stDialog"] div[role="dialog"] {{
+            background-color: #1E293B !important;
+            border: 3px solid #D97706 !important;
+            border-radius: 16px !important;
+        }}
+
+        [data-testid="stDialog"] div[role="dialog"] label, 
+        [data-testid="stDialog"] div[role="dialog"] p, 
+        [data-testid="stDialog"] div[role="dialog"] span,
+        [data-testid="stDialog"] div[role="dialog"] h1,
+        [data-testid="stDialog"] div[role="dialog"] h2,
+        [data-testid="stDialog"] div[role="dialog"] h3,
+        [data-testid="stDialog"] div[role="dialog"] div {{
+            color: #FFFFFF !important;
+            font-weight: 700 !important;
+        }}
+
         [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
             background-color: #1E293B !important;
             border: 2px dashed #D97706 !important;
@@ -119,31 +135,14 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        /* وضوح العناوين والتسميات والأزرار داخل النوافذ المنبثقة والسندات */
-        [data-testid="stDialog"] div[role="dialog"] {{
-            background-color: #FFFFFF !important;
-            border: 3px solid #D97706 !important;
-            border-radius: 12px !important;
-        }}
-
-        [data-testid="stDialog"] div[role="dialog"] label, 
-        [data-testid="stDialog"] div[role="dialog"] p, 
-        [data-testid="stDialog"] div[role="dialog"] span,
-        [data-testid="stDialog"] div[role="dialog"] h1,
-        [data-testid="stDialog"] div[role="dialog"] h2,
-        [data-testid="stDialog"] div[role="dialog"] h3,
-        [data-testid="stDialog"] div[role="dialog"] div {{
-            color: #0F172A !important;
-            font-weight: 700 !important;
-        }}
-
-        .stButton>button, .stDownloadButton>button, form [data-testid="stFormSubmitButton"] button {{
+        /* الأزرار العريضة الملونة وأزرار حفظ النوافذ */
+        .stButton>button, .stDownloadButton>button, [data-testid="stFormSubmitButton"] button {{
             background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
             color: #FFFFFF !important;
             border: none !important;
             border-radius: 8px !important;
-            font-weight: 700 !important;
-            font-size: 15px !important;
+            font-weight: 800 !important;
+            font-size: 16px !important;
             box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4) !important;
         }}
 
@@ -171,22 +170,30 @@ st.markdown(f"""
             color: {text_color} !important;
         }}
 
+        /* كارت الترحيب الضخم والفاخر للشاشة الافتتاحية */
         .welcome-card-lux {{
             background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
             border-radius: 20px;
-            padding: 40px 30px;
+            padding: 50px 30px;
             text-align: center;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
             margin-top: 20px;
-            color: white !important;
+            border: 2px solid #D97706;
         }}
 
-        .welcome-card-lux * {{
-            color: white !important;
+        .title-company-huge {{
+            font-size: 42px !important;
+            font-weight: 900 !important;
+            background: linear-gradient(135deg, #FFF 0%, #F59E0B 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
         }}
 
         .logo-lux {{
-            font-size: 80px;
+            font-size: 95px;
             font-weight: 900;
             color: #EF4444 !important;
             font-family: Arial, sans-serif;
@@ -455,7 +462,7 @@ def edit_cash_modal(month_name, trans_idx, target_box="main"):
 
 @st.dialog("📊 ملخص توزيع الموظفين حسب الفروع")
 def modal_emp_summary():
-    st.write("### 🏢 توزيع العمالة ومتوسط الرواتب:")
+    st.write("### 🏢 توزيع العمالة والمتوسطات:")
     df = st.session_state.payroll_df
     summary_data = []
     for b_name in ['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة']:
@@ -598,7 +605,7 @@ if not st.session_state.get('app_started', False):
     st.markdown("""
         <div class="welcome-card-lux">
             <div class="logo-lux">5M</div>
-            <h1 style="color: #FFFFFF !important; margin-top: 10px; font-weight: 800;">شركة ميم الخماسية للتصنيع</h1>
+            <div class="title-company-huge">شركة ميم الخماسية للتصنيع</div>
             <p style="color: #94A3B8 !important; font-size: 18px; margin-bottom: 20px;">النظام المحاسبي والإداري الموحد لإدارة الرواتب، المستحقات، وسندات الصندوق والعُهد</p>
             <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.2); margin: 25px 0;">
         </div>
@@ -649,7 +656,7 @@ else:
         month_selected = st.selectbox('📅 شهر العمليات الحالي:', st.session_state.months_list)
         st.divider()
 
-        st.session_state['theme_mode'] = st.selectbox("🎨 نمط ألوان الواجهة:", ["🌙 ليلي رمادي داكن (Slate Dark)", "☀️ نهاري رمادي مريح (Slate Day)"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
+        st.session_state['theme_mode'] = st.selectbox("🎨 نمط ألوان الواجهة:", ["🌙 ليلي ذهبي نحاسي (Copper Dark)", "☀️ نهاري رمادي مريح (Slate Day)"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
 
         st.divider()
 
