@@ -96,15 +96,15 @@ st.markdown(f"""
             font-weight: 800 !important;
         }}
 
-        /* تكبير البارز لـ عناوين الأقسام الجانبية */
+        /* تصميم عناوين الأقسام الجانبية البارزة والنظيفة */
         .sidebar-section-title {{
             color: #F59E0B !important;
-            font-size: 15px !important;
+            font-size: 14px !important;
             font-weight: 900 !important;
             border-bottom: 2px solid #D97706;
-            padding-bottom: 4px;
-            margin-top: 14px;
-            margin-bottom: 8px;
+            padding-bottom: 3px;
+            margin-top: 12px;
+            margin-bottom: 6px;
             text-align: right !important;
         }}
 
@@ -116,7 +116,7 @@ st.markdown(f"""
             border-radius: 6px !important;
             font-weight: 800 !important;
             font-size: 13px !important;
-            padding: 6px 8px !important;
+            padding: 5px 8px !important;
             margin-bottom: 3px !important;
             text-align: right !important;
             box-shadow: none !important;
@@ -224,14 +224,13 @@ st.markdown(f"""
             font-size: 17px !important;
         }}
 
-        /* شاشة الدخول الفاخرة بالذهب الملكي */
         .welcome-card-lux {{
             background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
             border-radius: 20px;
-            padding: 30px 20px;
+            padding: 20px 15px;
             text-align: center !important;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-            margin-top: 10px;
+            margin-top: 5px;
             border: 2px solid #D97706;
         }}
 
@@ -943,7 +942,7 @@ if not st.session_state.get('app_started', False):
                 st.error("كلمة المرور غير صحيحة! يرجى إدخال كلمة المرور للوصول للنظام.")
 
 else:
-    # 3. القائمة الجانبية المباشرة مع العناوين الكبيرة الموضحة
+    # 3. القائمة الجانبية الهيكلية الشاملة
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 2px;">
@@ -975,7 +974,7 @@ else:
             st.session_state['current_view'] = 'الرئيسية'
             st.rerun()
 
-        # 2. قسم الخزائن والصناديق بعناوين تكبير واضحة
+        # 2. قسم الخزائن والصناديق
         st.markdown('<div class="sidebar-section-title">🏦 الخزائن والصناديق</div>', unsafe_allow_html=True)
         if st.button("حركة الصندوق", use_container_width=True):
             st.session_state['current_view'] = 'حركة الصندوق'
@@ -987,29 +986,32 @@ else:
             st.session_state['current_view'] = 'جرد الخزينة'
             st.rerun()
 
-        # 3. قسم الموارد البشرية والرواتب (يضم كافة موديولات الموظفين والدفعات)
+        # 3. قسم إدارة الرواتب والدفعات (يضم كافة موديولات الدفعات والرواتب والسندات)
         if st.session_state.user_role == "admin":
-            st.markdown('<div class="sidebar-section-title">👥 الموارد البشرية والرواتب</div>', unsafe_allow_html=True)
+            st.markdown('<div class="sidebar-section-title">📊 إدارة الرواتب والدفعات</div>', unsafe_allow_html=True)
             if st.button("إدخال الدفعات", use_container_width=True):
                 st.session_state['current_view'] = 'إدخال الدفعات'
                 st.rerun()
             if st.button("كشف مسير الرواتب", use_container_width=True):
                 st.session_state['current_view'] = 'مسير الرواتب'
                 st.rerun()
+            if st.button("🖨️ طباعة سندات الرواتب A4", use_container_width=True):
+                st.session_state['current_view'] = 'طباعة السندات'
+                st.rerun()
+
+            # 4. قسم الموارد البشرية HR
+            st.markdown('<div class="sidebar-section-title">👤 الموارد البشرية (HR)</div>', unsafe_allow_html=True)
             if st.button("دليل الموظفين", use_container_width=True):
                 st.session_state['current_view'] = 'دليل الموظفين'
                 st.rerun()
-            if st.button("🖨️ طباعة السندات A4", use_container_width=True):
-                st.session_state['current_view'] = 'طباعة السندات'
-                st.rerun()
-            if st.button("حاسبة الخدمة", use_container_width=True):
+            if st.button("حاسبة نهاية الخدمة", use_container_width=True):
                 st.session_state['current_view'] = 'حاسبة الخدمة'
                 st.rerun()
             if st.button("التنبيهات الإدارية", use_container_width=True):
                 st.session_state['current_view'] = 'التنبيهات'
                 st.rerun()
 
-            # 4. قسم النظام والأرشيف
+            # 5. قسم النظام والأرشيف
             st.markdown('<div class="sidebar-section-title">⚙️ أدوات النظام والأرشيف</div>', unsafe_allow_html=True)
             if st.button("النسخ الاحتياطي", use_container_width=True):
                 st.session_state['current_view'] = 'النسخ الاحتياطي'
@@ -1748,7 +1750,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق مع خاصية طباعة كشف الحساب المقابل (T-Account)
+    # 8. موديول حركة الصندوق مع خاصية طباعة وتصدير الكشف
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -1790,10 +1792,10 @@ else:
 
         st.divider()
 
-        # قسم استخراج طباعة كشف حساب الصندوق المقابل T-Account
-        st.markdown("### 🖨️ طباعة كشف حساب الصندوق المقابل (T-Account):")
+        # قسم استخراج وطباعة وتصدير كشف حساب الصندوق المقابل Excel / PDF
+        st.markdown("### 🖨️ طباعة وتصدير كشف حساب الصندوق المقابل (T-Account):")
         
-        t_col_p1, t_col_p2, t_col_p3 = st.columns([1.2, 1.5, 1.3])
+        t_col_p1, t_col_p2, t_col_p3, t_col_p4 = st.columns([1.2, 1.3, 1.2, 1.2])
         with t_col_p1:
             period_type_sel = st.selectbox("نطاق كشف الحساب:", ["الشهر كاملاً", "فترة مخصصة (تحديد الأيام)"], key="sel_period_t_acc")
         
@@ -1824,6 +1826,21 @@ else:
                     print_t_account_dialog(filtered_print_trans, month_selected, period_label_txt, target_box_txt)
                 else:
                     st.warning("لا توجد حركات تسوية بالصندوق مسجلة بالفترة المحددة.")
+
+        with t_col_p4:
+            st.write("")
+            st.write("")
+            if filtered_print_trans:
+                df_export_cash = pd.DataFrame(filtered_print_trans)
+                csv_cash_bytes = df_export_cash.to_csv(index=False).encode('utf-8-sig')
+                st.download_button(
+                    label="📥 تصدير سجل الصندوق إلى Excel / CSV",
+                    data=csv_cash_bytes,
+                    file_name=f"سجل_حركة_الصندوق_{month_selected}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key="btn_export_cash_csv"
+                )
 
         st.divider()
 
@@ -2035,6 +2052,18 @@ else:
         filter_sheet = st.selectbox('اختر الفرع للكشف:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
         df_sheet = st.session_state.payroll_df if 'جميع الفروع' in filter_sheet else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == filter_sheet]
         
+        # تصدير جدول مسير الرواتب الموحد بملف Excel مباشر
+        csv_payroll_bytes = df_sheet.to_csv(index=False).encode('utf-8-sig')
+        st.download_button(
+            label=f"📊 تصدير كشف المسير إلى Excel / CSV ({filter_sheet})",
+            data=csv_payroll_bytes,
+            file_name=f"كشف_مسير_رواتب_{filter_sheet}_{month_selected}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            key="btn_export_payroll_excel"
+        )
+        st.write("")
+
         sheet_html = f"""
         <!DOCTYPE html>
         <html dir="rtl" lang="ar">
