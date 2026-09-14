@@ -358,12 +358,7 @@ if 'user_role' not in st.session_state:
 if 'current_view' not in st.session_state:
     st.session_state['current_view'] = 'الرئيسية'
 
-MONTHLY_PAYROLL_FILE = 'monthly_payroll_store.json'
-CASH_FILE = 'cashbox_data.json'
-AUDIT_FILE = 'audit_history.json'
-DRIVERS_FILE = 'driver_custody.json'
-LAST_MONTH_FILE = 'last_selected_month.json'
-
+# قاعدة البيانات المستحدثة المرفقة الأخيرة
 initial_payroll_data = [
     {'م': 1, 'الاسم': 'مد ساجد ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01', 'الخصومات': 0.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 5000.0, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': ''},
     {'م': 2, 'الاسم': 'فيض الإسلام', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-09-20', 'تاريخ انتهاء العقد': '2026-12-31', 'الخصومات': 0.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 2500.0, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': ''},
@@ -421,7 +416,7 @@ initial_payroll_data = [
     {'م': 54, 'الاسم': 'سمير المغازي ', 'الوظيفة': 'كميائي ', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-12-31', 'تاريخ انتهاء العقد': '2027-12-31', 'الخصومات': 0.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 5000.0, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': ''}
 ]
 
-# دالة القراءة من Supabase مع المحافظة على التخزين الاحتياطي
+# دالة القراءة من Supabase مع التخزين الاحتياطي السحابي
 def fetch_cloud_store(key_name, default_data):
     try:
         response = supabase.table('app_stores').select('data_val').eq('store_key', key_name).execute()
@@ -452,7 +447,7 @@ def save_monthly_payroll_store(store_data):
 
 def get_payroll_for_month(month_name):
     store = load_monthly_payroll_store()
-    if month_name in store:
+    if month_name in store and len(store[month_name]) > 0:
         return pd.DataFrame(store[month_name])
     else:
         df_base = pd.DataFrame(initial_payroll_data)
@@ -811,7 +806,7 @@ def edit_employee_dialog(emp_idx, month_selected):
             st.success("تم الحذف!")
             st.rerun()
 
-# 2. الشاشة الافتتاحية
+# 2. الشاشة الافتتاحية وكلمة المرور
 if not st.session_state.get('app_started', False):
     st.markdown("""
         <div class="welcome-card-lux">
@@ -831,7 +826,7 @@ if not st.session_state.get('app_started', False):
         
         if st.button('الدخول للنظام', use_container_width=True):
             if username_selected == "wahby":
-                if pwd_input == ADMIN_PASSWORD or pwd_input == "":
+                if pwd_input == ADMIN_PASSWORD:
                     st.session_state.app_started = True
                     st.session_state.user_role = "admin"
                     st.success("أهلاً بك (wahby)!")
@@ -839,7 +834,7 @@ if not st.session_state.get('app_started', False):
                 else:
                     st.error("كلمة المرور غير صحيحة!")
             elif username_selected == "omar":
-                if pwd_input == USER_PASSWORD or pwd_input == "":
+                if pwd_input == USER_PASSWORD:
                     st.session_state.app_started = True
                     st.session_state.user_role = "accountant"
                     st.success("أهلاً بك (omar)!")
@@ -1485,12 +1480,12 @@ else:
                 except Exception:
                     st.error("خطأ في قراءة ملف النسخة المرفوع.")
 
-    # 7. موديول إدخال الدفعات
+    # 7. موديول إدخال الدفعات المحدث والمكتمل لخصم أي شهر سابق
     elif selected_option == 'إدخال الدفعات' and st.session_state.user_role == "admin":
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات - ({month_selected})')
         
         curr_m_idx = st.session_state.months_list.index(month_selected)
-        prev_month_label = st.session_state.months_list[curr_m_idx - 1] if curr_m_idx > 0 else None
+        prev_month_label = st.session_state.months_list[curr_m_idx - 1] if curr_m_idx > 0 else 'أغسطس 2026'
 
         t1, t2, t3, t4 = st.tabs(['مصنع الخرج', 'مستودع الخرج', 'مستودع الرياض', 'رواتب متنوعة'])
         branches = [('مصنع ميم الخماسية الخرج', t1), ('مستودع ميم الخماسية الخرج', t2), ('مستودع ميم الخماسية الرياض', t3), ('رواتب متنوعة', t4)]
@@ -1546,7 +1541,7 @@ else:
                             key=f"pay_choice_select_{b_name}_{month_selected}"
                         )
 
-                        if prev_month_label and prev_month_label in src_choice:
+                        if "السابق" in src_choice:
                             target_df_calc = get_payroll_for_month(prev_month_label)
                             label_month_used = prev_month_label
                         else:
@@ -1649,7 +1644,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق المحدث بالألوان المباشرة والتفريغ التلقائي
+    # 8. موديول حركة الصندوق المحدث بالألوان المباشرة الزاهية
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -1778,7 +1773,7 @@ else:
                         st.rerun()
 
         with col_c_in2:
-            st.markdown("### 📊 دفتر يومية الصندوق (الأرقام الملونة المباشرة):")
+            st.markdown("### 📊 دفتر يومية الصندوق:")
             if curr_trans:
                 cf1, cf2 = st.columns([2, 1])
                 with cf1:
@@ -1810,10 +1805,11 @@ else:
                     is_rec = "قبض" in t_item['type']
                     t_color = "#10B981" if is_rec else "#EF4444"
                     t_sign = "+" if is_rec else "-"
-                    bg_badge = "rgba(16, 185, 129, 0.1)" if is_rec else "rgba(239, 68, 68, 0.1)"
-                    
-                    tc2.write(f"**{t_item['party']}**  \n<span style='background:{bg_badge}; color:{t_color}; padding:2px 8px; border-radius:4px; font-weight:bold; font-size:11px;'>{t_item['type']}</span>", unsafe_allow_html=True)
-                    tc3.write(f"<span style='color:{t_color}; font-weight:900; font-size:16px;'>{t_sign} {t_item['amount']:,.2f} ر.س</span>", unsafe_allow_html=True)
+                    badge_style = f"background-color: {t_color} !important; color: #FFFFFF !important; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px;"
+                    amt_style = f"color: {t_color} !important; font-weight: 900 !important; font-size: 16px !important;"
+
+                    tc2.write(f"**{t_item['party']}**  \n<span style='{badge_style}'>{t_item['type']}</span>", unsafe_allow_html=True)
+                    tc3.write(f"<span style='{amt_style}'>{t_sign} {t_item['amount']:,.2f} ر.س</span>", unsafe_allow_html=True)
                     
                     if tc4.button("طباعة", key=f"btn_p_cash_{real_idx}"):
                         print_cash_voucher_dialog(t_item, month_selected)
