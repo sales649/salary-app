@@ -24,8 +24,10 @@ if '🌙' in st.session_state['theme_mode']:
     input_text = "#0F172A"
     modal_bg = "#1E293B"
     modal_text = "#FFFFFF"
+    btn_sidebar_bg = "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)"
+    btn_sidebar_text = "#F59E0B"
 else:
-    bg_app = "#F1F5F9"
+    bg_app = "#F8FAFC"
     bg_card = "#FFFFFF"
     bg_sidebar = "#FFFFFF"
     text_color = "#0F172A"
@@ -34,6 +36,8 @@ else:
     input_text = "#0F172A"
     modal_bg = "#FFFFFF"
     modal_text = "#0F172A"
+    btn_sidebar_bg = "linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)"
+    btn_sidebar_text = "#0F172A"
 
 st.markdown(f"""
     <style>
@@ -57,34 +61,37 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* القائمة الجانبية النظيفة والمبسطة */
+        /* القائمة الجانبية المرفوعة والمختصرة بوضوح ممتاز في الوضعين */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
         }}
 
         [data-testid="stSidebarContent"] {{
-            padding: 12px !important;
+            padding-top: 5px !important;
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+            padding-bottom: 10px !important;
             box-sizing: border-box !important;
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
             color: {text_color} !important;
             font-size: 13px !important;
-            font-weight: 700 !important;
+            font-weight: 800 !important;
         }}
 
-        /* أزرار القائمة الجانبية المبسطة */
+        /* أزرار القائمة الجانبية المحدثة للوضع النهاري والليلي */
         [data-testid="stSidebar"] .stButton>button {{
             width: 100% !important;
-            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
-            color: #F59E0B !important;
+            background: {btn_sidebar_bg} !important;
+            color: {btn_sidebar_text} !important;
             border: 1px solid #D97706 !important;
             border-radius: 8px !important;
-            font-weight: 700 !important;
+            font-weight: 800 !important;
             font-size: 13px !important;
-            padding: 8px 10px !important;
-            margin-bottom: 4px !important;
+            padding: 5px 8px !important;
+            margin-bottom: 2px !important;
             text-align: right !important;
             box-shadow: none !important;
         }}
@@ -696,9 +703,9 @@ else:
     # 3. القائمة الجانبية المباشرة والنظيفة بالمسميات المحدثة
     with st.sidebar:
         st.markdown("""
-            <div style="text-align: center; padding-bottom: 5px;">
-                <div style="font-size: 45px; font-weight: 900; color: #EF4444; line-height: 1; font-family: Arial;">5M</div>
-                <h3 style="color: #1E3A8A; margin-top: 2px; font-size: 16px; font-weight: bold;">شركة ميم الخماسية للتصنيع</h3>
+            <div style="text-align: center; padding-bottom: 2px;">
+                <div style="font-size: 40px; font-weight: 900; color: #EF4444; line-height: 1; font-family: Arial; text-align: center;">5M</div>
+                <h3 style="color: #1E3A8A; margin-top: 2px; font-size: 15px; font-weight: bold; text-align: center;">شركة ميم الخماسية للتصنيع</h3>
             </div>
         """, unsafe_allow_html=True)
 
@@ -722,8 +729,8 @@ else:
             st.session_state['current_view'] = 'حركة الصندوق'
             st.rerun()
 
-        if st.button("🚚 عُهد وتصفية السائقين", use_container_width=True):
-            st.session_state['current_view'] = 'عُهد وتصفية السائقين'
+        if st.button("🚚 عُهدة السواقين", use_container_width=True):
+            st.session_state['current_view'] = 'عُهدة السواقين'
             st.rerun()
 
         if st.button("🔍 جرد الخزينة", use_container_width=True):
@@ -731,15 +738,15 @@ else:
             st.rerun()
 
         if st.session_state.user_role == "admin":
-            if st.button("📊 إدخال الدفعات السريع", use_container_width=True):
-                st.session_state['current_view'] = 'إدخال الدفعات السريع'
+            if st.button("📊 إدخال الدفعات", use_container_width=True):
+                st.session_state['current_view'] = 'إدخال الدفعات'
                 st.rerun()
 
-            if st.button("📋 مسير الرواتب الشهري", use_container_width=True):
-                st.session_state['current_view'] = 'مسير الرواتب الشهري'
+            if st.button("📋 مسير الرواتب", use_container_width=True):
+                st.session_state['current_view'] = 'مسير الرواتب'
                 st.rerun()
 
-            if st.button("👤 دليل الموظفين والملفات", use_container_width=True):
+            if st.button("👤 دليل الموظفين", use_container_width=True):
                 st.session_state['current_view'] = 'دليل الموظفين'
                 st.rerun()
 
@@ -751,16 +758,16 @@ else:
                 st.session_state['current_view'] = 'النسخ الاحتياطي'
                 st.rerun()
 
-            if st.button("🇸🇦 حاسبة نهاية الخدمة", use_container_width=True):
-                st.session_state['current_view'] = 'حاسبة نهاية الخدمة'
+            if st.button("🇸🇦 حاسبة الخدمة", use_container_width=True):
+                st.session_state['current_view'] = 'حاسبة الخدمة'
                 st.rerun()
 
-            if st.button("🔔 تنبيهات الإقامات والعقود", use_container_width=True):
-                st.session_state['current_view'] = 'تنبيهات الإقامات والعقود'
+            if st.button("🔔 التنبيهات", use_container_width=True):
+                st.session_state['current_view'] = 'التنبيهات'
                 st.rerun()
 
-            if st.button("🏁 الإغلاق السنوي وسنة جديدة", use_container_width=True):
-                st.session_state['current_view'] = 'الإغلاق السنوي وسنة جديدة'
+            if st.button("🏁 الإغلاق السنوي", use_container_width=True):
+                st.session_state['current_view'] = 'الإغلاق السنوي'
                 st.rerun()
 
         st.divider()
@@ -772,9 +779,20 @@ else:
 
         selected_option = st.session_state.get('current_view', 'الرئيسية')
 
+    # الترحيل وتصفية الدفعات والخصومات تلقائياً بالشهر الجديد مع الثبات بجدول الرواتب الأساسية
     if 'payroll_df' not in st.session_state or st.session_state.get('current_month') != month_selected:
         st.session_state.current_month = month_selected
-        st.session_state.payroll_df = load_data()
+        df_loaded = load_data()
+        
+        # تصفية الدفعات والخصومات للشهر الجديد مع بقاء الرواتب الأساسية ثابتة ومحسوبة
+        df_loaded['الدفعة 1'] = 0.0
+        df_loaded['الدفعة 2'] = 0.0
+        df_loaded['الخصومات'] = 0.0
+        df_loaded['الدفعة المدفوعة'] = 0.0
+        df_loaded['المتبقي'] = df_loaded['الراتب الأساسي']
+        df_loaded['نوع الإجراء'] = 'لم يُصرف'
+        
+        st.session_state.payroll_df = df_loaded
 
     tot_emp = len(st.session_state.payroll_df)
     tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
@@ -896,7 +914,7 @@ else:
         output.seek(0)
         return output
 
-    # 4. الواجهة الرئيسية مع ضبط الصلاحيات لحجاب الخزينة الرئيسية عن omar
+    # 4. الواجهة الرئيسية مع حجب الخزينة الرئيسية نهائياً عن omar
     if selected_option == 'الرئيسية':
         all_cash_db = load_cash_data()
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
@@ -923,7 +941,6 @@ else:
 
         st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
         
-        # العرض الكامل لـ wahby المشتمل الخزينة الرئيسية
         if st.session_state.user_role == "admin":
             c_box1, c_box2, c_box3, c_box4 = st.columns(4)
             with c_box1:
@@ -982,7 +999,7 @@ else:
             with q_col5:
                 st.markdown('<div class="daftra-quick-card"><h3>🚚</h3><h4>السائقين</h4></div>', unsafe_allow_html=True)
                 if st.button("تصفية عُهدة", use_container_width=True, key="q_btn_driver_page"):
-                    st.session_state['current_view'] = 'عُهد وتصفية السائقين'
+                    st.session_state['current_view'] = 'عُهدة السواقين'
                     st.rerun()
 
             with q_col6:
@@ -997,7 +1014,7 @@ else:
                     st.session_state['current_view'] = 'النسخ الاحتياطي'
                     st.rerun()
 
-        # العرض المقتصر الخص بـ omar الخالي من الخزينة الرئيسية
+        # لوحة omar المقتصرة والخالية من تفاصيل الخزينة الرئيسية
         else:
             c_box1, c_box2 = st.columns(2)
             with c_box1:
@@ -1023,7 +1040,7 @@ else:
             with q_col3:
                 st.markdown('<div class="daftra-quick-card"><h3>🚚</h3><h4>تصفية السائقين</h4></div>', unsafe_allow_html=True)
                 if st.button("تصفية عُهدة سائق", use_container_width=True, key="q_btn_driver_page_acc"):
-                    st.session_state['current_view'] = 'عُهد وتصفية السائقين'
+                    st.session_state['current_view'] = 'عُهدة السواقين'
                     st.rerun()
 
             with q_col4:
@@ -1032,9 +1049,9 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 5. موديول عُهد وتصفية السائقين التراكمي المباشر
-    elif selected_option == 'عُهد وتصفية السائقين':
-        st.subheader(f'🚚 موديول إدارة عُهد وتصفية السائقين المباشر - ({month_selected})')
+    # 5. موديول عُهدة السواقين التراكمي المباشر
+    elif selected_option == 'عُهدة السواقين':
+        st.subheader(f'🚚 موديول إدارة عُهدة السواقين المباشر - ({month_selected})')
         st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والتسميع التراكمي المباشر بصندوق omar:')
 
         drivers_db = load_drivers_data()
@@ -1077,7 +1094,7 @@ else:
                     })
                     save_drivers_data(drivers_db)
 
-                    # تسميع فوري كـ "سند صرف" مبسط ببيان صريح بصندوق omar
+                    # تسميع فوري كـ "سند صرف" صريح ببصمة عُهدة سمان السواق بملف omar
                     all_cash = load_cash_data()
                     if month_selected not in all_cash:
                         all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
@@ -1119,7 +1136,7 @@ else:
                 diff_val = target_item['given_amt'] - spent_val
                 st.divider()
                 if diff_val > 0:
-                    st.success(f"🟢 **متبقي بجراب السائق لليوم القادم: {diff_val:,.2f} ر.س** (تترحل تلقائياً بذمته)")
+                    st.success(f"🟢 **متبقي بجراب السائق لليوم القادم: {diff_val:,.2f} ر.س** (تترحل تلقائياً بذمته دون إعادة إدخالها للصندوق)")
                 elif diff_val < 0:
                     st.error(f"🔴 **السائق صرف زيادة من جيبه يستحق ردها: ({abs(diff_val):,.2f} ر.س)**")
                 else:
@@ -1134,7 +1151,7 @@ else:
                     
                     save_drivers_data(drivers_db)
 
-                    # تسميع الفرق فقط في صندوق omar إذا قام السائق بصرف زيادة من جيبه
+                    # تسميع الفرق فقط بـ omar إذا كان السائق قد دفع أزيد من جيبه
                     if diff_val < 0:
                         all_cash = load_cash_data()
                         if month_selected not in all_cash:
@@ -1198,7 +1215,6 @@ else:
         all_cash_db = load_cash_data()
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
         
-        # حجب خيار الخزينة الرئيسية إذا كان المستخدم omar
         if st.session_state.user_role == "admin":
             target_audit_box = st.radio("اختر الخزينة المراد جردها ومطابقتها الآن:", ["🏢 الخزينة الرئيسية (wahby)", "👤 عُهدة المحاسب (omar)"], horizontal=True)
         else:
@@ -1330,7 +1346,7 @@ else:
                 except Exception:
                     st.error("خطأ في قراءة ملف النسخة المرفوع.")
 
-    elif selected_option == 'إدخال الدفعات السريع' and st.session_state.user_role == "admin":
+    elif selected_option == 'إدخال الدفعات' and st.session_state.user_role == "admin":
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات السريع - ({month_selected})')
         
         t1, t2, t3, t4 = st.tabs(['مصنع الخرج', 'مستودع الخرج', 'مستودع الرياض', 'رواتب متنوعة'])
@@ -1422,7 +1438,6 @@ else:
             
         current_m_cash = all_cash_db[month_selected]
         
-        # حجب التنقل واقتصار حركة الصندوق لـ omar على عُهدته فقط
         if st.session_state.user_role == "admin":
             box_selected = st.radio("اختر الصندوق:", ["🏢 الخزينة الرئيسية (wahby)", "👤 عُهدة المحاسب (omar)"], horizontal=True)
             active_box_key = 'transactions' if "wahby" in box_selected else 'acc_transactions'
@@ -1651,7 +1666,7 @@ else:
                     else:
                         st.info(f"لا يوجد موظفين حالياً في {b_name}.")
 
-    elif selected_option == 'مسير الرواتب الشهري' and st.session_state.user_role == "admin":
+    elif selected_option == 'مسير الرواتب' and st.session_state.user_role == "admin":
         st.subheader(f'📋 كشف مسير الرواتب الشهري الموحد - ({month_selected})')
         filter_sheet = st.selectbox('اختر الفرع للكشف:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
         df_sheet = st.session_state.payroll_df if 'جميع الفروع' in filter_sheet else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == filter_sheet]
@@ -1762,7 +1777,7 @@ else:
             mime="text/html"
         )
 
-    elif selected_option == 'حاسبة نهاية الخدمة' and st.session_state.user_role == "admin":
+    elif selected_option == 'حاسبة الخدمة' and st.session_state.user_role == "admin":
         st.subheader('🇸🇦 حاسبة مستحقات نهاية الخدمة وبدل الإجازات (نظام العمل السعودي)')
         saudi_reports = []
         for _, r in st.session_state.payroll_df.iterrows():
@@ -1781,7 +1796,7 @@ else:
         df_saudi = pd.DataFrame(saudi_reports)
         st.dataframe(df_saudi, use_container_width=True, hide_index=True)
 
-    elif selected_option == 'تنبيهات الإقامات والعقود' and st.session_state.user_role == "admin":
+    elif selected_option == 'التنبيهات' and st.session_state.user_role == "admin":
         st.subheader('🔔 مركز تنبيهات انتهاء الإقامات وعقود العمل')
         today = datetime.now().date()
         alerts = []
@@ -1801,7 +1816,7 @@ else:
         if alerts: st.dataframe(pd.DataFrame(alerts), use_container_width=True, hide_index=True)
         else: st.success('جميع الإقامات والعقود سارية ولا يوجد وثائق منتهية حالياً!')
 
-    elif selected_option == 'الإغلاق السنوي وسنة جديدة' and st.session_state.user_role == "admin":
+    elif selected_option == 'الإغلاق السنوي' and st.session_state.user_role == "admin":
         st.subheader('🏁 شاشة الإغلاق المالي السنوي وفتح سنة جديدة')
         st.markdown("### ملخص الرواتب والدفعات الكلية بالسجلات:")
         st.dataframe(st.session_state.payroll_df[['م', 'الاسم', 'الوظيفة', 'الفرع', 'الراتب الأساسي', 'الخصومات', 'الدفعة المدفوعة', 'المتبقي']], use_container_width=True, hide_index=True)
