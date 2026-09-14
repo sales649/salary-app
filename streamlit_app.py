@@ -25,31 +25,17 @@ supabase = init_supabase()
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = '🌙 وضع ليلي'
 
-# ضبط متغيرات الألوان الديناميكية الحقيقية بين الليلي والنهاري
-if '🌙' in st.session_state['theme_mode']:
-    bg_app = "#0F172A"
-    bg_card = "#1E293B"
-    bg_sidebar = "#1E293B"
-    text_color = "#FFFFFF"
-    border_color = "#D97706"
-    input_bg = "#334155"
-    input_text = "#FFFFFF"
-    modal_bg = "#1E293B"
-    modal_text = "#FFFFFF"
-    btn_sidebar_bg = "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)"
-    btn_sidebar_text = "#F59E0B"
-else:
-    bg_app = "#F8FAFC"
-    bg_card = "#FFFFFF"
-    bg_sidebar = "#FFFFFF"
-    text_color = "#0F172A"
-    border_color = "#D97706"
-    input_bg = "#F1F5F9"
-    input_text = "#0F172A"
-    modal_bg = "#FFFFFF"
-    modal_text = "#0F172A"
-    btn_sidebar_bg = "linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)"
-    btn_sidebar_text = "#D97706"
+bg_app = "#0F172A"
+bg_card = "#1E293B"
+bg_sidebar = "#1E293B"
+text_color = "#FFFFFF"
+border_color = "#D97706"
+input_bg = "#F1F5F9"
+input_text = "#0F172A"
+modal_bg = "#1E293B"
+modal_text = "#FFFFFF"
+btn_sidebar_bg = "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)"
+btn_sidebar_text = "#F59E0B"
 
 st.markdown(f"""
     <style>
@@ -101,16 +87,17 @@ st.markdown(f"""
             font-weight: 800 !important;
         }}
 
+        /* أزرار القائمة الجانبية النظيفة المباشرة */
         [data-testid="stSidebar"] .stButton>button {{
             width: 100% !important;
-            background: {btn_sidebar_bg} !important;
-            color: {btn_sidebar_text} !important;
-            border: 1px solid {border_color} !important;
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+            color: #F59E0B !important;
+            border: 1px solid #D97706 !important;
             border-radius: 6px !important;
             font-weight: 800 !important;
-            font-size: 12px !important;
-            padding: 4px 6px !important;
-            margin-bottom: 1px !important;
+            font-size: 13px !important;
+            padding: 5px 8px !important;
+            margin-bottom: 2px !important;
             text-align: right !important;
             box-shadow: none !important;
         }}
@@ -120,17 +107,28 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        /* ألوان القوائم المنسدلة */
+        /* عناوين المجموعات الجانبية */
+        .sidebar-section-title {{
+            color: #F59E0B !important;
+            font-size: 12px !important;
+            font-weight: 900 !important;
+            border-bottom: 1px solid #D97706;
+            padding-bottom: 2px;
+            margin-top: 8px;
+            margin-bottom: 4px;
+        }}
+
+        /* إصلاح ألوان القوائم المنسدلة بالكامل لمنع ظهور اللون الأبيض */
         ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"], [data-baseweb="popover"] > div, div[data-baseweb="menu"] {{
-            background-color: {bg_card} !important;
-            color: {text_color} !important;
+            background-color: #1E293B !important;
+            color: #FFFFFF !important;
             border: 1px solid #D97706 !important;
             border-radius: 8px !important;
         }}
 
         li[role="option"], li[role="option"] *, div[role="option"], div[role="option"] * {{
-            color: {text_color} !important;
-            background-color: {bg_card} !important;
+            color: #FFFFFF !important;
+            background-color: #1E293B !important;
             font-weight: 800 !important;
             font-size: 13px !important;
         }}
@@ -176,9 +174,9 @@ st.markdown(f"""
         }}
 
         div.stButton > button, div.stDownloadButton > button, [data-testid="stFormSubmitButton"] > button {{
-            background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%) !important;
-            color: {text_color} !important;
-            border: 1px solid {border_color} !important;
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+            color: #FFFFFF !important;
+            border: 1px solid #D97706 !important;
             border-radius: 8px !important;
             font-weight: 800 !important;
             font-size: 12px !important;
@@ -300,7 +298,6 @@ if 'user_role' not in st.session_state:
 if 'current_view' not in st.session_state:
     st.session_state['current_view'] = 'الرئيسية'
 
-# كشف شهر أغسطس الفعلي المعتمد بالكامل
 august_payroll_data = [
     {'م': 1, 'الاسم': 'مد ساجد ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01', 'الخصومات': 0.0, 'الدفعة 1': 3000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 5000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 2, 'الاسم': 'فيض الإسلام', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-09-20', 'تاريخ انتهاء العقد': '2026-12-31', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
@@ -925,7 +922,7 @@ if not st.session_state.get('app_started', False):
                 st.error("كلمة المرور غير صحيحة! يرجى إدخال كلمة المرور للوصول للنظام.")
 
 else:
-    # 3. القائمة الجانبية المنظمة بداخل مجموعات منسدلة
+    # 3. القائمة الجانبية المباشرة الأنيقة
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 2px;">
@@ -950,51 +947,57 @@ else:
 
         st.session_state['theme_mode'] = st.selectbox("نمط الألوان:", ["🌙 وضع ليلي", "☀️ وضع نهاري"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
 
-        # مجموعات القائمة الجانبية المنسدلة المجمعة أنيقاً
-        with st.expander("🏠 لوحة التحكم والصناديق", expanded=True):
-            if st.button("الرئيسية", use_container_width=True):
-                st.session_state['current_view'] = 'الرئيسية'
-                st.rerun()
-            if st.button("حركة الصندوق", use_container_width=True):
-                st.session_state['current_view'] = 'حركة الصندوق'
-                st.rerun()
-            if st.button("عُهدة السواقين", use_container_width=True):
-                st.session_state['current_view'] = 'عُهدة السواقين'
-                st.rerun()
-            if st.button("جرد الخزينة", use_container_width=True):
-                st.session_state['current_view'] = 'جرد الخزينة'
-                st.rerun()
+        st.divider()
 
+        # 1. زر شاشة الرئيسية الخارجي المباشر
+        if st.button("🏠 الرئيسية", use_container_width=True):
+            st.session_state['current_view'] = 'الرئيسية'
+            st.rerun()
+
+        # 2. قسم الصناديق والخزائن
+        st.markdown('<div class="sidebar-section-title">🏦 الخزائن والصناديق</div>', unsafe_allow_html=True)
+        if st.button("حركة الصندوق", use_container_width=True):
+            st.session_state['current_view'] = 'حركة الصندوق'
+            st.rerun()
+        if st.button("عُهدة السواقين", use_container_width=True):
+            st.session_state['current_view'] = 'عُهدة السواقين'
+            st.rerun()
+        if st.button("جرد الخزينة", use_container_width=True):
+            st.session_state['current_view'] = 'جرد الخزينة'
+            st.rerun()
+
+        # 3. قسم الموارد البشرية والرواتب
         if st.session_state.user_role == "admin":
-            with st.expander("📊 إدارة الرواتب والدفعات", expanded=False):
-                if st.button("إدخال الدفعات", use_container_width=True):
-                    st.session_state['current_view'] = 'إدخال الدفعات'
-                    st.rerun()
-                if st.button("مسير الرواتب", use_container_width=True):
-                    st.session_state['current_view'] = 'مسير الرواتب'
-                    st.rerun()
+            st.markdown('<div class="sidebar-section-title">👥 الموارد البشرية والرواتب</div>', unsafe_allow_html=True)
+            if st.button("إدخال الدفعات", use_container_width=True):
+                st.session_state['current_view'] = 'إدخال الدفعات'
+                st.rerun()
+            if st.button("كشف مسير الرواتب", use_container_width=True):
+                st.session_state['current_view'] = 'مسير الرواتب'
+                st.rerun()
+            if st.button("دليل الموظفين", use_container_width=True):
+                st.session_state['current_view'] = 'دليل الموظفين'
+                st.rerun()
+            if st.button("حاسبة الخدمة", use_container_width=True):
+                st.session_state['current_view'] = 'حاسبة الخدمة'
+                st.rerun()
+            if st.button("التنبيهات الإدارية", use_container_width=True):
+                st.session_state['current_view'] = 'التنبيهات'
+                st.rerun()
 
-            with st.expander("👤 الموارد البشرية والعمالة", expanded=False):
-                if st.button("دليل الموظفين", use_container_width=True):
-                    st.session_state['current_view'] = 'دليل الموظفين'
-                    st.rerun()
-                if st.button("حاسبة الخدمة", use_container_width=True):
-                    st.session_state['current_view'] = 'حاسبة الخدمة'
-                    st.rerun()
-                if st.button("التنبيهات", use_container_width=True):
-                    st.session_state['current_view'] = 'التنبيهات'
-                    st.rerun()
+            # 4. قسم أدوات النظام
+            st.markdown('<div class="sidebar-section-title">⚙️ أدوات النظام والأرشيف</div>', unsafe_allow_html=True)
+            if st.button("طباعة السندات A4", use_container_width=True):
+                st.session_state['current_view'] = 'طباعة السندات'
+                st.rerun()
+            if st.button("النسخ الاحتياطي", use_container_width=True):
+                st.session_state['current_view'] = 'النسخ الاحتياطي'
+                st.rerun()
+            if st.button("الإغلاق السنوي", use_container_width=True):
+                st.session_state['current_view'] = 'الإغلاق السنوي'
+                st.rerun()
 
-            with st.expander("⚙️ النظام والأرشيف", expanded=False):
-                if st.button("طباعة السندات", use_container_width=True):
-                    st.session_state['current_view'] = 'طباعة السندات'
-                    st.rerun()
-                if st.button("النسخ الاحتياطي", use_container_width=True):
-                    st.session_state['current_view'] = 'النسخ الاحتياطي'
-                    st.rerun()
-                if st.button("الإغلاق السنوي", use_container_width=True):
-                    st.session_state['current_view'] = 'الإغلاق السنوي'
-                    st.rerun()
+        st.divider()
 
         if st.button("🚪 تسجيل الخروج", use_container_width=True):
             st.session_state.app_started = False
@@ -1186,35 +1189,49 @@ else:
             q_col1, q_col2, q_col3, q_col4, q_col5, q_col6, q_col7 = st.columns(7)
             
             with q_col1:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("👤 إضافة موظف", key="q_btn_add_emp", use_container_width=True):
                     add_employee_dialog('مصنع ميم الخماسية الخرج')
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col2:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🔄 تحويل عُهدة", key="q_btn_trf_cash", use_container_width=True):
                     quick_cash_voucher_dialog("تحويل عُهدة إلى (omar)", month_selected, "main")
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col3:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🟢 سند قبض", key="q_btn_rec", use_container_width=True):
                     quick_cash_voucher_dialog("قبض", month_selected, "main")
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col4:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🔴 سند صرف", key="q_btn_pay", use_container_width=True):
                     quick_cash_voucher_dialog("صرف", month_selected, "main")
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col5:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🚚 السائقين", key="q_btn_driver_page", use_container_width=True):
                     st.session_state['current_view'] = 'عُهدة السواقين'
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col6:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🔍 الجرد", key="q_btn_audit_page", use_container_width=True):
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col7:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("💾 الأرشيف", key="q_btn_backup_page", use_container_width=True):
                     st.session_state['current_view'] = 'النسخ الاحتياطي'
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
         else:
             c_box1, c_box2 = st.columns(2)
@@ -1228,22 +1245,30 @@ else:
             st.markdown("### ⚡ إجراءات خاطفة وسريعة (لوحة omar)")
             q_col1, q_col2, q_col3, q_col4 = st.columns(4)
             with q_col1:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🟢 سند قبض", use_container_width=True, key="q_btn_rec_acc"):
                     quick_cash_voucher_dialog("قبض", month_selected, "accountant")
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col2:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🔴 سند صرف", use_container_width=True, key="q_btn_pay_acc"):
                     quick_cash_voucher_dialog("صرف", month_selected, "accountant")
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col3:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🚚 تصفية السائقين", use_container_width=True, key="q_btn_driver_page_acc"):
                     st.session_state['current_view'] = 'عُهدة السواقين'
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col4:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🔍 جرد الخزينة", use_container_width=True, key="q_btn_audit_acc"):
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
     # 5. موديول عُهدة السواقين
     elif selected_option == 'عُهدة السواقين':
