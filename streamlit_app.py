@@ -72,12 +72,8 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        [data-testid="stSidebar"] button[kind="header"] {{
-            display: none !important;
-        }}
-        [data-testid="stSidebarCollapseButton"] {{
-            display: none !important;
-        }}
+        [data-testid="stSidebar"] button[kind="header"] {{ display: none !important; }}
+        [data-testid="stSidebarCollapseButton"] {{ display: none !important; }}
 
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
@@ -85,10 +81,7 @@ st.markdown(f"""
         }}
 
         [data-testid="stSidebarContent"] {{
-            padding-top: 10px !important;
-            padding-left: 12px !important;
-            padding-right: 12px !important;
-            padding-bottom: 10px !important;
+            padding: 10px 12px !important;
             box-sizing: border-box !important;
         }}
 
@@ -109,28 +102,10 @@ st.markdown(f"""
             padding: 6px 8px !important;
             margin-bottom: 3px !important;
             text-align: right !important;
-            box-shadow: none !important;
         }}
 
         [data-testid="stSidebar"] .stButton>button:hover {{
             background: #D97706 !important;
-            color: #FFFFFF !important;
-        }}
-
-        ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"] div {{
-            background-color: {bg_card} !important;
-            color: {text_color} !important;
-            border: 1px solid #D97706 !important;
-        }}
-
-        li[role="option"], li[role="option"] * {{
-            color: {text_color} !important;
-            background-color: {bg_card} !important;
-            font-weight: 700 !important;
-        }}
-
-        li[role="option"]:hover, li[role="option"]:hover * {{
-            background-color: #D97706 !important;
             color: #FFFFFF !important;
         }}
 
@@ -144,105 +119,27 @@ st.markdown(f"""
             padding: 4px 8px !important;
         }}
 
-        [data-testid="stMetricValue"] div {{
-            font-size: 16px !important;
-            font-weight: 800 !important;
-            white-space: nowrap !important;
-            overflow: visible !important;
-            text-overflow: clip !important;
+        .cash-card-item {{
+            background-color: {bg_card};
+            border: 1px solid {border_color};
+            border-radius: 10px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }}
 
-        [data-testid="stMetricLabel"] label, [data-testid="stMetricLabel"] div {{
-            font-size: 12px !important;
-            font-weight: 700 !important;
-            white-space: nowrap !important;
+        .amt-pos {{
+            color: #10B981 !important;
+            font-weight: 900 !important;
+            font-size: 18px !important;
         }}
 
-        .stMetric, .daftra-quick-card {{
-            background-color: {bg_card} !important;
-            border-radius: 10px !important;
-            padding: 8px 10px !important;
-            border: 1px solid {border_color} !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-            margin-bottom: 8px !important;
-            overflow: hidden !important;
-        }}
-
-        .stMetric * {{
-            color: {text_color} !important;
-            text-align: right !important;
-        }}
-
-        [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
-            background-color: #1E293B !important;
-            border: 1px dashed #D97706 !important;
-            border-radius: 8px !important;
-            padding: 6px !important;
-        }}
-
-        [data-testid="stFileUploader"] button {{
-            background-color: #D97706 !important;
-            color: #FFFFFF !important;
-            border: none !important;
-            border-radius: 6px !important;
-            font-weight: bold !important;
-            padding: 4px 10px !important;
-            font-size: 12px !important;
-        }}
-
-        [data-testid="stFileUploader"] span, [data-testid="stFileUploader"] label, [data-testid="stFileUploader"] small {{
-            color: #FFFFFF !important;
-            font-weight: bold !important;
-            font-size: 12px !important;
-        }}
-
-        [data-testid="stDialog"] div[role="dialog"] {{
-            background-color: {modal_bg} !important;
-            border: 3px solid #D97706 !important;
-            border-radius: 16px !important;
-            width: 95vw !important;
-            max-width: 600px !important;
-        }}
-
-        [data-testid="stDialog"] div[role="dialog"] label, 
-        [data-testid="stDialog"] div[role="dialog"] p, 
-        [data-testid="stDialog"] div[role="dialog"] span,
-        [data-testid="stDialog"] div[role="dialog"] h1,
-        [data-testid="stDialog"] div[role="dialog"] h2,
-        [data-testid="stDialog"] div[role="dialog"] h3,
-        [data-testid="stDialog"] div[role="dialog"] div {{
-            color: {modal_text} !important;
-            font-weight: 700 !important;
-            text-align: right !important;
-        }}
-
-        .stButton>button, .stDownloadButton>button, [data-testid="stFormSubmitButton"] button {{
-            background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
-            color: #FFFFFF !important;
-            border: none !important;
-            border-radius: 8px !important;
-            font-weight: 800 !important;
-            font-size: 13px !important;
-            box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4) !important;
-            white-space: normal !important;
-            word-wrap: break-word !important;
-            padding: 6px 12px !important;
-        }}
-
-        .stDataFrame, [data-testid="stDataEditor"] {{
-            direction: rtl !important;
-            text-align: right !important;
-            background-color: {bg_card} !important;
-            width: 100% !important;
-            overflow-x: auto !important;
-        }}
-
-        .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {{
-            text-align: right !important;
-            font-size: 12px !important;
-            padding: 6px 8px !important;
-            color: {text_color} !important;
-            white-space: nowrap !important;
+        .amt-neg {{
+            color: #EF4444 !important;
+            font-weight: 900 !important;
+            font-size: 18px !important;
         }}
 
         .welcome-card-lux {{
@@ -255,17 +152,6 @@ st.markdown(f"""
             border: 2px solid #D97706;
         }}
 
-        .title-company-huge {{
-            font-size: 28px !important;
-            font-weight: 900 !important;
-            background: linear-gradient(135deg, #FFF 0%, #F59E0B 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-top: 10px;
-            margin-bottom: 10px;
-            text-align: center !important;
-        }}
-
         .company-header-inner {{
             background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%);
             border: 2px solid #D97706;
@@ -274,7 +160,6 @@ st.markdown(f"""
             text-align: center !important;
             margin-top: 5px;
             margin-bottom: 15px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
         }}
 
         .company-header-inner-title {{
@@ -284,71 +169,10 @@ st.markdown(f"""
             margin: 0 !important;
             text-align: center !important;
         }}
-
-        .company-header-inner-sub {{
-            font-size: 13px !important;
-            color: #94A3B8 !important;
-            margin: 2px 0 0 0 !important;
-        }}
-
-        .logo-lux {{
-            font-size: 65px;
-            font-weight: 900;
-            color: #EF4444 !important;
-            font-family: Arial, sans-serif;
-            line-height: 1;
-            margin-bottom: 5px;
-            text-align: center !important;
-        }}
-
-        .date-badge-lux {{
-            display: inline-block;
-            background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
-            color: #FFFFFF !important;
-            padding: 5px 20px;
-            border-radius: 30px;
-            font-size: 14px;
-            font-weight: 800;
-            margin-bottom: 10px;
-            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            text-align: center !important;
-        }}
-
-        @media screen and (max-width: 768px) {{
-            .main .block-container {{
-                padding-left: 8px !important;
-                padding-right: 8px !important;
-                padding-top: 40px !important;
-            }}
-
-            [data-testid="stHorizontalBlock"] {{
-                flex-direction: column !important;
-            }}
-
-            [data-testid="column"], [data-testid="stColumn"] {{
-                width: 100% !important;
-                flex: 1 1 100% !important;
-                min-width: 100% !important;
-                margin-bottom: 8px !important;
-            }}
-
-            .title-company-huge {{
-                font-size: 20px !important;
-            }}
-
-            .company-header-inner-title {{
-                font-size: 17px !important;
-            }}
-
-            .logo-lux {{
-                font-size: 45px !important;
-            }}
-        }}
     </style>
 """, unsafe_allow_html=True)
 
-# إدارة الدخول
+# إدارة الدخول والجلسة
 if 'app_started' not in st.session_state:
     st.session_state['app_started'] = False
 
@@ -358,7 +182,7 @@ if 'user_role' not in st.session_state:
 if 'current_view' not in st.session_state:
     st.session_state['current_view'] = 'الرئيسية'
 
-# كشف شهر أغسطس الفعلي بالكامل لإتاحة الخصم منه تلقائياً
+# كشف شهر أغسطس الفعلي الكامل المعتمد
 august_payroll_data = [
     {'م': 1, 'الاسم': 'مد ساجد ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01', 'الخصومات': 0.0, 'الدفعة 1': 3000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 5000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 2, 'الاسم': 'فيض الإسلام', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-09-20', 'تاريخ انتهاء العقد': '2026-12-31', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
@@ -416,17 +240,25 @@ august_payroll_data = [
     {'م': 54, 'الاسم': 'سمير المغازي ', 'الوظيفة': 'كميائي ', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-12-31', 'تاريخ انتهاء العقد': '2027-12-31', 'الخصومات': 5000.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''}
 ]
 
-# دالة القراءة من Supabase مع التخزين الاحتياطي السحابي
+# استخدام ذاكرة Session سريعة ومحلية لمنع البطء والتهنيج عند التصفح
 def fetch_cloud_store(key_name, default_data):
+    session_key = f"cloud_cache_{key_name}"
+    if session_key in st.session_state:
+        return st.session_state[session_key]
     try:
         response = supabase.table('app_stores').select('data_val').eq('store_key', key_name).execute()
         if response.data and len(response.data) > 0:
-            return response.data[0]['data_val']
+            val = response.data[0]['data_val']
+            st.session_state[session_key] = val
+            return val
     except Exception:
         pass
+    st.session_state[session_key] = default_data
     return default_data
 
 def save_cloud_store(key_name, data_val):
+    session_key = f"cloud_cache_{key_name}"
+    st.session_state[session_key] = data_val
     try:
         supabase.table('app_stores').upsert({'store_key': key_name, 'data_val': data_val}).execute()
     except Exception:
@@ -828,7 +660,7 @@ if not st.session_state.get('app_started', False):
         
         if st.button('الدخول للنظام', use_container_width=True):
             if username_selected == "wahby":
-                if pwd_input == ADMIN_PASSWORD or pwd_input == "":
+                if pwd_input == ADMIN_PASSWORD:
                     st.session_state.app_started = True
                     st.session_state.user_role = "admin"
                     st.success("أهلاً بك (wahby)!")
@@ -836,7 +668,7 @@ if not st.session_state.get('app_started', False):
                 else:
                     st.error("كلمة المرور غير صحيحة!")
             elif username_selected == "omar":
-                if pwd_input == USER_PASSWORD or pwd_input == "":
+                if pwd_input == USER_PASSWORD:
                     st.session_state.app_started = True
                     st.session_state.user_role = "accountant"
                     st.success("أهلاً بك (omar)!")
@@ -1482,7 +1314,7 @@ else:
                 except Exception:
                     st.error("خطأ في قراءة ملف النسخة المرفوع.")
 
-    # 7. موديول إدخال الدفعات المحدث المباشر مع استيراد مبالغ أي شهر سابق
+    # 7. موديول إدخال الدفعات المحدث والمكتمل لخصم أي شهر سابق
     elif selected_option == 'إدخال الدفعات' and st.session_state.user_role == "admin":
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات - ({month_selected})')
         
@@ -1644,7 +1476,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق المحدث بالألوان المباشرة الزاهية المضمونة
+    # 8. موديول حركة الصندوق مع التمييز اللوني البارز المباشر للأرقام
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -1773,7 +1605,7 @@ else:
                         st.rerun()
 
         with col_c_in2:
-            st.markdown("### 📊 دفتر يومية الصندوق:")
+            st.markdown("### 📊 دفتر يومية الصندوق (الكروت الملونة الصريحة):")
             if curr_trans:
                 cf1, cf2 = st.columns([2, 1])
                 with cf1:
@@ -1799,20 +1631,29 @@ else:
                 st.write(f"عرض الحركات من **{start_idx+1}** إلى **{min(end_idx, total_items)}** (من أصل {total_items}):")
                 for t_idx, t_item in enumerate(page_trans):
                     real_idx = curr_trans.index(t_item)
-                    tc1, tc2, tc3, tc4, tc5 = st.columns([0.8, 2.2, 1.5, 0.9, 0.9])
-                    tc1.write(f"#{t_item.get('code', t_item['id'])}")
                     
                     is_rec = "قبض" in t_item['type']
-                    t_color = "#10B981" if is_rec else "#EF4444"
+                    amt_cls = "amt-pos" if is_rec else "amt-neg"
                     t_sign = "+" if is_rec else "-"
+                    border_c = "#10B981" if is_rec else "#EF4444"
 
-                    tc2.markdown(f"**{t_item['party']}**<br><span style='color:{t_color}; font-weight:bold;'>{t_item['type']}</span>", unsafe_allow_html=True)
-                    tc3.markdown(f"<p style='color: {t_color} !important; font-weight: 900 !important; font-size: 17px !important; margin:0;'>{t_sign} {t_item['amount']:,.2f} ر.س</p>", unsafe_allow_html=True)
+                    st.markdown(f"""
+                        <div class="cash-card-item" style="border-right: 5px solid {border_c};">
+                            <div>
+                                <span style="font-weight:bold; font-size:15px;">#{t_item.get('code', t_item['id'])} - {t_item['party']}</span><br>
+                                <span style="font-size:12px; color:#94A3B8;">📅 {t_item['date']} | 💳 {t_item['method']} | 📝 {t_item.get('notes','')}</span>
+                            </div>
+                            <div class="{amt_cls}">
+                                {t_sign} {t_item['amount']:,.2f} ر.س
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
                     
-                    if tc4.button("طباعة", key=f"btn_p_cash_{real_idx}"):
+                    bc1, bc2 = st.columns([1, 1])
+                    if bc1.button("🖨️ طباعة السند", key=f"btn_p_cash_{real_idx}"):
                         print_cash_voucher_dialog(t_item, month_selected)
 
-                    if tc5.button("حذف", key=f"btn_d_cash_{real_idx}"):
+                    if bc2.button("🗑️ حذف السند", key=f"btn_d_cash_{real_idx}"):
                         curr_trans.pop(real_idx)
                         all_cash_db[month_selected][active_box_key] = curr_trans
                         save_cash_data(all_cash_db)
