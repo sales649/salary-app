@@ -353,6 +353,7 @@ AUDIT_FILE = 'audit_history.json'
 DRIVERS_FILE = 'driver_custody.json'
 LAST_MONTH_FILE = 'last_selected_month.json'
 
+# قاعدة البيانات المستحدثة المرفقة الأخيرة
 initial_payroll_data = [
     {'م': 1, 'الاسم': 'مد ساجد ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01', 'الخصومات': 0.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 5000.0, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': ''},
     {'م': 2, 'الاسم': 'فيض الإسلام', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-09-20', 'تاريخ انتهاء العقد': '2026-12-31', 'الخصومات': 0.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 2500.0, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': ''},
@@ -546,7 +547,7 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
     else:
         type_options = ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (wahby)"]
 
-    with st.form("quick_cash_form"):
+    with st.form("quick_cash_form", clear_on_submit=True):
         q_type = st.selectbox("نوع السند:", type_options, index=0 if "قبض" in default_type else 1)
         q_party = st.text_input("صادر إلى / مستلم من:", placeholder="اسم الجهة...")
         q_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
@@ -1657,7 +1658,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق مع التمييز اللوني البارز (أخضر للمقبوضات / أحمر للمصروفات)
+    # 8. موديول حركة الصندوق المحدث بالألوان المباشرة والتفريغ التلقائي
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -1702,7 +1703,7 @@ else:
             st.markdown("### 📝 تسجيل حركة بالصندوق:")
             type_select_options = ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (omar)"] if st.session_state.user_role == "admin" else ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (wahby)"]
             
-            with st.form("add_cash_transaction_form"):
+            with st.form("add_cash_transaction_form", clear_on_submit=True):
                 trans_type = st.selectbox("نوع الحركة:", type_select_options)
                 trans_party = st.text_input("اسم الجهة / البيان:", placeholder="مثلاً: العميل / شراء مواد خام")
                 trans_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
@@ -1786,7 +1787,7 @@ else:
                         st.rerun()
 
         with col_c_in2:
-            st.markdown("### 📊 دفتر يومية الصندوق (التمييز اللوني المباشر):")
+            st.markdown("### 📊 دفتر يومية الصندوق (الأرقام الملونة المباشرة):")
             if curr_trans:
                 cf1, cf2 = st.columns([2, 1])
                 with cf1:
@@ -1821,7 +1822,7 @@ else:
                     bg_badge = "rgba(16, 185, 129, 0.1)" if is_rec else "rgba(239, 68, 68, 0.1)"
                     
                     tc2.write(f"**{t_item['party']}**  \n<span style='background:{bg_badge}; color:{t_color}; padding:2px 8px; border-radius:4px; font-weight:bold; font-size:11px;'>{t_item['type']}</span>", unsafe_allow_html=True)
-                    tc3.write(f"<span style='color:{t_color}; font-weight:900; font-size:15px;'>{t_sign} {t_item['amount']:,.2f} ر.س</span>", unsafe_allow_html=True)
+                    tc3.write(f"<span style='color:{t_color}; font-weight:900; font-size:16px;'>{t_sign} {t_item['amount']:,.2f} ر.س</span>", unsafe_allow_html=True)
                     
                     if tc4.button("طباعة", key=f"btn_p_cash_{real_idx}"):
                         print_cash_voucher_dialog(t_item, month_selected)
