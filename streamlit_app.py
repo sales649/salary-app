@@ -61,7 +61,6 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* إخفاء شفرات الأيقونات المزعجة وأزرار التكبير القسري من القائمة الجانبية */
         [data-testid="stSidebar"] button[kind="header"] {{
             display: none !important;
         }}
@@ -69,7 +68,6 @@ st.markdown(f"""
             display: none !important;
         }}
 
-        /* القائمة الجانبية المرفوعة والمختصرة بوضوح ممتاز */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
@@ -89,7 +87,6 @@ st.markdown(f"""
             font-weight: 800 !important;
         }}
 
-        /* أزرار القائمة الجانبية المحدثة */
         [data-testid="stSidebar"] .stButton>button {{
             width: 100% !important;
             background: {btn_sidebar_bg} !important;
@@ -126,7 +123,6 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        /* حقول الإدخال والتواريخ */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: {input_bg} !important;
             color: {input_text} !important;
@@ -137,7 +133,6 @@ st.markdown(f"""
             padding: 4px 8px !important;
         }}
 
-        /* تصحيح خطوط كروت الملاحظات والإحصائيات */
         [data-testid="stMetricValue"] div {{
             font-size: 16px !important;
             font-weight: 800 !important;
@@ -356,6 +351,7 @@ MONTHLY_PAYROLL_FILE = 'monthly_payroll_store.json'
 CASH_FILE = 'cashbox_data.json'
 AUDIT_FILE = 'audit_history.json'
 DRIVERS_FILE = 'driver_custody.json'
+LAST_MONTH_FILE = 'last_selected_month.json'
 
 initial_payroll_data = [
     {'م': 1, 'الاسم': 'مد ساجد ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01', 'الخصومات': 0.0, 'الدفعة 1': 3000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 5000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
@@ -413,6 +409,20 @@ initial_payroll_data = [
     {'م': 53, 'الاسم': 'موظف متنوع 1', 'الوظيفة': 'متنوع', 'الراتب الأساسي': 0.0, 'الفرع': 'رواتب متنوعة', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-01-01', 'تاريخ انتهاء العقد': '2027-01-01', 'الخصومات': 0.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 54, 'الاسم': 'سمير المغازي ', 'الوظيفة': 'كميائي ', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-12-31', 'تاريخ انتهاء العقد': '2027-12-31', 'الخصومات': 5000.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''}
 ]
+
+def load_last_selected_month():
+    if os.path.exists(LAST_MONTH_FILE):
+        try:
+            with open(LAST_MONTH_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get('last_month', 'أغسطس 2026')
+        except Exception:
+            return 'أغسطس 2026'
+    return 'أغسطس 2026'
+
+def save_last_selected_month(month_name):
+    with open(LAST_MONTH_FILE, 'w', encoding='utf-8') as f:
+        json.dump({'last_month': month_name}, f, ensure_ascii=False, indent=4)
 
 def load_monthly_payroll_store():
     if os.path.exists(MONTHLY_PAYROLL_FILE):
@@ -851,7 +861,7 @@ if not st.session_state.get('app_started', False):
                     st.error("كلمة المرور غير صحيحة!")
 
 else:
-    # 3. القائمة الجانبية المباشرة مع توسيط اسم الشركة
+    # 3. القائمة الجانبية المباشرة مع التذكر التلقائي لآخر شهر تم إغلاقه
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 2px;">
@@ -866,7 +876,13 @@ else:
         if 'months_list' not in st.session_state:
             st.session_state.months_list = ['أغسطس 2026', 'سبتمبر 2026', 'أكتوبر 2026', 'نوفمبر 2026', 'ديسمبر 2026']
             
-        month_selected = st.selectbox('الشهر الحالي:', st.session_state.months_list)
+        saved_last_month = load_last_selected_month()
+        default_m_index = st.session_state.months_list.index(saved_last_month) if saved_last_month in st.session_state.months_list else 0
+
+        month_selected = st.selectbox('الشهر الحالي:', st.session_state.months_list, index=default_m_index)
+
+        if month_selected != saved_last_month:
+            save_last_selected_month(month_selected)
 
         st.session_state['theme_mode'] = st.selectbox("نمط الألوان:", ["🌙 وضع ليلي", "☀️ وضع نهاري"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
 
@@ -930,7 +946,7 @@ else:
 
         selected_option = st.session_state.get('current_view', 'الرئيسية')
 
-    # جلب ملف الرواتب المخصص للشهر المح محدد من السجل المستقل
+    # جلب ملف الرواتب المخصص للشهر المفضل المختار من السجل المستقل
     st.session_state.payroll_df = get_payroll_for_month(month_selected)
     st.session_state.current_active_month = month_selected
 
@@ -1235,7 +1251,7 @@ else:
                     })
                     save_drivers_data(drivers_db)
 
-                    # تسميع فوري كـ "سند صرف" صريح ببصمة عُهدة سمان السواق بملف omar
+                    # تسميع فوري كـ "سند صرف" صريح بصندوق omar
                     all_cash = load_cash_data()
                     if month_selected not in all_cash:
                         all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
