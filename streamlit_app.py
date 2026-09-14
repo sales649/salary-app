@@ -353,7 +353,6 @@ AUDIT_FILE = 'audit_history.json'
 DRIVERS_FILE = 'driver_custody.json'
 LAST_MONTH_FILE = 'last_selected_month.json'
 
-# قاعدة البيانات المستحدثة المرفقة
 initial_payroll_data = [
     {'م': 1, 'الاسم': 'مد ساجد ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01', 'الخصومات': 0.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 5000.0, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': ''},
     {'م': 2, 'الاسم': 'فيض الإسلام', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-09-20', 'تاريخ انتهاء العقد': '2026-12-31', 'الخصومات': 0.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 2500.0, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': ''},
@@ -444,9 +443,7 @@ def get_payroll_for_month(month_name):
         return pd.DataFrame(store[month_name])
     else:
         df_base = pd.DataFrame(initial_payroll_data)
-        if month_name == 'أغسطس 2026':
-            df_base = pd.DataFrame(initial_payroll_data)
-        else:
+        if month_name != 'أغسطس 2026':
             df_base['الدفعة 1'] = 0.0
             df_base['الدفعة 2'] = 0.0
             df_base['الخصومات'] = 0.0
@@ -1660,7 +1657,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق بـ نظام الجدولين المتجاورين
+    # 8. موديول حركة الصندوق مع التمييز اللوني البارز (أخضر للمقبوضات / أحمر للمصروفات)
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -1688,38 +1685,31 @@ else:
             opening_balance_dialog(month_selected, active_target_box)
 
         curr_trans = current_m_cash.get(active_box_key, [])
-        
-        in_trans = [t for t in curr_trans if 'قبض' in t['type']]
-        out_trans = [t for t in curr_trans if 'صرف' in t['type']]
-
-        tot_cash_in = sum(t['amount'] for t in in_trans)
-        tot_cash_out = sum(t['amount'] for t in out_trans)
+        tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
+        tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
         net_cash_now = opening_bal + tot_cash_in - tot_cash_out
 
         c_m1, c_m2, c_m3, c_m4 = st.columns(4)
         c_m1.metric("رصيد أول الشهر", f"{opening_bal:,.2f} ر.س")
-        c_m2.metric("🟢 إجمالي المقبوضات", f"{tot_cash_in:,.2f} ر.س")
-        c_m3.metric("🔴 إجمالي المصروفات", f"{tot_cash_out:,.2f} ر.س")
-        c_m4.metric("💵 صافي المتبقي بالصندوق", f"{net_cash_now:,.2f} ر.س")
+        c_m2.metric("🟢 المقبوضات", f"{tot_cash_in:,.2f} ر.س")
+        c_m3.metric("🔴 المصروفات", f"{tot_cash_out:,.2f} ر.س")
+        c_m4.metric("💵 المتبقي بالصندوق", f"{net_cash_now:,.2f} ر.س")
 
         st.divider()
 
-        with st.expander("➕ تسجيل حركة نقديّة جديدة بالصندوق", expanded=False):
+        col_c_in1, col_c_in2 = st.columns([1, 1.8])
+        with col_c_in1:
+            st.markdown("### 📝 تسجيل حركة بالصندوق:")
             type_select_options = ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (omar)"] if st.session_state.user_role == "admin" else ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (wahby)"]
             
             with st.form("add_cash_transaction_form"):
-                col_f1, col_f2, col_f3 = st.columns(3)
-                with col_f1:
-                    trans_type = st.selectbox("نوع الحركة:", type_select_options)
-                    trans_party = st.text_input("اسم الجهة / البيان:", placeholder="اسم العميل / المستلم...")
-                with col_f2:
-                    trans_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
-                    trans_pay_method = st.selectbox("طريقة السداد:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
-                with col_f3:
-                    trans_notes = st.text_input("ملاحظات / الفاتورة:")
-                    st.write("")
-                    sub_cash = st.form_submit_button("💾 حفظ السند")
+                trans_type = st.selectbox("نوع الحركة:", type_select_options)
+                trans_party = st.text_input("اسم الجهة / البيان:", placeholder="مثلاً: العميل / شراء مواد خام")
+                trans_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
+                trans_pay_method = st.selectbox("طريقة السداد:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
+                trans_notes = st.text_input("ملاحظات / الفاتورة:")
                 
+                sub_cash = st.form_submit_button("💾 حفظ الحركة")
                 if sub_cash:
                     if trans_party and trans_amt > 0:
                         if "تحويل عُهدة إلى (omar)" in trans_type and st.session_state.user_role == "admin":
@@ -1734,6 +1724,7 @@ else:
                                 'method': trans_pay_method,
                                 'notes': trans_notes
                             })
+                            
                             acc_trans = current_m_cash.get('acc_transactions', [])
                             acc_trans.append({
                                 'id': len(acc_trans) + 1,
@@ -1759,6 +1750,7 @@ else:
                                 'method': trans_pay_method,
                                 'notes': trans_notes
                             })
+                            
                             main_trans = current_m_cash.get('transactions', [])
                             main_trans.append({
                                 'id': len(main_trans) + 1,
@@ -1793,78 +1785,56 @@ else:
                         st.success(f"تم التسجيل بنجاح برقم #{v_code}!")
                         st.rerun()
 
-        st.markdown("### 📊 دفتر يومية الصندوق (الجدولين المتجاورين):")
-        col_side_in, col_side_out = st.columns(2)
+        with col_c_in2:
+            st.markdown("### 📊 دفتر يومية الصندوق (التمييز اللوني المباشر):")
+            if curr_trans:
+                cf1, cf2 = st.columns([2, 1])
+                with cf1:
+                    cash_search = st.text_input("🔍 استعلام بالبيان:", key="search_cash_input")
+                with cf2:
+                    cash_filter_type = st.selectbox("تصفية بالحركة:", ["جميع الحركات", "سند قبض / إيراد", "سند صرف / مصروف"], key="filter_cash_type")
 
-        # ----------------- الجدول الأيمن: المقبوضات (الوارد) -----------------
-        with col_side_in:
-            st.markdown(f"#### 🟢 جدول المقبوضات (الوارد +): {tot_cash_in:,.2f} ر.س")
-            search_in = st.text_input("🔍 استعلام بالمقبوضات:", key="search_in_box_kw")
-            
-            filtered_in = in_trans.copy()
-            if search_in:
-                filtered_in = [t for t in filtered_in if search_in.lower() in t['party'].lower() or search_in.lower() in t.get('notes','').lower()]
+                filtered_cash = curr_trans.copy()
+                if cash_search:
+                    filtered_cash = [t for t in filtered_cash if cash_search.lower() in t['party'].lower()]
+                if cash_filter_type != "جميع الحركات":
+                    filtered_cash = [t for t in filtered_cash if t['type'] == cash_filter_type]
 
-            if filtered_in:
-                for idx_in, t_item in enumerate(reversed(filtered_in)):
+                items_per_page = 10
+                total_items = len(filtered_cash)
+                total_pages = (total_items + items_per_page - 1) // items_per_page if total_items > 0 else 1
+                
+                page_num = st.number_input(f"الصفحة (من أصل {total_pages}):", min_value=1, max_value=total_pages, value=1, step=1, key="cash_pg_num")
+                start_idx = (page_num - 1) * items_per_page
+                end_idx = start_idx + items_per_page
+                page_trans = filtered_cash[start_idx:end_idx]
+
+                st.write(f"عرض الحركات من **{start_idx+1}** إلى **{min(end_idx, total_items)}** (من أصل {total_items}):")
+                for t_idx, t_item in enumerate(page_trans):
                     real_idx = curr_trans.index(t_item)
+                    tc1, tc2, tc3, tc4, tc5 = st.columns([0.8, 2.2, 1.5, 0.9, 0.9])
+                    tc1.write(f"#{t_item.get('code', t_item['id'])}")
                     
-                    st.markdown(f"""
-                        <div style="background:{bg_card}; border-right: 4px solid #10B981; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px;">
-                            <div style="display:flex; justify-content:space-between; font-weight:bold;">
-                                <span style="color:#10B981;">+#{t_item.get('code', t_item['id'])} - {t_item['party']}</span>
-                                <span style="color:#10B981; font-size:14px;">+{t_item['amount']:,.2f} ر.س</span>
-                            </div>
-                            <div style="font-size:11px; color:#94A3B8;">📅 {t_item['date']} | 💳 {t_item['method']} | 📝 {t_item.get('notes','')}</div>
-                        </div>
-                    """, unsafe_allow_html=True)
+                    is_rec = "قبض" in t_item['type']
+                    t_color = "#10B981" if is_rec else "#EF4444"
+                    t_sign = "+" if is_rec else "-"
+                    bg_badge = "rgba(16, 185, 129, 0.1)" if is_rec else "rgba(239, 68, 68, 0.1)"
                     
-                    ci1, ci2 = st.columns([1, 1])
-                    if ci1.button("🖨️ طباعة", key=f"p_in_{real_idx}"):
+                    tc2.write(f"**{t_item['party']}**  \n<span style='background:{bg_badge}; color:{t_color}; padding:2px 8px; border-radius:4px; font-weight:bold; font-size:11px;'>{t_item['type']}</span>", unsafe_allow_html=True)
+                    tc3.write(f"<span style='color:{t_color}; font-weight:900; font-size:15px;'>{t_sign} {t_item['amount']:,.2f} ر.س</span>", unsafe_allow_html=True)
+                    
+                    if tc4.button("طباعة", key=f"btn_p_cash_{real_idx}"):
                         print_cash_voucher_dialog(t_item, month_selected)
-                    if ci2.button("🗑️ حذف", key=f"d_in_{real_idx}"):
+
+                    if tc5.button("حذف", key=f"btn_d_cash_{real_idx}"):
                         curr_trans.pop(real_idx)
                         all_cash_db[month_selected][active_box_key] = curr_trans
                         save_cash_data(all_cash_db)
                         st.success("تم الحذف!")
                         st.rerun()
+                    st.divider()
             else:
-                st.info("لا توجد حركات مقبوضات مسجلة.")
-
-        # ----------------- الجدول الأيسر: المصروفات (الصادر) -----------------
-        with col_side_out:
-            st.markdown(f"#### 🔴 جدول المصروفات (الصادر -): {tot_cash_out:,.2f} ر.س")
-            search_out = st.text_input("🔍 استعلام بالمصروفات:", key="search_out_box_kw")
-            
-            filtered_out = out_trans.copy()
-            if search_out:
-                filtered_out = [t for t in filtered_out if search_out.lower() in t['party'].lower() or search_out.lower() in t.get('notes','').lower()]
-
-            if filtered_out:
-                for idx_out, t_item in enumerate(reversed(filtered_out)):
-                    real_idx = curr_trans.index(t_item)
-                    
-                    st.markdown(f"""
-                        <div style="background:{bg_card}; border-right: 4px solid #EF4444; padding: 6px 10px; border-radius: 6px; margin-bottom: 6px;">
-                            <div style="display:flex; justify-content:space-between; font-weight:bold;">
-                                <span style="color:#EF4444;">-# {t_item.get('code', t_item['id'])} - {t_item['party']}</span>
-                                <span style="color:#EF4444; font-size:14px;">-{t_item['amount']:,.2f} ر.س</span>
-                            </div>
-                            <div style="font-size:11px; color:#94A3B8;">📅 {t_item['date']} | 💳 {t_item['method']} | 📝 {t_item.get('notes','')}</div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    co1, co2 = st.columns([1, 1])
-                    if co1.button("🖨️ طباعة", key=f"p_out_{real_idx}"):
-                        print_cash_voucher_dialog(t_item, month_selected)
-                    if co2.button("🗑️ حذف", key=f"d_out_{real_idx}"):
-                        curr_trans.pop(real_idx)
-                        all_cash_db[month_selected][active_box_key] = curr_trans
-                        save_cash_data(all_cash_db)
-                        st.success("تم الحذف!")
-                        st.rerun()
-            else:
-                st.info("لا توجد حركات مصروفات مسجلة.")
+                st.info("لا توجد حركات تسوية بالصندوق مسجلة لهذا الشهر.")
 
     elif selected_option == 'دليل الموظفين' and st.session_state.user_role == "admin":
         st.subheader('👤 دليل الموظفين والملفات الإدارية')
