@@ -31,11 +31,11 @@ if '🌙' in st.session_state['theme_mode']:
     bg_sidebar = "linear-gradient(180deg, #0B132B 0%, #1C2541 100%)"
     text_color = "#FFFFFF"
     border_color = "#D97706"
-    input_bg = "#FFFFFF"
-    input_text = "#000000"
     btn_sidebar_bg = "linear-gradient(135deg, #1C2541 0%, #0B132B 100%)"
     btn_sidebar_text = "#F59E0B"
     header_bg = "#0B132B"
+    dialog_bg = "#1C2541"
+    dialog_text = "#FFFFFF"
     stars_css = """
         body, .stApp, [data-testid="stHeader"] {
             background-color: #0B132B !important;
@@ -56,11 +56,11 @@ else:
     bg_sidebar = "#FFFFFF"
     text_color = "#0F172A"
     border_color = "#D97706"
-    input_bg = "#FFFFFF"
-    input_text = "#000000"
     btn_sidebar_bg = "linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)"
     btn_sidebar_text = "#D97706"
     header_bg = "#F8FAFC"
+    dialog_bg = "#FFFFFF"
+    dialog_text = "#0F172A"
     stars_css = ""
 
 st.markdown(f"""
@@ -78,7 +78,6 @@ st.markdown(f"""
             -webkit-text-size-adjust: 100% !important;
         }}
 
-        /* إخفاء الشريط الأبيض العلوي */
         [data-testid="stHeader"] {{
             background-color: {header_bg} !important;
             border-bottom: none !important;
@@ -97,6 +96,23 @@ st.markdown(f"""
             color: {text_color} !important;
             font-family: 'Cairo', sans-serif !important;
             word-wrap: break-word !important;
+        }}
+
+        /* إصلاح حاسم لنوافذ التعديل والـ Dialogs لمنع اللون الأبيض وتوحيد الثيم الداكن */
+        [data-testid="stDialog"] > div:first-child, [data-testid="stModal"] > div:first-child, div[role="dialog"] {{
+            background-color: {dialog_bg} !important;
+            color: {dialog_text} !important;
+            border: 2px solid #D97706 !important;
+            border-radius: 16px !important;
+        }}
+
+        [data-testid="stDialog"] *, [data-testid="stModal"] *, div[role="dialog"] * {{
+            color: {dialog_text} !important;
+        }}
+
+        [data-testid="stDialog"] h3, [data-testid="stModal"] h3, div[role="dialog"] h3 {{
+            color: #F59E0B !important;
+            font-weight: 900 !important;
         }}
 
         [data-testid="stSidebar"] button[kind="header"] {{ display: none !important; }}
@@ -181,6 +197,7 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
+        /* ألوان خانات الإدخال داخل وخارج النوافذ */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: #FFFFFF !important;
             color: #000000 !important;
@@ -341,7 +358,6 @@ st.markdown(f"""
             margin-bottom: 4px;
         }}
 
-        /* قواعد تجاوب الموبايل والآيفون الصريحة المخصصة دون التأثير على الكمبيوتر */
         @media screen and (max-width: 768px) {{
             .main .block-container {{
                 padding-left: 6px !important;
@@ -1768,6 +1784,7 @@ else:
                                 st.success(f"تم اعتماد وتخصيم {amt_to_deduct:,.2f} ر.س كـ سند صرف (#{v_code}) بـ فرع ({b_name}) بنجاح!")
                                 st.rerun()
 
+                # ترتيب العمود المطلوبة من اليمين إلى اليسار كلياً
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'المتبقي', 'الملاحظات']
                 edited_b = st.data_editor(
                     df_b_curr[cols_rtl],
