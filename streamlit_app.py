@@ -6,8 +6,8 @@ import os
 from datetime import datetime
 from supabase import create_client, Client
 
-# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
-st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
+# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL مع تغيير اسم التبويب إلى 5M فقط
+st.set_page_config(page_title='5M', layout='wide', page_icon='🏢')
 
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
