@@ -96,15 +96,15 @@ st.markdown(f"""
             font-weight: 800 !important;
         }}
 
-        /* تصميم عناوين الأقسام الجانبية البارزة والنظيفة */
+        /* تكبير البارز لـ عناوين الأقسام الجانبية */
         .sidebar-section-title {{
             color: #F59E0B !important;
-            font-size: 13px !important;
+            font-size: 15px !important;
             font-weight: 900 !important;
             border-bottom: 2px solid #D97706;
-            padding-bottom: 2px;
-            margin-top: 10px;
-            margin-bottom: 6px;
+            padding-bottom: 4px;
+            margin-top: 14px;
+            margin-bottom: 8px;
             text-align: right !important;
         }}
 
@@ -116,7 +116,7 @@ st.markdown(f"""
             border-radius: 6px !important;
             font-weight: 800 !important;
             font-size: 13px !important;
-            padding: 5px 8px !important;
+            padding: 6px 8px !important;
             margin-bottom: 3px !important;
             text-align: right !important;
             box-shadow: none !important;
@@ -224,14 +224,25 @@ st.markdown(f"""
             font-size: 17px !important;
         }}
 
+        /* شاشة الدخول الفاخرة بالذهب الملكي */
         .welcome-card-lux {{
             background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
             border-radius: 20px;
-            padding: 20px 15px;
+            padding: 30px 20px;
             text-align: center !important;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-            margin-top: 5px;
+            margin-top: 10px;
             border: 2px solid #D97706;
+        }}
+
+        .title-company-royal {{
+            font-size: 32px !important;
+            font-weight: 900 !important;
+            color: #F59E0B !important;
+            text-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+            margin-top: 10px;
+            margin-bottom: 10px;
+            text-align: center !important;
         }}
 
         .company-header-inner {{
@@ -259,7 +270,7 @@ st.markdown(f"""
         }}
 
         .logo-lux {{
-            font-size: 50px;
+            font-size: 60px;
             font-weight: 900;
             color: #EF4444 !important;
             font-family: Arial, sans-serif;
@@ -899,12 +910,12 @@ def edit_employee_dialog(emp_idx, month_selected):
             st.success("تم الحذف!")
             st.rerun()
 
-# 2. الشاشة الافتتاحية وكلمة المرور المشددة الصارمة
+# 2. الشاشة الافتتاحية الملكية بكلمة المرور المشددة
 if not st.session_state.get('app_started', False):
     st.markdown("""
         <div class="welcome-card-lux">
             <div class="logo-lux">5M</div>
-            <div class="title-company-huge">شركة ميم الخماسية للتصنيع</div>
+            <div class="title-company-royal">شركة ميم الخماسية للتصنيع</div>
             <p style="color: #94A3B8 !important; font-size: 17px; margin-bottom: 20px;">النظام المحاسبي والإداري الموحد</p>
             <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.2); margin: 25px 0;">
         </div>
@@ -932,7 +943,7 @@ if not st.session_state.get('app_started', False):
                 st.error("كلمة المرور غير صحيحة! يرجى إدخال كلمة المرور للوصول للنظام.")
 
 else:
-    # 3. القائمة الجانبية المباشرة المفتوحة المرتبة والأنيقة
+    # 3. القائمة الجانبية المباشرة مع العناوين الكبيرة الموضحة
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 2px;">
@@ -959,12 +970,12 @@ else:
 
         st.divider()
 
-        # 1. زر الرئيسية المباشر المستقل الخارجي
+        # 1. زر الرئيسية المباشر الخارجي المميز
         if st.button("🏠 الرئيسية", use_container_width=True):
             st.session_state['current_view'] = 'الرئيسية'
             st.rerun()
 
-        # 2. قسم الصناديق والخزائن المباشر
+        # 2. قسم الخزائن والصناديق بعناوين تكبير واضحة
         st.markdown('<div class="sidebar-section-title">🏦 الخزائن والصناديق</div>', unsafe_allow_html=True)
         if st.button("حركة الصندوق", use_container_width=True):
             st.session_state['current_view'] = 'حركة الصندوق'
