@@ -340,12 +340,12 @@ if 'user_role' not in st.session_state:
 if 'current_view' not in st.session_state:
     st.session_state['current_view'] = 'الرئيسية'
 
-DATA_FILE = 'payroll_data.json'
+MONTHLY_PAYROLL_FILE = 'monthly_payroll_store.json'
 CASH_FILE = 'cashbox_data.json'
 AUDIT_FILE = 'audit_history.json'
 DRIVERS_FILE = 'driver_custody.json'
 
-initial_data = [
+initial_payroll_data = [
     {'م': 1, 'الاسم': 'مد ساجد ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01', 'الخصومات': 0.0, 'الدفعة 1': 3000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 5000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 2, 'الاسم': 'فيض الإسلام', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-09-20', 'تاريخ انتهاء العقد': '2026-12-31', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 3, 'الاسم': 'أيوب', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2200.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-08-01', 'تاريخ انتهاء العقد': '2026-11-15', 'الخصومات': 0.0, 'الدفعة 1': 1200.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2200.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
@@ -402,27 +402,45 @@ initial_data = [
     {'م': 54, 'الاسم': 'سمير المغازي ', 'الوظيفة': 'كميائي ', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-12-31', 'تاريخ انتهاء العقد': '2027-12-31', 'الخصومات': 5000.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''}
 ]
 
-def load_data():
-    if os.path.exists(DATA_FILE):
+def load_monthly_payroll_store():
+    if os.path.exists(MONTHLY_PAYROLL_FILE):
         try:
-            with open(DATA_FILE, 'r', encoding='utf-8') as f:
-                df = pd.DataFrame(json.load(f))
-                if 'تاريخ بداية العمل' not in df.columns:
-                    df['تاريخ بداية العمل'] = '2024-01-01'
-                if 'الخصومات' not in df.columns:
-                    df['الخصومات'] = 0.0
-                return df
+            with open(MONTHLY_PAYROLL_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
         except Exception:
-            return pd.DataFrame(initial_data)
-    else:
-        df = pd.DataFrame(initial_data)
-        save_data(df)
-        return df
+            return {}
+    return {}
 
-def save_data(df):
-    data_dict = df.to_dict(orient='records')
-    with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data_dict, f, ensure_ascii=False, indent=4)
+def save_monthly_payroll_store(store_data):
+    with open(MONTHLY_PAYROLL_FILE, 'w', encoding='utf-8') as f:
+        json.dump(store_data, f, ensure_ascii=False, indent=4)
+
+def get_payroll_for_month(month_name):
+    store = load_monthly_payroll_store()
+    if month_name in store:
+        return pd.DataFrame(store[month_name])
+    else:
+        # إنشاء كشف جديد للشهر يعتمد على أحدث بيانات الرواتب مع تصفير الدفعات
+        df_base = pd.DataFrame(initial_payroll_data)
+        df_base['الدفعة 1'] = 0.0
+        df_base['الدفعة 2'] = 0.0
+        df_base['الخصومات'] = 0.0
+        df_base['الدفعة المدفوعة'] = 0.0
+        df_base['المتبقي'] = df_base['الراتب الأساسي']
+        df_base['نوع الإجراء'] = 'لم يُصرف'
+        
+        # حفظ أغسطس بالبيانات الأولى المكتملة
+        if month_name == 'أغسطس 2026':
+            df_base = pd.DataFrame(initial_payroll_data)
+
+        store[month_name] = df_base.to_dict(orient='records')
+        save_monthly_payroll_store(store)
+        return df_base
+
+def save_payroll_for_month(df, month_name):
+    store = load_monthly_payroll_store()
+    store[month_name] = df.to_dict(orient='records')
+    save_monthly_payroll_store(store)
 
 def load_cash_data():
     if os.path.exists(CASH_FILE):
@@ -482,6 +500,24 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
         return round(years, 2), round(gratuity, 2), round(leave_allowance, 2)
     except:
         return 0.0, 0.0, 0.0
+
+@st.dialog("تعديل الرصيد الافتتاحي للصندوق")
+def opening_balance_dialog(month_name, target_box):
+    all_cash_db = load_cash_data()
+    m_cash = all_cash_db.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
+    active_opening_key = 'opening' if target_box == 'main' else 'acc_opening'
+    opening_bal = m_cash.get(active_opening_key, 0.0)
+
+    st.write(f"تثبيت وتعديل الرصيد الافتتاحي لـ **{'الخزينة الرئيسية' if target_box == 'main' else 'عُهدة omar'}** لشهر ({month_name}):")
+    with st.form("set_opening_balance_dialog_form"):
+        new_opening_val = st.number_input("الرصيد الافتتاحي (ر.س):", min_value=0.0, value=float(opening_bal))
+        sub_op = st.form_submit_button("💾 تثبيت الرصيد الافتتاحي")
+        if sub_op:
+            m_cash[active_opening_key] = new_opening_val
+            all_cash_db[month_name] = m_cash
+            save_cash_data(all_cash_db)
+            st.success("تم التثبيت!")
+            st.rerun()
 
 @st.dialog("إنشاء سند جديد")
 def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
@@ -775,24 +811,8 @@ else:
 
         selected_option = st.session_state.get('current_view', 'الرئيسية')
 
-    # الترحيل وتصفية الدفعات والخصومات فقط عند تحويل الشهر لشهر جديد
-    if 'current_active_month' not in st.session_state:
-        st.session_state.current_active_month = month_selected
-        st.session_state.payroll_df = load_data()
-
-    elif st.session_state.current_active_month != month_selected:
-        st.session_state.current_active_month = month_selected
-        df_loaded = load_data()
-        
-        # تصفية الدفعات والخصومات للشهر الجديد
-        df_loaded['الدفعة 1'] = 0.0
-        df_loaded['الدفعة 2'] = 0.0
-        df_loaded['الخصومات'] = 0.0
-        df_loaded['الدفعة المدفوعة'] = 0.0
-        df_loaded['المتبقي'] = df_loaded['الراتب الأساسي']
-        df_loaded['نوع الإجراء'] = 'لم يُصرف'
-        
-        st.session_state.payroll_df = df_loaded
+    # جلب ملف الرواتب المخصص للشهر المح محدد من السجل المستقل
+    st.session_state.payroll_df = get_payroll_for_month(month_selected)
 
     tot_emp = len(st.session_state.payroll_df)
     tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
@@ -1050,7 +1070,7 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 5. موديول عُهدة السواقين التراكمي المباشر
+    # 5. موديول عُهدة السواقين
     elif selected_option == 'عُهدة السواقين':
         st.subheader(f'🚚 موديول إدارة عُهدة السواقين المباشر - ({month_selected})')
         st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والتسميع التراكمي المباشر بصندوق omar:')
@@ -1095,7 +1115,7 @@ else:
                     })
                     save_drivers_data(drivers_db)
 
-                    # تسميع فوري كـ "سند صرف" صريح ببصمة عُهدة سمان السواق بملف omar
+                    # تسميع فوري كـ "سند صرف" صريح بصندوق omar
                     all_cash = load_cash_data()
                     if month_selected not in all_cash:
                         all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
@@ -1152,7 +1172,6 @@ else:
                     
                     save_drivers_data(drivers_db)
 
-                    # تسميع الفرق فقط بـ omar إذا كان السائق قد دفع أزيد من جيبه
                     if diff_val < 0:
                         all_cash = load_cash_data()
                         if month_selected not in all_cash:
@@ -1341,7 +1360,7 @@ else:
                 try:
                     imported_df_page = pd.DataFrame(json.load(uploaded_backup_page))
                     st.session_state.payroll_df = imported_df_page
-                    save_data(imported_df_page)
+                    save_payroll_for_month(imported_df_page, month_selected)
                     st.success("تم استيراد وحفظ النسخة الاحتياطية بنجاح بنسبة 100%!")
                     st.rerun()
                 except Exception:
@@ -1355,7 +1374,10 @@ else:
         
         for b_name, tab_obj in branches:
             with tab_obj:
-                col_auto1, col_auto2 = st.columns([2, 1])
+                df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
+                b_tot_paid_current = df_b['الدفعة المدفوعة'].sum()
+
+                col_auto1, col_auto2 = st.columns([1.5, 1.5])
                 with col_auto1:
                     if st.button(f'توزيع المتبقي كـ "دفعة 2" تلقائياً ({b_name})', key=f"auto_btn_{b_name}"):
                         for idx, row in st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].iterrows():
@@ -1366,12 +1388,37 @@ else:
                             st.session_state.payroll_df.loc[idx, 'الدفعة 2'] = rem_needed
                             st.session_state.payroll_df.loc[idx, 'الدفعة المدفوعة'] = p1 + rem_needed
                             st.session_state.payroll_df.loc[idx, 'المتبقي'] = 0.0
-                        save_data(st.session_state.payroll_df)
+                        save_payroll_for_month(st.session_state.payroll_df, month_selected)
                         st.success("تم التوزيع وتصفير المتبقي!")
                         st.rerun()
 
-                df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
-                
+                with col_auto2:
+                    if b_tot_paid_current > 0:
+                        if st.button(f'💸 اعتماد وتسميع دفعات ({b_name}) كـ سند صرف بالصندوق', key=f"trf_sal_to_cash_{b_name}"):
+                            all_cash = load_cash_data()
+                            if month_selected not in all_cash:
+                                all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                            
+                            m_cash = all_cash[month_selected]
+                            target_trans_key = 'transactions' if st.session_state.user_role == "admin" else 'acc_transactions'
+                            c_trans = m_cash.get(target_trans_key, [])
+                            
+                            c_trans.append({
+                                'id': len(c_trans) + 1,
+                                'code': f"PAY-SAL-{(len(c_trans) + 1):03d}",
+                                'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                                'type': 'سند صرف / مصروف',
+                                'party': f"سداد دفع ورواتب شهر ({month_selected}) - {b_name}",
+                                'amount': b_tot_paid_current,
+                                'method': 'نقداً بالصندوق',
+                                'notes': f"سند صرف آلي معمد لمسير {b_name}"
+                            })
+                            m_cash[target_trans_key] = c_trans
+                            all_cash[month_selected] = m_cash
+                            save_cash_data(all_cash)
+                            st.success(f"تم اعتماد وتخصيم {b_tot_paid_current:,.2f} ر.س كـ سند صرف بالصندوق بنجاح!")
+                            st.rerun()
+
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'نوع الإجراء', 'الملاحظات']
                 edited_b = st.data_editor(
                     df_b[cols_rtl],
@@ -1411,7 +1458,7 @@ else:
                         st.session_state.payroll_df.loc[target_idx, 'نوع الإجراء'] = row['نوع الإجراء']
                         st.session_state.payroll_df.loc[target_idx, 'الملاحظات'] = row['الملاحظات']
                     
-                    save_data(st.session_state.payroll_df)
+                    save_payroll_for_month(st.session_state.payroll_df, month_selected)
                     st.success("تم الحفظ بنجاح!")
                     st.rerun()
 
@@ -1443,23 +1490,19 @@ else:
             box_selected = st.radio("اختر الصندوق:", ["🏢 الخزينة الرئيسية (wahby)", "👤 عُهدة المحاسب (omar)"], horizontal=True)
             active_box_key = 'transactions' if "wahby" in box_selected else 'acc_transactions'
             active_opening_key = 'opening' if "wahby" in box_selected else 'acc_opening'
+            active_target_box = "main" if "wahby" in box_selected else "accountant"
         else:
             active_box_key = 'acc_transactions'
             active_opening_key = 'acc_opening'
+            active_target_box = "accountant"
             st.info("أنت تعمل على شاشة **عُهدتك المالية (omar)**.")
 
         opening_bal = current_m_cash.get(active_opening_key, 0.0)
 
-        with st.expander("تعديل الرصيد الافتتاحي للصندوق", expanded=False):
-            with st.form("set_opening_balance_form"):
-                new_opening_val = st.number_input("الرصيد الافتتاحي (ر.س):", min_value=0.0, value=float(opening_bal))
-                sub_op = st.form_submit_button("تثبيت الرصيد الافتتاحي")
-                if sub_op:
-                    current_m_cash[active_opening_key] = new_opening_val
-                    all_cash_db[month_selected] = current_m_cash
-                    save_cash_data(all_cash_db)
-                    st.success("تم التثبيت!")
-                    st.rerun()
+        # تحويل تعديل الرصيد الافتتاحي بزر مباشر صريح بدلاً من expander
+        st.write("")
+        if st.button("✏️ تعديل وتثبيت الرصيد الافتتاحي للصندوق", key="btn_open_dialog_bal"):
+            opening_balance_dialog(month_selected, active_target_box)
 
         curr_trans = current_m_cash.get(active_box_key, [])
         tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
@@ -1831,14 +1874,6 @@ else:
             st.write("")
             st.write("")
             if st.button(f"إغلاق السنة المالية الحالية وفتح سنة ({next_year_name})"):
-                st.session_state.payroll_df['الخصومات'] = 0.0
-                st.session_state.payroll_df['الدفعة 1'] = 0.0
-                st.session_state.payroll_df['الدفعة 2'] = 0.0
-                st.session_state.payroll_df['الدفعة المدفوعة'] = 0.0
-                st.session_state.payroll_df['المتبقي'] = st.session_state.payroll_df['الراتب الأساسي']
-                st.session_state.payroll_df['نوع الإجراء'] = 'لم يُصرف'
-                
                 st.session_state.months_list = [f'يناير {next_year_name}', f'فبراير {next_year_name}', f'مارس {next_year_name}', f'أبريل {next_year_name}']
-                save_data(st.session_state.payroll_df)
                 st.success(f"تم إغلاق السنة الحالية وافتتاح سنة ({next_year_name}) بنجاح!")
                 st.rerun()
