@@ -26,15 +26,30 @@ if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = '🌙 وضع ليلي'
 
 if '🌙' in st.session_state['theme_mode']:
-    bg_app = "#0F172A"
-    bg_card = "#1E293B"
-    bg_sidebar = "#1E293B"
+    bg_app = "#0B132B"
+    bg_card = "#1C2541"
+    bg_sidebar = "linear-gradient(180deg, #0B132B 0%, #1C2541 100%)"
     text_color = "#FFFFFF"
     border_color = "#D97706"
     input_bg = "#FFFFFF"
     input_text = "#000000"
-    btn_sidebar_bg = "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)"
+    btn_sidebar_bg = "linear-gradient(135deg, #1C2541 0%, #0B132B 100%)"
     btn_sidebar_text = "#F59E0B"
+    # تأثير خلفية النجوم المضيئة بالليل
+    stars_css = """
+        body, .stApp {
+            background-color: #0B132B !important;
+            background-image: 
+                radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 40px 70px, #f59e0b, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 160px 120px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(1.5px 1.5px at 230px 190px, #f59e0b, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 300px 80px, #ffffff, rgba(0,0,0,0));
+            background-repeat: repeat;
+            background-size: 350px 350px;
+        }
+    """
 else:
     bg_app = "#F8FAFC"
     bg_card = "#FFFFFF"
@@ -45,15 +60,17 @@ else:
     input_text = "#000000"
     btn_sidebar_bg = "linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)"
     btn_sidebar_text = "#D97706"
+    stars_css = ""
 
 st.markdown(f"""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
 
+        {stars_css}
+
         html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {{
             direction: rtl !important;
             text-align: right !important;
-            background-color: {bg_app} !important;
             color: {text_color} !important;
             font-family: 'Cairo', sans-serif !important;
             overflow-x: hidden !important;
@@ -80,7 +97,7 @@ st.markdown(f"""
 
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
-            background-color: {bg_sidebar} !important;
+            background: {bg_sidebar} !important;
         }}
 
         [data-testid="stSidebarContent"] {{
@@ -137,7 +154,7 @@ st.markdown(f"""
         }}
 
         ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"], [data-baseweb="popover"] > div, div[data-baseweb="menu"] {{
-            background-color: #1E293B !important;
+            background-color: #1C2541 !important;
             color: #FFFFFF !important;
             border: 1px solid #D97706 !important;
             border-radius: 8px !important;
@@ -145,7 +162,7 @@ st.markdown(f"""
 
         li[role="option"], li[role="option"] *, div[role="option"], div[role="option"] * {{
             color: #FFFFFF !important;
-            background-color: #1E293B !important;
+            background-color: #1C2541 !important;
             font-weight: 800 !important;
             font-size: 13px !important;
         }}
@@ -181,7 +198,7 @@ st.markdown(f"""
         }}
 
         div.stButton > button, div.stDownloadButton > button, [data-testid="stFormSubmitButton"] > button {{
-            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+            background: linear-gradient(135deg, #1C2541 0%, #0B132B 100%) !important;
             color: #FFFFFF !important;
             border: 1px solid #D97706 !important;
             border-radius: 8px !important;
@@ -222,7 +239,7 @@ st.markdown(f"""
         }}
 
         .welcome-card-lux {{
-            background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
+            background: linear-gradient(135deg, #0B132B 0%, #1E3A8A 100%);
             border-radius: 20px;
             padding: 20px 15px;
             text-align: center !important;
@@ -315,7 +332,6 @@ if 'user_role' not in st.session_state:
 if 'current_view' not in st.session_state:
     st.session_state['current_view'] = 'الرئيسية'
 
-# بيانات أغسطس الدقيقة المسحوبة من ملف المسير الرسمي
 august_payroll_data = [
     {'م': 1, 'الاسم': 'حبيب مد', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2200.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-01-15', 'تاريخ انتهاء العقد': '2027-03-30', 'الخصومات': 0.0, 'الدفعة 1': 1200.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2200.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 2, 'الاسم': 'فيض الإسلام', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-09-20', 'تاريخ انتهاء العقد': '2026-12-31', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
