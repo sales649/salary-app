@@ -83,6 +83,7 @@ st.markdown(f"""
             border-bottom: none !important;
         }}
 
+        /* تجميل وترتيب الزر الصغير لفتح وإغلاق القائمة الجانبية */
         [data-testid="stSidebarCollapseButton"], [data-testid="stSidebarActionButton"] {{
             display: block !important;
             color: #F59E0B !important;
@@ -90,6 +91,7 @@ st.markdown(f"""
             border: 1px solid #D97706 !important;
             border-radius: 8px !important;
             margin: 5px !important;
+            z-index: 999999 !important;
         }}
 
         .main .block-container {{
@@ -105,6 +107,26 @@ st.markdown(f"""
             color: {text_color} !important;
             font-family: 'Cairo', sans-serif !important;
             word-wrap: break-word !important;
+        }}
+
+        /* إخفاء القائمة الجانبية كلياً إلى أقصى اليمين عند إغلاقها بالمرور */
+        [data-testid="stSidebar"] {{
+            border-left: 2px solid {border_color} !important;
+            background: {bg_sidebar} !important;
+            transition: transform 0.3s ease-in-out !important;
+        }}
+
+        [data-testid="stSidebarContent"] {{
+            padding-top: 0.2rem !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+            padding-bottom: 0.2rem !important;
+        }}
+
+        [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
+            color: {text_color} !important;
+            font-size: 13px !important;
+            font-weight: 800 !important;
         }}
 
         /* إصلاح حاسم لنوافذ التعديل والـ Dialogs */
@@ -149,24 +171,6 @@ st.markdown(f"""
         div[data-baseweb="calendar"] [aria-selected="true"] {{
             background-color: #D97706 !important;
             color: #FFFFFF !important;
-        }}
-
-        [data-testid="stSidebar"] {{
-            border-left: 2px solid {border_color} !important;
-            background: {bg_sidebar} !important;
-        }}
-
-        [data-testid="stSidebarContent"] {{
-            padding-top: 0.2rem !important;
-            padding-left: 0.5rem !important;
-            padding-right: 0.5rem !important;
-            padding-bottom: 0.2rem !important;
-        }}
-
-        [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
-            color: {text_color} !important;
-            font-size: 13px !important;
-            font-weight: 800 !important;
         }}
 
         .sidebar-logo-card {{
@@ -389,9 +393,15 @@ st.markdown(f"""
             margin-bottom: 4px;
         }}
 
+        /* ضوابط الآيفون القاطعة لمنع تعليق القائمة الجانبية في المنتصف عند الإغلاق */
         @media screen and (max-width: 768px) {{
-            [data-testid="stSidebar"] {{
+            [data-testid="stSidebar"][aria-expanded="false"] {{
+                margin-right: -100vw !important;
+            }}
+
+            [data-testid="stSidebar"][aria-expanded="true"] {{
                 width: 82vw !important;
+                margin-right: 0 !important;
             }}
 
             .main .block-container {{
@@ -413,14 +423,6 @@ st.markdown(f"""
             div.stButton > button {{
                 font-size: 14px !important;
                 padding: 10px 12px !important;
-            }}
-
-            .sidebar-logo-text {{
-                font-size: 45px !important;
-            }}
-
-            .sidebar-company-title {{
-                font-size: 14px !important;
             }}
         }}
     </style>
