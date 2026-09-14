@@ -81,7 +81,10 @@ st.markdown(f"""
         }}
 
         [data-testid="stSidebarContent"] {{
-            padding: 10px 12px !important;
+            padding-top: 10px !important;
+            padding-left: 12px !important;
+            padding-right: 12px !important;
+            padding-bottom: 10px !important;
             box-sizing: border-box !important;
         }}
 
@@ -102,10 +105,28 @@ st.markdown(f"""
             padding: 6px 8px !important;
             margin-bottom: 3px !important;
             text-align: right !important;
+            box-shadow: none !important;
         }}
 
         [data-testid="stSidebar"] .stButton>button:hover {{
             background: #D97706 !important;
+            color: #FFFFFF !important;
+        }}
+
+        ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"] div {{
+            background-color: {bg_card} !important;
+            color: {text_color} !important;
+            border: 1px solid #D97706 !important;
+        }}
+
+        li[role="option"], li[role="option"] * {{
+            color: {text_color} !important;
+            background-color: {bg_card} !important;
+            font-weight: 700 !important;
+        }}
+
+        li[role="option"]:hover, li[role="option"]:hover * {{
+            background-color: #D97706 !important;
             color: #FFFFFF !important;
         }}
 
@@ -119,13 +140,128 @@ st.markdown(f"""
             padding: 4px 8px !important;
         }}
 
-        /* ضغط الفراغات بين السندات */
+        [data-testid="stMetricValue"] div {{
+            font-size: 16px !important;
+            font-weight: 800 !important;
+            white-space: nowrap !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+        }}
+
+        [data-testid="stMetricLabel"] label, [data-testid="stMetricLabel"] div {{
+            font-size: 12px !important;
+            font-weight: 700 !important;
+            white-space: nowrap !important;
+        }}
+
+        .stMetric, .daftra-quick-card {{
+            background-color: {bg_card} !important;
+            border-radius: 10px !important;
+            padding: 8px 10px !important;
+            border: 1px solid {border_color} !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+            margin-bottom: 8px !important;
+            overflow: hidden !important;
+            text-align: center !important;
+        }}
+
+        .daftra-quick-card h3 {{
+            margin: 0 !important;
+            font-size: 22px !important;
+            line-height: 1 !important;
+        }}
+
+        .daftra-quick-card h4 {{
+            margin: 4px 0 0 0 !important;
+            font-size: 13px !important;
+            font-weight: 800 !important;
+            color: {text_color} !important;
+        }}
+
+        .stMetric * {{
+            color: {text_color} !important;
+            text-align: right !important;
+        }}
+
+        [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
+            background-color: #1E293B !important;
+            border: 1px dashed #D97706 !important;
+            border-radius: 8px !important;
+            padding: 6px !important;
+        }}
+
+        [data-testid="stFileUploader"] button {{
+            background-color: #D97706 !important;
+            color: #FFFFFF !important;
+            border: none !important;
+            border-radius: 6px !important;
+            font-weight: bold !important;
+            padding: 4px 10px !important;
+            font-size: 12px !important;
+        }}
+
+        [data-testid="stFileUploader"] span, [data-testid="stFileUploader"] label, [data-testid="stFileUploader"] small {{
+            color: #FFFFFF !important;
+            font-weight: bold !important;
+            font-size: 12px !important;
+        }}
+
+        [data-testid="stDialog"] div[role="dialog"] {{
+            background-color: {modal_bg} !important;
+            border: 3px solid #D97706 !important;
+            border-radius: 16px !important;
+            width: 95vw !important;
+            max-width: 600px !important;
+        }}
+
+        [data-testid="stDialog"] div[role="dialog"] label, 
+        [data-testid="stDialog"] div[role="dialog"] p, 
+        [data-testid="stDialog"] div[role="dialog"] span,
+        [data-testid="stDialog"] div[role="dialog"] h1,
+        [data-testid="stDialog"] div[role="dialog"] h2,
+        [data-testid="stDialog"] div[role="dialog"] h3,
+        [data-testid="stDialog"] div[role="dialog"] div {{
+            color: {modal_text} !important;
+            font-weight: 700 !important;
+            text-align: right !important;
+        }}
+
+        .stButton>button, .stDownloadButton>button, [data-testid="stFormSubmitButton"] button {{
+            background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
+            color: #FFFFFF !important;
+            border: none !important;
+            border-radius: 8px !important;
+            font-weight: 800 !important;
+            font-size: 13px !important;
+            box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4) !important;
+            white-space: normal !important;
+            word-wrap: break-word !important;
+            padding: 6px 12px !important;
+        }}
+
+        .stDataFrame, [data-testid="stDataEditor"] {{
+            direction: rtl !important;
+            text-align: right !important;
+            background-color: {bg_card} !important;
+            width: 100% !important;
+            overflow-x: auto !important;
+        }}
+
+        .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {{
+            text-align: right !important;
+            font-size: 12px !important;
+            padding: 6px 8px !important;
+            color: {text_color} !important;
+            white-space: nowrap !important;
+        }}
+
+        /* تصميم حركة الصندوق المدمجة والمضغوطة */
         .cash-card-item {{
             background-color: {bg_card};
             border: 1px solid {border_color};
             border-radius: 8px;
-            padding: 6px 12px !important;
-            margin-bottom: 4px !important;
+            padding: 8px 12px !important;
+            margin-bottom: 5px !important;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -134,34 +270,13 @@ st.markdown(f"""
         .amt-pos {{
             color: #10B981 !important;
             font-weight: 900 !important;
-            font-size: 16px !important;
+            font-size: 17px !important;
         }}
 
         .amt-neg {{
             color: #EF4444 !important;
             font-weight: 900 !important;
-            font-size: 16px !important;
-        }}
-
-        .daftra-quick-card {{
-            background-color: {bg_card} !important;
-            border-radius: 10px !important;
-            padding: 6px 8px !important;
-            border: 1px solid {border_color} !important;
-            text-align: center !important;
-            margin-bottom: 4px !important;
-        }}
-
-        .daftra-quick-card h3 {{
-            margin: 0 !important;
-            font-size: 20px !important;
-            text-align: center !important;
-        }}
-
-        .daftra-quick-card h4 {{
-            margin: 2px 0 0 0 !important;
-            font-size: 12px !important;
-            text-align: center !important;
+            font-size: 17px !important;
         }}
 
         .welcome-card-lux {{
@@ -174,6 +289,17 @@ st.markdown(f"""
             border: 2px solid #D97706;
         }}
 
+        .title-company-huge {{
+            font-size: 28px !important;
+            font-weight: 900 !important;
+            background: linear-gradient(135deg, #FFF 0%, #F59E0B 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            text-align: center !important;
+        }}
+
         .company-header-inner {{
             background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%);
             border: 2px solid #D97706;
@@ -182,6 +308,7 @@ st.markdown(f"""
             text-align: center !important;
             margin-top: 5px;
             margin-bottom: 15px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
         }}
 
         .company-header-inner-title {{
@@ -190,6 +317,59 @@ st.markdown(f"""
             color: #F59E0B !important;
             margin: 0 !important;
             text-align: center !important;
+        }}
+
+        .company-header-inner-sub {{
+            font-size: 13px !important;
+            color: #94A3B8 !important;
+            margin: 2px 0 0 0 !important;
+        }}
+
+        .logo-lux {{
+            font-size: 65px;
+            font-weight: 900;
+            color: #EF4444 !important;
+            font-family: Arial, sans-serif;
+            line-height: 1;
+            margin-bottom: 5px;
+            text-align: center !important;
+        }}
+
+        .date-badge-lux {{
+            display: inline-block;
+            background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
+            color: #FFFFFF !important;
+            padding: 5px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 800;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            text-align: center !important;
+        }}
+
+        @media screen and (max-width: 768px) {{
+            .main .block-container {{
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+                padding-top: 40px !important;
+            }}
+
+            [data-testid="stHorizontalBlock"] {{
+                flex-direction: column !important;
+            }}
+
+            [data-testid="column"], [data-testid="stColumn"] {{
+                width: 100% !important;
+                flex: 1 1 100% !important;
+                min-width: 100% !important;
+                margin-bottom: 8px !important;
+            }}
+
+            .title-company-huge {{ font-size: 20px !important; }}
+            .company-header-inner-title {{ font-size: 17px !important; }}
+            .logo-lux {{ font-size: 45px !important; }}
         }}
     </style>
 """, unsafe_allow_html=True)
@@ -969,22 +1149,43 @@ else:
             st.markdown("### ⚡ إجراءات خاطفة وسريعة (لوحة wahby)")
             q_col1, q_col2, q_col3, q_col4, q_col5, q_col6, q_col7 = st.columns(7)
             
-            quick_actions = [
-                (q_col1, "👤", "إضافة موظف", "q_btn_add_emp", lambda: add_employee_dialog('مصنع ميم الخماسية الخرج')),
-                (q_col2, "🔄", "تحويل عُهدة", "q_btn_trf_cash", lambda: quick_cash_voucher_dialog("تحويل عُهدة إلى (omar)", month_selected, "main")),
-                (q_col3, "🟢", "سند قبض", "q_btn_rec", lambda: quick_cash_voucher_dialog("قبض", month_selected, "main")),
-                (q_col4, "🔴", "سند صرف", "q_btn_pay", lambda: quick_cash_voucher_dialog("صرف", month_selected, "main")),
-                (q_col5, "🚚", "السائقين", "q_btn_driver_page", lambda: st.session_state.update({'current_view': 'عُهدة السواقين'})),
-                (q_col6, "🔍", "الجرد", "q_btn_audit_page", lambda: st.session_state.update({'current_view': 'جرد الخزينة'})),
-                (q_col7, "💾", "الأرشيف", "q_btn_backup_page", lambda: st.session_state.update({'current_view': 'النسخ الاحتياطي'}))
-            ]
+            with q_col1:
+                st.markdown('<div class="daftra-quick-card"><h3>👤</h3><h4>إضافة موظف</h4></div>', unsafe_allow_html=True)
+                if st.button("➕ إضافة", key="q_btn_add_emp", use_container_width=True):
+                    add_employee_dialog('مصنع ميم الخماسية الخرج')
 
-            for col, icon, label, k, act in quick_actions:
-                with col:
-                    st.markdown(f'<div class="daftra-quick-card"><h3>{icon}</h3><h4>{label}</h4></div>', unsafe_allow_html=True)
-                    if st.button(f"فتح {label}", key=k, use_container_width=True):
-                        act()
-                        st.rerun()
+            with q_col2:
+                st.markdown('<div class="daftra-quick-card"><h3>🔄</h3><h4>تحويل عُهدة</h4></div>', unsafe_allow_html=True)
+                if st.button("تحويل", key="q_btn_trf_cash", use_container_width=True):
+                    quick_cash_voucher_dialog("تحويل عُهدة إلى (omar)", month_selected, "main")
+
+            with q_col3:
+                st.markdown('<div class="daftra-quick-card"><h3>🟢</h3><h4>سند قبض</h4></div>', unsafe_allow_html=True)
+                if st.button("قبض", key="q_btn_rec", use_container_width=True):
+                    quick_cash_voucher_dialog("قبض", month_selected, "main")
+
+            with q_col4:
+                st.markdown('<div class="daftra-quick-card"><h3>🔴</h3><h4>سند صرف</h4></div>', unsafe_allow_html=True)
+                if st.button("صرف", key="q_btn_pay", use_container_width=True):
+                    quick_cash_voucher_dialog("صرف", month_selected, "main")
+
+            with q_col5:
+                st.markdown('<div class="daftra-quick-card"><h3>🚚</h3><h4>السائقين</h4></div>', unsafe_allow_html=True)
+                if st.button("السائقين", key="q_btn_driver_page", use_container_width=True):
+                    st.session_state['current_view'] = 'عُهدة السواقين'
+                    st.rerun()
+
+            with q_col6:
+                st.markdown('<div class="daftra-quick-card"><h3>🔍</h3><h4>الجرد</h4></div>', unsafe_allow_html=True)
+                if st.button("الجرد", key="q_btn_audit_page", use_container_width=True):
+                    st.session_state['current_view'] = 'جرد الخزينة'
+                    st.rerun()
+
+            with q_col7:
+                st.markdown('<div class="daftra-quick-card"><h3>💾</h3><h4>الأرشيف</h4></div>', unsafe_allow_html=True)
+                if st.button("الأرشيف", key="q_btn_backup_page", use_container_width=True):
+                    st.session_state['current_view'] = 'النسخ الاحتياطي'
+                    st.rerun()
 
         else:
             c_box1, c_box2 = st.columns(2)
@@ -1477,7 +1678,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق المكتمل بضغط المساحات والتميز اللوني الصريح
+    # 8. موديول حركة الصندوق المضغوط والمميز بالألوان المباشرة
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
