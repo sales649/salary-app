@@ -858,7 +858,7 @@ if not st.session_state.get('app_started', False):
                     st.error("كلمة المرور غير صحيحة!")
 
 else:
-    # 3. القائمة الجانبية المباشرة مع التذكر التلقائي لآخر شهر تم إغلاقه
+    # 3. القائمة الجانبية المباشرة
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 2px;">
@@ -1066,7 +1066,7 @@ else:
         output.seek(0)
         return output
 
-    # 4. الواجهة الرئيسية مع حجب الخزينة الرئيسية نهائياً عن omar
+    # 4. الواجهة الرئيسية
     if selected_option == 'الرئيسية':
         all_cash_db = load_cash_data()
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
@@ -1093,7 +1093,6 @@ else:
 
         st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
         
-        # العرض الكامل لـ wahby المشتمل الخزينة الرئيسية
         if st.session_state.user_role == "admin":
             c_box1, c_box2, c_box3, c_box4 = st.columns(4)
             with c_box1:
@@ -1167,7 +1166,6 @@ else:
                     st.session_state['current_view'] = 'النسخ الاحتياطي'
                     st.rerun()
 
-        # لوحة omar المقتصرة والخالية من تفاصيل الخزينة الرئيسية
         else:
             c_box1, c_box2 = st.columns(2)
             with c_box1:
@@ -1202,7 +1200,7 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 5. موديول عُهدة السواقين التراكمي المباشر
+    # 5. موديول عُهدة السواقين
     elif selected_option == 'عُهدة السواقين':
         st.subheader(f'🚚 موديول إدارة عُهدة السواقين المباشر - ({month_selected})')
         st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والتسميع التراكمي المباشر بصندوق omar:')
@@ -1497,7 +1495,7 @@ else:
                 except Exception:
                     st.error("خطأ في قراءة ملف النسخة المرفوع.")
 
-    # 7. موديول إدخال الدفعات المحدث والمزود بـ تخصيص الدفعة المراد خصمها (1 أو 2 أو الكل)
+    # 7. موديول إدخال الدفعات المحدث المشتمل على اختيار مصدر الرواتب وتأكيد الخصم المباشر بضغطة زر
     elif selected_option == 'إدخال الدفعات' and st.session_state.user_role == "admin":
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات - ({month_selected})')
         
@@ -1509,10 +1507,9 @@ else:
         
         for b_name, tab_obj in branches:
             with tab_obj:
-                df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
-                b_tot_paid_current = df_b['الدفعة المدفوعة'].sum()
+                df_b_curr = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
 
-                col_auto1, col_auto2 = st.columns([1.3, 1.7])
+                col_auto1, col_auto2 = st.columns([1.2, 1.8])
                 with col_auto1:
                     if st.button(f'توزيع المتبقي كـ "دفعة 2" تلقائياً ({b_name})', key=f"auto_btn_{b_name}"):
                         for idx, row in st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].iterrows():
@@ -1528,23 +1525,44 @@ else:
                         st.rerun()
 
                 with col_auto2:
-                    # إضافة قائمة اختيار نوع الدفعة المراد خصمها بالصندوق
+                    source_options = [f"رواتب شهر ({month_selected}) الحالي"]
+                    if prev_month_label:
+                        source_options.append(f"رواتب شهر ({prev_month_label}) السابق")
+
+                    src_choice = st.selectbox(
+                        "اختر مصدر الرواتب المراد خصمها بالصندوق:",
+                        source_options,
+                        key=f"src_choice_select_{b_name}_{month_selected}"
+                    )
+
                     pay_choice = st.selectbox(
                         "اختر الدفعة المراد خصمها بالصندوق:",
                         ["إجمالي الدفعات معاً", "الدفعة الأولى فقط", "الدفعة الثانية فقط"],
                         key=f"pay_choice_select_{b_name}_{month_selected}"
                     )
 
-                    # احتساب المبلغ المسدد بناءً على نوع الدفعة المحددة
-                    if pay_choice == "الدفعة الأولى فقط":
-                        amt_to_deduct = df_b['الدفعة 1'].sum()
-                    elif pay_choice == "الدفعة الثانية فقط":
-                        amt_to_deduct = df_b['الدفعة 2'].sum()
+                    # اختيار الـ DataFrame التابع للشهر المحدد
+                    if prev_month_label and prev_month_label in src_choice:
+                        target_df_calc = get_payroll_for_month(prev_month_label)
+                        label_month_used = prev_month_label
                     else:
-                        amt_to_deduct = df_b['الدفعة المدفوعة'].sum()
+                        target_df_calc = st.session_state.payroll_df
+                        label_month_used = month_selected
+
+                    target_df_branch = target_df_calc[target_df_calc['الفرع'] == b_name]
+
+                    # احتساب المبلغ المسدد بناءً على نوع الدفعة والشهر المحددين
+                    if pay_choice == "الدفعة الأولى فقط":
+                        amt_to_deduct = target_df_branch['الدفعة 1'].sum()
+                    elif pay_choice == "الدفعة الثانية فقط":
+                        amt_to_deduct = target_df_branch['الدفعة 2'].sum()
+                    else:
+                        amt_to_deduct = target_df_branch['الدفعة المدفوعة'].sum()
+
+                    st.info(f"💵 **إجمالي المبلغ المجهز للخصم الآن بالصندوق: ({amt_to_deduct:,.2f} ر.س)** عن ({pay_choice} - {label_month_used})")
 
                     if amt_to_deduct > 0:
-                        if st.button(f'💸 خصم وتسميع ({pay_choice}) بـ ({amt_to_deduct:,.0f} ر.س) كـ سند صرف', key=f"trf_sal_to_cash_{b_name}"):
+                        if st.button(f'🚀 تأكيد خصم المبلغ ({amt_to_deduct:,.0f} ر.س) وإنشاء سند صرف بصندوق {month_selected}', key=f"confirm_trf_sal_btn_{b_name}"):
                             all_cash = load_cash_data()
                             if month_selected not in all_cash:
                                 all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
@@ -1558,20 +1576,20 @@ else:
                                 'code': f"PAY-SAL-{(len(c_trans) + 1):03d}",
                                 'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
                                 'type': 'سند صرف / مصروف',
-                                'party': f"سداد رواتب ودفعات ({pay_choice}) - شهر ({month_selected}) - فرع ({b_name})",
+                                'party': f"سداد رواتب ودفعات ({pay_choice}) - شهر ({label_month_used}) - فرع ({b_name})",
                                 'amount': amt_to_deduct,
                                 'method': 'نقداً بالصندوق',
-                                'notes': f"سند صرف آلي معمد لـ ({pay_choice}) بفرع {b_name}"
+                                'notes': f"سند صرف آلي معمد لمسير فرع {b_name} عن شهر {label_month_used}"
                             })
                             m_cash[target_trans_key] = c_trans
                             all_cash[month_selected] = m_cash
                             save_cash_data(all_cash)
-                            st.success(f"تم اعتماد وتخصيم {amt_to_deduct:,.2f} ر.س كـ سند صرف لـ ({pay_choice}) بـ فرع ({b_name}) بنجاح!")
+                            st.success(f"تم اعتماد وتخصيم {amt_to_deduct:,.2f} ر.س كـ سند صرف بـ فرع ({b_name}) بصندوق {month_selected} بنجاح!")
                             st.rerun()
 
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'نوع الإجراء', 'الملاحظات']
                 edited_b = st.data_editor(
-                    df_b[cols_rtl],
+                    df_b_curr[cols_rtl],
                     column_config={
                         "م": st.column_config.NumberColumn("مسلسل", disabled=True),
                         "الاسم": st.column_config.TextColumn("اسم الموظف"),
