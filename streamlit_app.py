@@ -61,15 +61,24 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
+        /* إخفاء شفرات الأيقونات المزعجة وأزرار التكبير القسري من القائمة الجانبية */
+        [data-testid="stSidebar"] button[kind="header"] {{
+            display: none !important;
+        }}
+        [data-testid="stSidebarCollapseButton"] {{
+            display: none !important;
+        }}
+
+        /* القائمة الجانبية المرفوعة والمختصرة بوضوح ممتاز */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
         }}
 
         [data-testid="stSidebarContent"] {{
-            padding-top: 5px !important;
-            padding-left: 10px !important;
-            padding-right: 10px !important;
+            padding-top: 10px !important;
+            padding-left: 12px !important;
+            padding-right: 12px !important;
             padding-bottom: 10px !important;
             box-sizing: border-box !important;
         }}
@@ -80,6 +89,7 @@ st.markdown(f"""
             font-weight: 800 !important;
         }}
 
+        /* أزرار القائمة الجانبية المحدثة */
         [data-testid="stSidebar"] .stButton>button {{
             width: 100% !important;
             background: {btn_sidebar_bg} !important;
@@ -88,8 +98,8 @@ st.markdown(f"""
             border-radius: 8px !important;
             font-weight: 800 !important;
             font-size: 13px !important;
-            padding: 5px 8px !important;
-            margin-bottom: 2px !important;
+            padding: 6px 8px !important;
+            margin-bottom: 3px !important;
             text-align: right !important;
             box-shadow: none !important;
         }}
@@ -116,6 +126,7 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
+        /* حقول الإدخال والتواريخ */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: {input_bg} !important;
             color: {input_text} !important;
@@ -126,6 +137,7 @@ st.markdown(f"""
             padding: 4px 8px !important;
         }}
 
+        /* تصحيح خطوط كروت الملاحظات والإحصائيات */
         [data-testid="stMetricValue"] div {{
             font-size: 16px !important;
             font-weight: 800 !important;
@@ -420,18 +432,19 @@ def get_payroll_for_month(month_name):
     if month_name in store:
         return pd.DataFrame(store[month_name])
     else:
-        # إنشاء كشف جديد للشهر يعتمد على أحدث بيانات الرواتب مع تصفير الدفعات
         df_base = pd.DataFrame(initial_payroll_data)
-        df_base['الدفعة 1'] = 0.0
-        df_base['الدفعة 2'] = 0.0
-        df_base['الخصومات'] = 0.0
-        df_base['الدفعة المدفوعة'] = 0.0
-        df_base['المتبقي'] = df_base['الراتب الأساسي']
-        df_base['نوع الإجراء'] = 'لم يُصرف'
         
-        # حفظ أغسطس بالبيانات الأولى المكتملة
+        # حفظ أغسطس ببياناته المكتملة
         if month_name == 'أغسطس 2026':
             df_base = pd.DataFrame(initial_payroll_data)
+        else:
+            # تصفية الدفعات والخصومات للشهر الجديد فقط عند افتتاحه لأول مرة
+            df_base['الدفعة 1'] = 0.0
+            df_base['الدفعة 2'] = 0.0
+            df_base['الخصومات'] = 0.0
+            df_base['الدفعة المدفوعة'] = 0.0
+            df_base['المتبقي'] = df_base['الراتب الأساسي']
+            df_base['نوع الإجراء'] = 'لم يُصرف'
 
         store[month_name] = df_base.to_dict(orient='records')
         save_monthly_payroll_store(store)
@@ -695,6 +708,112 @@ def edit_driver_custody_modal(item_idx):
                 st.success("تم تعديل بيانات عُهدة السائق بنجاح!")
                 st.rerun()
 
+@st.dialog("إضافة موظف جديد")
+def add_employee_dialog(default_branch):
+    st.write(f"إضافة موظف لفرع: **{default_branch}**")
+    with st.form("add_emp_modal_form"):
+        c1, c2 = st.columns(2)
+        with c1:
+            new_name = st.text_input("اسم الموظف الثلاثي:")
+            new_job = st.text_input("الوظيفة:", "عامل")
+            new_branch = st.selectbox("الفرع:", ['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'], index=['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'].index(default_branch))
+        with c2:
+            new_sal = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=2500.0)
+            new_start = st.date_input("تاريخ بداية العمل:", datetime(2024, 1, 1))
+            new_iq = st.date_input("تاريخ انتهاء الإقامة:", datetime(2027, 12, 31))
+            new_ct = st.date_input("تاريخ انتهاء العقد:", datetime(2027, 12, 31))
+            
+        sub_btn = st.form_submit_button("حفظ وإضافة الموظف")
+        if sub_btn:
+            if new_name:
+                max_id = st.session_state.payroll_df['م'].max() + 1 if not st.session_state.payroll_df.empty else 1
+                new_dict = {
+                    'م': max_id,
+                    'الاسم': new_name,
+                    'الوظيفة': new_job,
+                    'الراتب الأساسي': new_sal,
+                    'الفرع': new_branch,
+                    'تاريخ بداية العمل': str(new_start),
+                    'تاريخ انتهاء الإقامة': str(new_iq),
+                    'تاريخ انتهاء العقد': str(new_ct),
+                    'الخصومات': 0.0,
+                    'الدفعة 1': new_sal / 2.0,
+                    'الدفعة 2': new_sal / 2.0,
+                    'الدفعة المدفوعة': new_sal,
+                    'المتبقي': 0.0,
+                    'نوع الإجراء': 'صرف كامل',
+                    'الملاحظات': ''
+                }
+                st.session_state.payroll_df = pd.concat([st.session_state.payroll_df, pd.DataFrame([new_dict])], ignore_index=True)
+                save_payroll_for_month(st.session_state.payroll_df, st.session_state.current_active_month)
+                st.success(f"تمت إضافة ({new_name}) بنجاح!")
+                st.rerun()
+
+@st.dialog("تعديل ملف الموظف")
+def edit_employee_dialog(emp_idx, month_selected):
+    emp_data = st.session_state.payroll_df.loc[emp_idx]
+    st.write(f"تعديل الموظف: **{emp_data['الاسم']}** (كود: #{emp_data['م']})")
+    
+    with st.form(f'edit_modal_{emp_data["م"]}'):
+        col_e1, col_e2, col_e3 = st.columns(3)
+        with col_e1:
+            st.markdown("### البيانات الإدارية")
+            up_name = st.text_input("اسم الموظف الثلاثي:", value=emp_data['الاسم'])
+            up_job = st.text_input("الوظيفة:", value=emp_data['الوظيفة'])
+            up_branch = st.selectbox("الفرع التابع له:", [
+                'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'
+            ], index=['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'].index(emp_data['الفرع']))
+            
+        with col_e2:
+            st.markdown("### المالية (" + month_selected + ")")
+            up_salary = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=float(emp_data['الراتب الأساسي']))
+            up_pay1 = st.number_input("الدفعة 1 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 1', 0)))
+            up_pay2 = st.number_input("الدفعة 2 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 2', 0)))
+            up_ded = st.number_input("الخصومات (ر.س):", min_value=0.0, value=float(emp_data.get('الخصومات', 0)))
+            up_action = st.selectbox("نوع الإجراء:", ["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"], index=["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"].index(emp_data['نوع الإجراء']))
+            up_notes = st.text_input("الملاحظات:", value=emp_data['الملاحظات'])
+            
+        with col_e3:
+            st.markdown("### التواريخ والوثائق")
+            st_val = datetime.strptime(str(emp_data.get('تاريخ بداية العمل', '2024-01-01')), '%Y-%m-%d')
+            iq_val = datetime.strptime(str(emp_data['تاريخ انتهاء الإقامة']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء الإقامة']) else datetime(2027, 12, 31)
+            ct_val = datetime.strptime(str(emp_data['تاريخ انتهاء العقد']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء العقد']) else datetime(2027, 12, 31)
+            
+            up_start_date = st.date_input("تاريخ بداية العمل:", st_val)
+            up_iqama_date = st.date_input("تاريخ انتهاء الإقامة:", iq_val)
+            up_contract_date = st.date_input("تاريخ انتهاء العقد:", ct_val)
+            
+        st.divider()
+        save_btn = st.form_submit_button('حفظ وتحديث البيانات')
+        
+        if save_btn:
+            tot_paid_emp = up_pay1 + up_pay2
+            st.session_state.payroll_df.loc[emp_idx, 'الاسم'] = up_name
+            st.session_state.payroll_df.loc[emp_idx, 'الوظيفة'] = up_job
+            st.session_state.payroll_df.loc[emp_idx, 'الفرع'] = up_branch
+            st.session_state.payroll_df.loc[emp_idx, 'الراتب الأساسي'] = up_salary
+            st.session_state.payroll_df.loc[emp_idx, 'الخصومات'] = up_ded
+            st.session_state.payroll_df.loc[emp_idx, 'الدفعة 1'] = up_pay1
+            st.session_state.payroll_df.loc[emp_idx, 'الدفعة 2'] = up_pay2
+            st.session_state.payroll_df.loc[emp_idx, 'الدفعة المدفوعة'] = tot_paid_emp
+            st.session_state.payroll_df.loc[emp_idx, 'المتبقي'] = up_salary - (tot_paid_emp + up_ded)
+            st.session_state.payroll_df.loc[emp_idx, 'نوع الإجراء'] = up_action
+            st.session_state.payroll_df.loc[emp_idx, 'الملاحظات'] = up_notes
+            st.session_state.payroll_df.loc[emp_idx, 'تاريخ بداية العمل'] = str(up_start_date)
+            st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء الإقامة'] = str(up_iqama_date)
+            st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء العقد'] = str(up_contract_date)
+            
+            save_payroll_for_month(st.session_state.payroll_df, month_selected)
+            st.success("تم الحفظ بنجاح!")
+            st.rerun()
+
+    with st.expander(f"حذف الموظف ({emp_data['الاسم']})"):
+        if st.button(f"تأكيد الحذف النهائياً", key=f"del_modal_{emp_data['م']}"):
+            st.session_state.payroll_df = st.session_state.payroll_df.drop(emp_idx).reset_index(drop=True)
+            save_payroll_for_month(st.session_state.payroll_df, month_selected)
+            st.success("تم الحذف!")
+            st.rerun()
+
 # 2. الشاشة الافتتاحية
 if not st.session_state.get('app_started', False):
     st.markdown("""
@@ -732,7 +851,7 @@ if not st.session_state.get('app_started', False):
                     st.error("كلمة المرور غير صحيحة!")
 
 else:
-    # 3. القائمة الجانبية المباشرة والنظيفة بالمسميات المحدثة
+    # 3. القائمة الجانبية المباشرة مع توسيط اسم الشركة
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 2px;">
@@ -813,6 +932,7 @@ else:
 
     # جلب ملف الرواتب المخصص للشهر المح محدد من السجل المستقل
     st.session_state.payroll_df = get_payroll_for_month(month_selected)
+    st.session_state.current_active_month = month_selected
 
     tot_emp = len(st.session_state.payroll_df)
     tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
@@ -1070,7 +1190,7 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 5. موديول عُهدة السواقين
+    # 5. موديول عُهدة السواقين التراكمي المباشر
     elif selected_option == 'عُهدة السواقين':
         st.subheader(f'🚚 موديول إدارة عُهدة السواقين المباشر - ({month_selected})')
         st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والتسميع التراكمي المباشر بصندوق omar:')
@@ -1115,7 +1235,7 @@ else:
                     })
                     save_drivers_data(drivers_db)
 
-                    # تسميع فوري كـ "سند صرف" صريح بصندوق omar
+                    # تسميع فوري كـ "سند صرف" صريح ببصمة عُهدة سمان السواق بملف omar
                     all_cash = load_cash_data()
                     if month_selected not in all_cash:
                         all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
@@ -1499,7 +1619,6 @@ else:
 
         opening_bal = current_m_cash.get(active_opening_key, 0.0)
 
-        # تحويل تعديل الرصيد الافتتاحي بزر مباشر صريح بدلاً من expander
         st.write("")
         if st.button("✏️ تعديل وتثبيت الرصيد الافتتاحي للصندوق", key="btn_open_dialog_bal"):
             opening_balance_dialog(month_selected, active_target_box)
