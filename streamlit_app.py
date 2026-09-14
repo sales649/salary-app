@@ -255,7 +255,7 @@ st.markdown(f"""
             white-space: nowrap !important;
         }}
 
-        /* تصميم حركة الصندوق المدمجة والمضغوطة */
+        /* تصميم حركة الصندوق المدمجة المبسطة */
         .cash-card-item {{
             background-color: {bg_card};
             border: 1px solid {border_color};
@@ -564,9 +564,9 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
     st.write(f"إضافة سند لشهر: **{month_name}** ({'الرئيسية' if target_box == 'main' else 'omar'})")
     
     if target_box == "main":
-        type_options = ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (omar)"]
+        type_options = ["سند قبض", "سند صرف", "🔄 تحويل عُهدة إلى (omar)"]
     else:
-        type_options = ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (wahby)"]
+        type_options = ["سند قبض", "سند صرف", "🔄 تحويل عُهدة إلى (wahby)"]
 
     with st.form("quick_cash_form", clear_on_submit=True):
         q_type = st.selectbox("نوع السند:", type_options, index=0 if "قبض" in default_type else 1)
@@ -595,7 +595,7 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                         'id': len(c_trans) + 1,
                         'code': v_code,
                         'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                        'type': 'سند صرف / مصروف',
+                        'type': 'سند صرف',
                         'party': f"تحويل عُهدة إلى المحاسب (omar) - {q_party}",
                         'amount': q_amt,
                         'method': q_method,
@@ -609,7 +609,7 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                         'id': len(acc_trans) + 1,
                         'code': f"REC-TRF-{(len(acc_trans) + 1):03d}",
                         'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                        'type': 'سند قبض / إيراد',
+                        'type': 'سند قبض',
                         'party': f"استلام عُهدة محولة من الخزينة الرئيسية (wahby)",
                         'amount': q_amt,
                         'method': q_method,
@@ -623,7 +623,7 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                         'id': len(c_trans) + 1,
                         'code': v_code,
                         'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                        'type': 'سند صرف / مصروف',
+                        'type': 'سند صرف',
                         'party': f"تحويل نقدية واسترداد إلى الخزينة الرئيسية (wahby) - {q_party}",
                         'amount': q_amt,
                         'method': q_method,
@@ -637,7 +637,7 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                         'id': len(main_trans) + 1,
                         'code': f"REC-TRF-{(len(main_trans) + 1):03d}",
                         'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                        'type': 'سند قبض / إيراد',
+                        'type': 'سند قبض',
                         'party': f"استلام نقدية محولة من عُهدة المحاسب (omar)",
                         'amount': q_amt,
                         'method': q_method,
@@ -696,7 +696,7 @@ def print_cash_voucher_dialog(trans_item, month_name):
                 <div style="font-size:50px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
                 <div style="font-size:13px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
             </div>
-            <div class="v-title">{t_type} - شهر ({month_name}) | رقم السند: #{trans_item.get('code', trans_item['id'])}</div>
+            <div class="v-title">{t_type} | رقم السند: #{trans_item.get('code', trans_item['id'])}</div>
             <table class="v-table">
                 <tr><th>التاريخ والتوقيت</th><td style="font-size:16px; font-weight:bold;">{trans_item['date']}</td><th>طريقة السداد</th><td><strong>{trans_item['method']}</strong></td></tr>
                 <tr><th>{party_label}</th><td colspan="3"><strong style="font-size:18px; color:#1E3A8A;">{trans_item['party']}</strong></td></tr>
@@ -1151,7 +1151,7 @@ else:
             
             with q_col1:
                 st.markdown('<div class="daftra-quick-card"><h3>👤</h3><h4>إضافة موظف</h4></div>', unsafe_allow_html=True)
-                if st.button("➕ إضافة", key="q_btn_add_emp", use_container_width=True):
+                if st.button("إضافة", key="q_btn_add_emp", use_container_width=True):
                     add_employee_dialog('مصنع ميم الخماسية الخرج')
 
             with q_col2:
@@ -1276,7 +1276,7 @@ else:
                         'id': len(acc_trans) + 1,
                         'code': f"DRV-OUT-{(len(acc_trans) + 1):03d}",
                         'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                        'type': 'سند صرف / مصروف',
+                        'type': 'سند صرف',
                         'party': f"عُهدة سمان السواق",
                         'amount': given_amt,
                         'method': 'نقداً بالصندوق',
@@ -1334,7 +1334,7 @@ else:
                             'id': len(acc_trans) + 1,
                             'code': f"DRV-REF-{(len(acc_trans) + 1):03d}",
                             'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                            'type': 'سند صرف / مصروف',
+                            'type': 'سند صرف',
                             'party': f"عُهدة سمان السواق - سداد فرق مصروفات زيادة",
                             'amount': abs(diff_val),
                             'method': 'نقداً بالصندوق',
@@ -1608,7 +1608,7 @@ else:
                                     'id': len(c_trans) + 1,
                                     'code': v_code,
                                     'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                                    'type': 'سند صرف / مصروف',
+                                    'type': 'سند صرف',
                                     'party': f"سداد رواتب ودفعات ({pay_choice}) - شهر ({label_month_used}) - فرع ({b_name})",
                                     'amount': amt_to_deduct,
                                     'method': 'نقداً بالصندوق',
@@ -1678,7 +1678,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق المضغوط والمميز بالألوان المباشرة
+    # 8. موديول حركة الصندوق المبسط مع الألوان الواضحة والمساحات المفتوحة
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -1721,7 +1721,7 @@ else:
         col_c_in1, col_c_in2 = st.columns([1, 1.8])
         with col_c_in1:
             st.markdown("### 📝 تسجيل حركة بالصندوق:")
-            type_select_options = ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (omar)"] if st.session_state.user_role == "admin" else ["سند قبض / إيراد", "سند صرف / مصروف", "🔄 تحويل عُهدة إلى (wahby)"]
+            type_select_options = ["سند قبض", "سند صرف", "🔄 تحويل عُهدة إلى (omar)"] if st.session_state.user_role == "admin" else ["سند قبض", "سند صرف", "🔄 تحويل عُهدة إلى (wahby)"]
             
             with st.form("add_cash_transaction_form", clear_on_submit=True):
                 trans_type = st.selectbox("نوع الحركة:", type_select_options)
@@ -1739,7 +1739,7 @@ else:
                                 'id': len(curr_trans) + 1,
                                 'code': v_code,
                                 'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                                'type': 'سند صرف / مصروف',
+                                'type': 'سند صرف',
                                 'party': f"تحويل عُهدة إلى المحاسب (omar) - {trans_party}",
                                 'amount': trans_amt,
                                 'method': trans_pay_method,
@@ -1751,7 +1751,7 @@ else:
                                 'id': len(acc_trans) + 1,
                                 'code': f"REC-TRF-{(len(acc_trans) + 1):03d}",
                                 'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                                'type': 'سند قبض / إيراد',
+                                'type': 'سند قبض',
                                 'party': f"استلام عُهدة محولة من الخزينة الرئيسية (wahby)",
                                 'amount': trans_amt,
                                 'method': trans_pay_method,
@@ -1765,7 +1765,7 @@ else:
                                 'id': len(curr_trans) + 1,
                                 'code': v_code,
                                 'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                                'type': 'سند صرف / مصروف',
+                                'type': 'سند صرف',
                                 'party': f"تحويل نقدية واسترداد إلى الخزينة الرئيسية (wahby) - {trans_party}",
                                 'amount': trans_amt,
                                 'method': trans_pay_method,
@@ -1777,7 +1777,7 @@ else:
                                 'id': len(main_trans) + 1,
                                 'code': f"REC-TRF-{(len(main_trans) + 1):03d}",
                                 'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                                'type': 'سند قبض / إيراد',
+                                'type': 'سند قبض',
                                 'party': f"استلام نقدية محولة من عُهدة المحاسب (omar)",
                                 'amount': trans_amt,
                                 'method': trans_pay_method,
@@ -1807,13 +1807,13 @@ else:
                         st.rerun()
 
         with col_c_in2:
-            st.markdown("### 📊 دفتر يومية الصندوق (الكروت المدمجة):")
+            st.markdown("### 📊 دفتر يومية الصندوق:")
             if curr_trans:
                 cf1, cf2 = st.columns([2, 1])
                 with cf1:
                     cash_search = st.text_input("🔍 استعلام بالبيان:", key="search_cash_input")
                 with cf2:
-                    cash_filter_type = st.selectbox("تصفية بالحركة:", ["جميع الحركات", "سند قبض / إيراد", "سند صرف / مصروف"], key="filter_cash_type")
+                    cash_filter_type = st.selectbox("تصفية بالحركة:", ["جميع الحركات", "سند قبض", "سند صرف"], key="filter_cash_type")
 
                 filtered_cash = curr_trans.copy()
                 if cash_search:
@@ -1841,7 +1841,7 @@ else:
                     st.markdown(f"""
                         <div class="cash-card-item" style="border-right: 5px solid {border_c};">
                             <div>
-                                <span style="font-weight:bold; font-size:14px;">#{t_item.get('code', t_item['id'])} - {t_item['party']}</span>
+                                <span style="font-weight:bold; font-size:15px;">#{t_item.get('code', t_item['id'])} - {t_item['party']}</span>
                                 <span style="font-size:11px; color:#94A3B8; margin-right:10px;">📅 {t_item['date']} | 💳 {t_item['method']}</span>
                             </div>
                             <div class="{amt_cls}">
