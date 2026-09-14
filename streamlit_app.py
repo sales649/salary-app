@@ -4,12 +4,23 @@ import io
 import json
 import os
 from datetime import datetime
+from supabase import create_client, Client
 
 # 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
 st.set_page_config(page_title='شركة ميم الخماسية للتصنيع - النظام المحاسبي الموحد', layout='wide', page_icon='🏢')
 
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
+
+# إعدادات الربط السحابي بـ Supabase
+SUPABASE_URL = "https://ohoqprtvmhyjomaavwct.supabase.co"
+SUPABASE_KEY = "sb_publishable_T6YFCaos1EexLgGG9KtwCw_nNMRHjJ_"
+
+@st.cache_resource
+def init_supabase() -> Client:
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+supabase = init_supabase()
 
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = '🌙 وضع ليلي'
@@ -353,7 +364,6 @@ AUDIT_FILE = 'audit_history.json'
 DRIVERS_FILE = 'driver_custody.json'
 LAST_MONTH_FILE = 'last_selected_month.json'
 
-# قاعدة البيانات المستحدثة المرفقة الأخيرة
 initial_payroll_data = [
     {'م': 1, 'الاسم': 'مد ساجد ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01', 'الخصومات': 0.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 5000.0, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': ''},
     {'م': 2, 'الاسم': 'فيض الإسلام', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-09-20', 'تاريخ انتهاء العقد': '2026-12-31', 'الخصومات': 0.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 2500.0, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': ''},
@@ -411,32 +421,34 @@ initial_payroll_data = [
     {'م': 54, 'الاسم': 'سمير المغازي ', 'الوظيفة': 'كميائي ', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-12-31', 'تاريخ انتهاء العقد': '2027-12-31', 'الخصومات': 0.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': 5000.0, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': ''}
 ]
 
+# دالة القراءة من Supabase مع المحافظة على التخزين الاحتياطي
+def fetch_cloud_store(key_name, default_data):
+    try:
+        response = supabase.table('app_stores').select('data_val').eq('store_key', key_name).execute()
+        if response.data and len(response.data) > 0:
+            return response.data[0]['data_val']
+    except Exception:
+        pass
+    return default_data
+
+def save_cloud_store(key_name, data_val):
+    try:
+        supabase.table('app_stores').upsert({'store_key': key_name, 'data_val': data_val}).execute()
+    except Exception:
+        pass
+
 def load_last_selected_month():
-    if os.path.exists(LAST_MONTH_FILE):
-        try:
-            with open(LAST_MONTH_FILE, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                return data.get('last_month', 'أغسطس 2026')
-        except Exception:
-            return 'أغسطس 2026'
-    return 'أغسطس 2026'
+    val = fetch_cloud_store('last_selected_month', {'last_month': 'أغسطس 2026'})
+    return val.get('last_month', 'أغسطس 2026')
 
 def save_last_selected_month(month_name):
-    with open(LAST_MONTH_FILE, 'w', encoding='utf-8') as f:
-        json.dump({'last_month': month_name}, f, ensure_ascii=False, indent=4)
+    save_cloud_store('last_selected_month', {'last_month': month_name})
 
 def load_monthly_payroll_store():
-    if os.path.exists(MONTHLY_PAYROLL_FILE):
-        try:
-            with open(MONTHLY_PAYROLL_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception:
-            return {}
-    return {}
+    return fetch_cloud_store('monthly_payroll_store', {})
 
 def save_monthly_payroll_store(store_data):
-    with open(MONTHLY_PAYROLL_FILE, 'w', encoding='utf-8') as f:
-        json.dump(store_data, f, ensure_ascii=False, indent=4)
+    save_cloud_store('monthly_payroll_store', store_data)
 
 def get_payroll_for_month(month_name):
     store = load_monthly_payroll_store()
@@ -462,43 +474,22 @@ def save_payroll_for_month(df, month_name):
     save_monthly_payroll_store(store)
 
 def load_cash_data():
-    if os.path.exists(CASH_FILE):
-        try:
-            with open(CASH_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception:
-            return {}
-    return {}
+    return fetch_cloud_store('cashbox_data', {})
 
 def save_cash_data(data):
-    with open(CASH_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    save_cloud_store('cashbox_data', data)
 
 def load_audit_data():
-    if os.path.exists(AUDIT_FILE):
-        try:
-            with open(AUDIT_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception:
-            return []
-    return []
+    return fetch_cloud_store('audit_history', [])
 
 def save_audit_data(data):
-    with open(AUDIT_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    save_cloud_store('audit_history', data)
 
 def load_drivers_data():
-    if os.path.exists(DRIVERS_FILE):
-        try:
-            with open(DRIVERS_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception:
-            return []
-    return []
+    return fetch_cloud_store('driver_custody', [])
 
 def save_drivers_data(data):
-    with open(DRIVERS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    save_cloud_store('driver_custody', data)
 
 def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     try:
@@ -535,7 +526,7 @@ def opening_balance_dialog(month_name, target_box):
             m_cash[active_opening_key] = new_opening_val
             all_cash_db[month_name] = m_cash
             save_cash_data(all_cash_db)
-            st.success("تم التثبيت!")
+            st.success("تم التثبيت السحابي!")
             st.rerun()
 
 @st.dialog("إنشاء سند جديد")
@@ -643,7 +634,7 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                 m_cash[box_key] = c_trans
                 all_cash[month_name] = m_cash
                 save_cash_data(all_cash)
-                st.success(f"تم الحفظ بنجاح برقم #{v_code}!")
+                st.success(f"تم الحفظ السحابي بنجاح برقم #{v_code}!")
                 st.rerun()
 
 @st.dialog("طباعة سند الصندوق A4")
@@ -711,7 +702,7 @@ def edit_driver_custody_modal(item_idx):
                 drivers_db[item_idx]['purpose'] = e_purpose
                 drivers_db[item_idx]['status'] = e_status
                 save_drivers_data(drivers_db)
-                st.success("تم تعديل بيانات عُهدة السائق بنجاح!")
+                st.success("تم تعديل بيانات عُهدة السائق سحابياً بنجاح!")
                 st.rerun()
 
 @st.dialog("إضافة موظف جديد")
@@ -1264,7 +1255,7 @@ else:
                     all_cash[month_selected] = m_cash
                     save_cash_data(all_cash)
 
-                    st.success(f"تم تسليم {given_amt:,.2f} ر.س للسائق وتوثيقها بصندوق omar!")
+                    st.success(f"تم تسليم {given_amt:,.2f} ر.س للسائق وتوثيقها سحابياً بصندوق omar!")
                     st.rerun()
 
         with d_col2:
