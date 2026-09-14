@@ -1495,7 +1495,7 @@ else:
                 except Exception:
                     st.error("خطأ في قراءة ملف النسخة المرفوع.")
 
-    # 7. موديول إدخال الدفعات المحدث المشتمل على اختيار مصدر الرواتب وتأكيد الخصم المباشر بضغطة زر
+    # 7. موديول إدخال الدفعات المحدث والمزود بـ حالة توثيق معتمدة وحظر التكرار
     elif selected_option == 'إدخال الدفعات' and st.session_state.user_role == "admin":
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات - ({month_selected})')
         
@@ -1505,11 +1505,22 @@ else:
         t1, t2, t3, t4 = st.tabs(['مصنع الخرج', 'مستودع الخرج', 'مستودع الرياض', 'رواتب متنوعة'])
         branches = [('مصنع ميم الخماسية الخرج', t1), ('مستودع ميم الخماسية الخرج', t2), ('مستودع ميم الخماسية الرياض', t3), ('رواتب متنوعة', t4)]
         
+        all_cash_db = load_cash_data()
+        current_month_cash = all_cash_db.get(month_selected, {'transactions': [], 'acc_transactions': []})
+        existing_vouchers = current_month_cash.get('transactions', []) + current_month_cash.get('acc_transactions', [])
+
         for b_name, tab_obj in branches:
             with tab_obj:
                 df_b_curr = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
 
-                col_auto1, col_auto2 = st.columns([1.2, 1.8])
+                # التحقق مما إذا تم تخصيم واعتماد رواتب هذا الفرع بالصندوق مسبقاً لهذا الشهر
+                already_settled_vouchers = [
+                    v for v in existing_vouchers 
+                    if "سداد رواتب ودفعات" in v.get('party', '') and b_name in v.get('party', '')
+                ]
+                is_already_settled = len(already_settled_vouchers) > 0
+
+                col_auto1, col_auto2 = st.columns([1.3, 1.7])
                 with col_auto1:
                     if st.button(f'توزيع المتبقي كـ "دفعة 2" تلقائياً ({b_name})', key=f"auto_btn_{b_name}"):
                         for idx, row in st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].iterrows():
@@ -1525,67 +1536,71 @@ else:
                         st.rerun()
 
                 with col_auto2:
-                    source_options = [f"رواتب شهر ({month_selected}) الحالي"]
-                    if prev_month_label:
-                        source_options.append(f"رواتب شهر ({prev_month_label}) السابق")
-
-                    src_choice = st.selectbox(
-                        "اختر مصدر الرواتب المراد خصمها بالصندوق:",
-                        source_options,
-                        key=f"src_choice_select_{b_name}_{month_selected}"
-                    )
-
-                    pay_choice = st.selectbox(
-                        "اختر الدفعة المراد خصمها بالصندوق:",
-                        ["إجمالي الدفعات معاً", "الدفعة الأولى فقط", "الدفعة الثانية فقط"],
-                        key=f"pay_choice_select_{b_name}_{month_selected}"
-                    )
-
-                    # اختيار الـ DataFrame التابع للشهر المحدد
-                    if prev_month_label and prev_month_label in src_choice:
-                        target_df_calc = get_payroll_for_month(prev_month_label)
-                        label_month_used = prev_month_label
+                    if is_already_settled:
+                        last_v = already_settled_vouchers[-1]
+                        st.success(f"✅ **تم اعتماد وتخصيم دفعات فرع ({b_name}) كـ سند صرف بالصندوق بنجاح (سند رقم: #{last_v.get('code', last_v['id'])})!**")
+                        st.button(f"🔒 تم الاعتماد بالصندوق لـ {b_name}", key=f"dis_trf_btn_{b_name}", disabled=True, use_container_width=True)
                     else:
-                        target_df_calc = st.session_state.payroll_df
-                        label_month_used = month_selected
+                        source_options = [f"رواتب شهر ({month_selected}) الحالي"]
+                        if prev_month_label:
+                            source_options.append(f"رواتب شهر ({prev_month_label}) السابق")
 
-                    target_df_branch = target_df_calc[target_df_calc['الفرع'] == b_name]
+                        src_choice = st.selectbox(
+                            "اختر مصدر الرواتب المراد خصمها بالصندوق:",
+                            source_options,
+                            key=f"src_choice_select_{b_name}_{month_selected}"
+                        )
 
-                    # احتساب المبلغ المسدد بناءً على نوع الدفعة والشهر المحددين
-                    if pay_choice == "الدفعة الأولى فقط":
-                        amt_to_deduct = target_df_branch['الدفعة 1'].sum()
-                    elif pay_choice == "الدفعة الثانية فقط":
-                        amt_to_deduct = target_df_branch['الدفعة 2'].sum()
-                    else:
-                        amt_to_deduct = target_df_branch['الدفعة المدفوعة'].sum()
+                        pay_choice = st.selectbox(
+                            "اختر الدفعة المراد خصمها بالصندوق:",
+                            ["إجمالي الدفعات معاً", "الدفعة الأولى فقط", "الدفعة الثانية فقط"],
+                            key=f"pay_choice_select_{b_name}_{month_selected}"
+                        )
 
-                    st.info(f"💵 **إجمالي المبلغ المجهز للخصم الآن بالصندوق: ({amt_to_deduct:,.2f} ر.س)** عن ({pay_choice} - {label_month_used})")
+                        if prev_month_label and prev_month_label in src_choice:
+                            target_df_calc = get_payroll_for_month(prev_month_label)
+                            label_month_used = prev_month_label
+                        else:
+                            target_df_calc = st.session_state.payroll_df
+                            label_month_used = month_selected
 
-                    if amt_to_deduct > 0:
-                        if st.button(f'🚀 تأكيد خصم المبلغ ({amt_to_deduct:,.0f} ر.س) وإنشاء سند صرف بصندوق {month_selected}', key=f"confirm_trf_sal_btn_{b_name}"):
-                            all_cash = load_cash_data()
-                            if month_selected not in all_cash:
-                                all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
-                            
-                            m_cash = all_cash[month_selected]
-                            target_trans_key = 'transactions' if st.session_state.user_role == "admin" else 'acc_transactions'
-                            c_trans = m_cash.get(target_trans_key, [])
-                            
-                            c_trans.append({
-                                'id': len(c_trans) + 1,
-                                'code': f"PAY-SAL-{(len(c_trans) + 1):03d}",
-                                'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                                'type': 'سند صرف / مصروف',
-                                'party': f"سداد رواتب ودفعات ({pay_choice}) - شهر ({label_month_used}) - فرع ({b_name})",
-                                'amount': amt_to_deduct,
-                                'method': 'نقداً بالصندوق',
-                                'notes': f"سند صرف آلي معمد لمسير فرع {b_name} عن شهر {label_month_used}"
-                            })
-                            m_cash[target_trans_key] = c_trans
-                            all_cash[month_selected] = m_cash
-                            save_cash_data(all_cash)
-                            st.success(f"تم اعتماد وتخصيم {amt_to_deduct:,.2f} ر.س كـ سند صرف بـ فرع ({b_name}) بصندوق {month_selected} بنجاح!")
-                            st.rerun()
+                        target_df_branch = target_df_calc[target_df_calc['الفرع'] == b_name]
+
+                        if pay_choice == "الدفعة الأولى فقط":
+                            amt_to_deduct = target_df_branch['الدفعة 1'].sum()
+                        elif pay_choice == "الدفعة الثانية فقط":
+                            amt_to_deduct = target_df_branch['الدفعة 2'].sum()
+                        else:
+                            amt_to_deduct = target_df_branch['الدفعة المدفوعة'].sum()
+
+                        st.info(f"💵 **إجمالي المبلغ المجهز للخصم الآن بالصندوق: ({amt_to_deduct:,.2f} ر.س)** عن ({pay_choice} - {label_month_used})")
+
+                        if amt_to_deduct > 0:
+                            if st.button(f'🚀 تأكيد خصم المبلغ ({amt_to_deduct:,.0f} ر.س) وإنشاء سند صرف بصندوق {month_selected}', key=f"confirm_trf_sal_btn_{b_name}", use_container_width=True):
+                                all_cash = load_cash_data()
+                                if month_selected not in all_cash:
+                                    all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                                
+                                m_cash = all_cash[month_selected]
+                                target_trans_key = 'transactions' if st.session_state.user_role == "admin" else 'acc_transactions'
+                                c_trans = m_cash.get(target_trans_key, [])
+                                
+                                v_code = f"PAY-SAL-{(len(c_trans) + 1):03d}"
+                                c_trans.append({
+                                    'id': len(c_trans) + 1,
+                                    'code': v_code,
+                                    'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                                    'type': 'سند صرف / مصروف',
+                                    'party': f"سداد رواتب ودفعات ({pay_choice}) - شهر ({label_month_used}) - فرع ({b_name})",
+                                    'amount': amt_to_deduct,
+                                    'method': 'نقداً بالصندوق',
+                                    'notes': f"سند صرف آلي معمد لـ ({pay_choice}) بفرع {b_name}"
+                                })
+                                m_cash[target_trans_key] = c_trans
+                                all_cash[month_selected] = m_cash
+                                save_cash_data(all_cash)
+                                st.success(f"تم اعتماد وتخصيم {amt_to_deduct:,.2f} ر.س كـ سند صرف (#{v_code}) بـ فرع ({b_name}) بنجاح!")
+                                st.rerun()
 
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'نوع الإجراء', 'الملاحظات']
                 edited_b = st.data_editor(
