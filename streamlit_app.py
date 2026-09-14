@@ -63,7 +63,15 @@ st.markdown(f"""
             overflow-x: hidden !important;
             -webkit-text-size-adjust: 100% !important;
         }}
-        
+
+        /* إلغاء الفراغات العلوية الفائضة بالكامل */
+        .main .block-container {{
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+            padding-left: 1.5rem !important;
+            padding-right: 1.5rem !important;
+        }}
+
         h1, h2, h3, h4, h5, h6, .stMarkdown, label, p, span, div {{
             direction: rtl !important;
             text-align: right !important;
@@ -81,10 +89,10 @@ st.markdown(f"""
         }}
 
         [data-testid="stSidebarContent"] {{
-            padding-top: 10px !important;
-            padding-left: 12px !important;
-            padding-right: 12px !important;
-            padding-bottom: 10px !important;
+            padding-top: 0.5rem !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+            padding-bottom: 0.5rem !important;
             box-sizing: border-box !important;
         }}
 
@@ -102,31 +110,14 @@ st.markdown(f"""
             border-radius: 8px !important;
             font-weight: 800 !important;
             font-size: 13px !important;
-            padding: 6px 8px !important;
-            margin-bottom: 3px !important;
+            padding: 5px 8px !important;
+            margin-bottom: 2px !important;
             text-align: right !important;
             box-shadow: none !important;
         }}
 
         [data-testid="stSidebar"] .stButton>button:hover {{
             background: #D97706 !important;
-            color: #FFFFFF !important;
-        }}
-
-        ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"] div {{
-            background-color: {bg_card} !important;
-            color: {text_color} !important;
-            border: 1px solid #D97706 !important;
-        }}
-
-        li[role="option"], li[role="option"] * {{
-            color: {text_color} !important;
-            background-color: {bg_card} !important;
-            font-weight: 700 !important;
-        }}
-
-        li[role="option"]:hover, li[role="option"]:hover * {{
-            background-color: #D97706 !important;
             color: #FFFFFF !important;
         }}
 
@@ -140,28 +131,29 @@ st.markdown(f"""
             padding: 4px 8px !important;
         }}
 
+        /* تكبير وتوسيط الخطوط بالمربعات المدرسية */
         [data-testid="stMetricValue"] div {{
-            font-size: 16px !important;
-            font-weight: 800 !important;
+            font-size: 20px !important;
+            font-weight: 900 !important;
+            text-align: center !important;
+            color: #F59E0B !important;
             white-space: nowrap !important;
-            overflow: visible !important;
-            text-overflow: clip !important;
         }}
 
         [data-testid="stMetricLabel"] label, [data-testid="stMetricLabel"] div {{
-            font-size: 12px !important;
-            font-weight: 700 !important;
+            font-size: 13px !important;
+            font-weight: 800 !important;
+            text-align: center !important;
             white-space: nowrap !important;
         }}
 
         .stMetric, .daftra-quick-card {{
             background-color: {bg_card} !important;
             border-radius: 10px !important;
-            padding: 8px 10px !important;
+            padding: 10px 12px !important;
             border: 1px solid {border_color} !important;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-            margin-bottom: 8px !important;
-            overflow: hidden !important;
+            margin-bottom: 6px !important;
             text-align: center !important;
         }}
 
@@ -178,90 +170,13 @@ st.markdown(f"""
             color: {text_color} !important;
         }}
 
-        .stMetric * {{
-            color: {text_color} !important;
-            text-align: right !important;
-        }}
-
-        [data-testid="stFileUploader"], [data-testid="stFileUploader"] section {{
-            background-color: #1E293B !important;
-            border: 1px dashed #D97706 !important;
-            border-radius: 8px !important;
-            padding: 6px !important;
-        }}
-
-        [data-testid="stFileUploader"] button {{
-            background-color: #D97706 !important;
-            color: #FFFFFF !important;
-            border: none !important;
-            border-radius: 6px !important;
-            font-weight: bold !important;
-            padding: 4px 10px !important;
-            font-size: 12px !important;
-        }}
-
-        [data-testid="stFileUploader"] span, [data-testid="stFileUploader"] label, [data-testid="stFileUploader"] small {{
-            color: #FFFFFF !important;
-            font-weight: bold !important;
-            font-size: 12px !important;
-        }}
-
-        [data-testid="stDialog"] div[role="dialog"] {{
-            background-color: {modal_bg} !important;
-            border: 3px solid #D97706 !important;
-            border-radius: 16px !important;
-            width: 95vw !important;
-            max-width: 600px !important;
-        }}
-
-        [data-testid="stDialog"] div[role="dialog"] label, 
-        [data-testid="stDialog"] div[role="dialog"] p, 
-        [data-testid="stDialog"] div[role="dialog"] span,
-        [data-testid="stDialog"] div[role="dialog"] h1,
-        [data-testid="stDialog"] div[role="dialog"] h2,
-        [data-testid="stDialog"] div[role="dialog"] h3,
-        [data-testid="stDialog"] div[role="dialog"] div {{
-            color: {modal_text} !important;
-            font-weight: 700 !important;
-            text-align: right !important;
-        }}
-
-        .stButton>button, .stDownloadButton>button, [data-testid="stFormSubmitButton"] button {{
-            background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
-            color: #FFFFFF !important;
-            border: none !important;
-            border-radius: 8px !important;
-            font-weight: 800 !important;
-            font-size: 13px !important;
-            box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.4) !important;
-            white-space: normal !important;
-            word-wrap: break-word !important;
-            padding: 6px 12px !important;
-        }}
-
-        .stDataFrame, [data-testid="stDataEditor"] {{
-            direction: rtl !important;
-            text-align: right !important;
-            background-color: {bg_card} !important;
-            width: 100% !important;
-            overflow-x: auto !important;
-        }}
-
-        .stDataFrame td, .stDataFrame th, [data-testid="stDataEditor"] td, [data-testid="stDataEditor"] th {{
-            text-align: right !important;
-            font-size: 12px !important;
-            padding: 6px 8px !important;
-            color: {text_color} !important;
-            white-space: nowrap !important;
-        }}
-
-        /* تصميم حركة الصندوق المدمجة المبسطة */
+        /* تصميم كروت حركة الصندوق المضغوطة والأنيقة */
         .cash-card-item {{
             background-color: {bg_card};
             border: 1px solid {border_color};
             border-radius: 8px;
             padding: 8px 12px !important;
-            margin-bottom: 5px !important;
+            margin-bottom: 4px !important;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -282,37 +197,26 @@ st.markdown(f"""
         .welcome-card-lux {{
             background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
             border-radius: 20px;
-            padding: 30px 15px;
+            padding: 20px 15px;
             text-align: center !important;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-            margin-top: 10px;
+            margin-top: 5px;
             border: 2px solid #D97706;
-        }}
-
-        .title-company-huge {{
-            font-size: 28px !important;
-            font-weight: 900 !important;
-            background: linear-gradient(135deg, #FFF 0%, #F59E0B 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-top: 10px;
-            margin-bottom: 10px;
-            text-align: center !important;
         }}
 
         .company-header-inner {{
             background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%);
             border: 2px solid #D97706;
-            border-radius: 16px;
-            padding: 12px 20px;
+            border-radius: 12px;
+            padding: 8px 15px;
             text-align: center !important;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            margin-top: 0px;
+            margin-bottom: 10px;
+            box-shadow: 0 5px 10px -3px rgba(0, 0, 0, 0.3);
         }}
 
         .company-header-inner-title {{
-            font-size: 22px !important;
+            font-size: 20px !important;
             font-weight: 900 !important;
             color: #F59E0B !important;
             margin: 0 !important;
@@ -320,13 +224,13 @@ st.markdown(f"""
         }}
 
         .company-header-inner-sub {{
-            font-size: 13px !important;
+            font-size: 12px !important;
             color: #94A3B8 !important;
-            margin: 2px 0 0 0 !important;
+            margin: 1px 0 0 0 !important;
         }}
 
         .logo-lux {{
-            font-size: 65px;
+            font-size: 50px;
             font-weight: 900;
             color: #EF4444 !important;
             font-family: Arial, sans-serif;
@@ -339,37 +243,14 @@ st.markdown(f"""
             display: inline-block;
             background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
             color: #FFFFFF !important;
-            padding: 5px 20px;
+            padding: 3px 16px;
             border-radius: 30px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 800;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.3);
             text-align: center !important;
-        }}
-
-        @media screen and (max-width: 768px) {{
-            .main .block-container {{
-                padding-left: 8px !important;
-                padding-right: 8px !important;
-                padding-top: 40px !important;
-            }}
-
-            [data-testid="stHorizontalBlock"] {{
-                flex-direction: column !important;
-            }}
-
-            [data-testid="column"], [data-testid="stColumn"] {{
-                width: 100% !important;
-                flex: 1 1 100% !important;
-                min-width: 100% !important;
-                margin-bottom: 8px !important;
-            }}
-
-            .title-company-huge {{ font-size: 20px !important; }}
-            .company-header-inner-title {{ font-size: 17px !important; }}
-            .logo-lux {{ font-size: 45px !important; }}
         }}
     </style>
 """, unsafe_allow_html=True)
@@ -558,6 +439,35 @@ def opening_balance_dialog(month_name, target_box):
             save_cash_data(all_cash_db)
             st.success("تم التثبيت السحابي!")
             st.rerun()
+
+@st.dialog("✏️ تعديل بيانات السند")
+def edit_cash_voucher_dialog(trans_idx, month_name, target_box="main"):
+    all_cash_db = load_cash_data()
+    m_cash = all_cash_db.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
+    box_key = 'transactions' if target_box == 'main' else 'acc_transactions'
+    c_trans = m_cash.get(box_key, [])
+    
+    if trans_idx < len(c_trans):
+        t_item = c_trans[trans_idx]
+        st.write(f"تعديل السند رقم: **#{t_item.get('code', t_item['id'])}**")
+        
+        with st.form(f"edit_voucher_form_{trans_idx}"):
+            e_party = st.text_input("صادر إلى / مستلم من:", value=t_item['party'])
+            e_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=float(t_item['amount']))
+            e_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"], index=["نقداً بالصندوق", "تحويل بنكي", "شيك"].index(t_item.get('method', 'نقداً بالصندوق')))
+            e_notes = st.text_input("البيان والملاحظات:", value=t_item.get('notes', ''))
+            
+            sub_e_voucher = st.form_submit_button("💾 حفظ تعديلات السند")
+            if sub_e_voucher:
+                c_trans[trans_idx]['party'] = e_party
+                c_trans[trans_idx]['amount'] = e_amt
+                c_trans[trans_idx]['method'] = e_method
+                c_trans[trans_idx]['notes'] = e_notes
+                m_cash[box_key] = c_trans
+                all_cash_db[month_name] = m_cash
+                save_cash_data(all_cash_db)
+                st.success("تم تعديل بيانات السند بنجاح!")
+                st.rerun()
 
 @st.dialog("إنشاء سند جديد")
 def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
@@ -1363,7 +1273,7 @@ else:
                 
                 diff_val = d_item.get('diff_amt', 0.0)
                 diff_str = "🟢 تصفية كاملة" if d_item['status'] == 'تمت التصفية' and diff_val == 0 else (f"🔴 متبقي معه ({diff_val:,.2f} ر.س)" if diff_val > 0 else f"🔵 زيادة له ({abs(diff_val):,.2f} ر.س)")
-                col_d4.write(f"الحالة: **{d_item['status']}**\n{diff_str}")
+                col_d4.write(f"الحالة: **{diff_str}**\n{diff_str}")
                 
                 if col_d5.button("✏️ تعديل", key=f"edit_drv_btn_{real_d_idx}"):
                     edit_driver_custody_modal(real_d_idx)
@@ -1678,7 +1588,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق المبسط مع الألوان الواضحة والمساحات المفتوحة
+    # 8. موديول حركة الصندوق المحدث بقائمة الإجراءات المدمجة ⚙️
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -1838,28 +1748,37 @@ else:
                     t_sign = "+" if is_rec else "-"
                     border_c = "#10B981" if is_rec else "#EF4444"
 
-                    st.markdown(f"""
-                        <div class="cash-card-item" style="border-right: 5px solid {border_c};">
-                            <div>
-                                <span style="font-weight:bold; font-size:15px;">#{t_item.get('code', t_item['id'])} - {t_item['party']}</span>
-                                <span style="font-size:11px; color:#94A3B8; margin-right:10px;">📅 {t_item['date']} | 💳 {t_item['method']}</span>
-                            </div>
-                            <div class="{amt_cls}">
-                                {t_sign} {t_item['amount']:,.2f} ر.س
-                            </div>
-                        </div>
-                    """, unsafe_allow_html=True)
+                    col_card_txt, col_popover = st.columns([3.5, 1])
                     
-                    bc1, bc2 = st.columns([1, 1])
-                    if bc1.button("🖨️ طباعة", key=f"btn_p_cash_{real_idx}"):
-                        print_cash_voucher_dialog(t_item, month_selected)
+                    with col_card_txt:
+                        st.markdown(f"""
+                            <div class="cash-card-item" style="border-right: 5px solid {border_c};">
+                                <div>
+                                    <span style="font-weight:bold; font-size:14px;">#{t_item.get('code', t_item['id'])} - {t_item['party']}</span><br>
+                                    <span style="font-size:11px; color:#94A3B8;">📅 {t_item['date']} | 💳 {t_item['method']} | 📝 {t_item.get('notes','')}</span>
+                                </div>
+                                <div class="{amt_cls}">
+                                    {t_sign} {t_item['amount']:,.2f} ر.س
+                                </div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                    
+                    with col_popover:
+                        with st.popover("⚙️ الإجراءات"):
+                            if st.button("🖨️ طباعة السند", key=f"pop_p_{real_idx}", use_container_width=True):
+                                print_cash_voucher_dialog(t_item, month_selected)
 
-                    if bc2.button("🗑️ حذف", key=f"btn_d_cash_{real_idx}"):
-                        curr_trans.pop(real_idx)
-                        all_cash_db[month_selected][active_box_key] = curr_trans
-                        save_cash_data(all_cash_db)
-                        st.success("تم الحذف!")
-                        st.rerun()
+                            if st.button("✏️ تعديل السند", key=f"pop_e_{real_idx}", use_container_width=True):
+                                edit_cash_voucher_dialog(real_idx, month_selected, active_target_box)
+
+                            if st.button("🗑️ حذف السند", key=f"pop_d_{real_idx}", use_container_width=True):
+                                curr_trans.pop(real_idx)
+                                all_cash_db[month_selected][active_box_key] = curr_trans
+                                save_cash_data(all_cash_db)
+                                st.success("تم حذف السند!")
+                                st.rerun()
+
+                    st.divider()
             else:
                 st.info("لا توجد حركات تسوية بالصندوق مسجلة لهذا الشهر.")
 
