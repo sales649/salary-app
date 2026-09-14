@@ -147,7 +147,7 @@ st.markdown(f"""
         }}
 
         [data-testid="stMetricValue"] div {{
-            font-size: 18px !important;
+            font-size: 22px !important;
             font-weight: 900 !important;
             text-align: center !important;
             color: #F59E0B !important;
@@ -155,7 +155,7 @@ st.markdown(f"""
         }}
 
         [data-testid="stMetricLabel"] label, [data-testid="stMetricLabel"] div {{
-            font-size: 13px !important;
+            font-size: 14px !important;
             font-weight: 800 !important;
             text-align: center !important;
             white-space: nowrap !important;
@@ -171,21 +171,21 @@ st.markdown(f"""
             text-align: center !important;
         }}
 
-        /* إصلاح فرض ألوان الأزرار ومنع ظهور اللون الأبيض نهائياً */
-        .stButton>button, .stDownloadButton>button, [data-testid="stFormSubmitButton"] button {{
-            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
-            color: #FFFFFF !important;
-            border: 1px solid #D97706 !important;
-            border-radius: 8px !important;
+        .daftra-btn-container button {{
+            background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%) !important;
+            color: {text_color} !important;
+            border: 1px solid {border_color} !important;
+            border-radius: 10px !important;
+            padding: 10px 4px !important;
+            font-size: 13px !important;
             font-weight: 800 !important;
-            font-size: 12px !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-            padding: 5px 8px !important;
             width: 100% !important;
+            text-align: center !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
         }}
 
-        .stButton>button:hover {{
-            background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
+        .daftra-btn-container button:hover {{
+            background: #D97706 !important;
             color: #FFFFFF !important;
         }}
 
@@ -193,7 +193,7 @@ st.markdown(f"""
             background-color: {bg_card};
             border: 1px solid {border_color};
             border-radius: 8px;
-            padding: 8px 12px !important;
+            padding: 6px 10px !important;
             margin-bottom: 2px !important;
             display: flex;
             justify-content: space-between;
@@ -652,6 +652,103 @@ def print_cash_voucher_dialog(trans_item, month_name):
     </body></html>
     """
     st.components.v1.html(html_v, height=340, scrolling=True)
+
+@st.dialog("🖨️ طباعة كشف حساب الصندوق المقابل (T-Account)")
+def print_t_account_dialog(trans_list, month_name, period_label, target_box_label):
+    rec_list = [t for t in trans_list if "قبض" in t['type']]
+    pay_list = [t for t in trans_list if "صرف" in t['type']]
+    
+    tot_rec = sum(t['amount'] for t in rec_list)
+    tot_pay = sum(t['amount'] for t in pay_list)
+    net_bal = tot_rec - tot_pay
+
+    max_len = max(len(rec_list), len(pay_list))
+
+    rows_html = ""
+    for i in range(max_len):
+        r_item = rec_list[i] if i < len(rec_list) else None
+        p_item = pay_list[i] if i < len(pay_list) else None
+
+        r_code = f"#{r_item.get('code', r_item['id'])}" if r_item else ""
+        r_party = r_item['party'] if r_item else ""
+        r_method = r_item['method'] if r_item else ""
+        r_amt = f"{r_item['amount']:,.2f}" if r_item else ""
+
+        p_code = f"#{p_item.get('code', p_item['id'])}" if p_item else ""
+        p_party = p_item['party'] if p_item else ""
+        p_method = p_item['method'] if p_item else ""
+        p_amt = f"{p_item['amount']:,.2f}" if p_item else ""
+
+        rows_html += f"""
+        <tr>
+            <td style="color:#047857; font-weight:bold;">{r_code}</td>
+            <td style="text-align:right;">{r_party}</td>
+            <td>{r_method}</td>
+            <td style="color:#047857; font-weight:bold;">{r_amt}</td>
+            <td style="border-right:2px solid #1E3A8A; color:#b91c1c; font-weight:bold;">{p_code}</td>
+            <td style="text-align:right;">{p_party}</td>
+            <td>{p_method}</td>
+            <td style="color:#b91c1c; font-weight:bold;">{p_amt}</td>
+        </tr>
+        """
+
+    html_t = f"""
+    <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; margin: 0; padding: 10px; }}
+        .t-box {{ border: 3px solid #1E3A8A; border-radius: 10px; padding: 15px; background: #fff; }}
+        .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 8px; }}
+        .t-title {{ text-align: center; font-size: 18px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 8px; margin: 10px 0; border-radius: 6px; }}
+        .t-table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }}
+        .t-table th {{ background-color: #1E3A8A; color: white; padding: 8px; border: 1px solid #334155; text-align: center; }}
+        .t-table td {{ border: 1px solid #cbd5e1; padding: 6px; text-align: center; }}
+        .tot-row {{ background-color: #f8fafc; font-weight: bold; font-size: 13px; }}
+        .net-summary {{ text-align: center; background: #ecfdf5; border: 2px solid #10b981; color: #047857; font-size: 16px; font-weight: bold; padding: 8px; border-radius: 6px; margin-top: 15px; }}
+        .sigs {{ margin-top: 35px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }}
+        @media print {{ .no-p {{ display: none; }} }}
+    </style></head><body>
+        <div class="no-p" style="text-align:center; margin-bottom:12px;">
+            <button onclick="window.print()" style="background:#1E3A8A; color:white; border:none; padding:10px 22px; font-weight:bold; font-size:15px; border-radius:6px; cursor:pointer;">طباعة كشف الحساب المقابل (PDF / A4)</button>
+        </div>
+        <div class="t-box">
+            <div class="header-logo">
+                <div style="font-size:11px; font-weight:bold;">Five-M Company For Industry<br>C. R. : 1011145035</div>
+                <div style="font-size:40px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
+                <div style="font-size:11px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
+            </div>
+            <div class="v-title t-title">كشف حساب حركة الصندوق المقابل (T-Account) - {target_box_label}<br>عن الفترة: {period_label} | شهر ({month_name})</div>
+            <table class="t-table">
+                <thead>
+                    <tr>
+                        <th colspan="4" style="background:#047857;">🟢 الجانب الأيمن: (المقبوضات / المقبوض)</th>
+                        <th colspan="4" style="background:#b91c1c; border-right:2px solid #fff;">🔴 الجانب الأيسر: (المصروفات / المدفوعات)</th>
+                    </tr>
+                    <tr>
+                        <th>رقم السند</th><th>البيان / الجهة</th><th>طريقة السداد</th><th>المبلغ</th>
+                        <th style="border-right:2px solid #1E3A8A;">رقم السند</th><th>البيان / الجهة</th><th>طريقة السداد</th><th>المبلغ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows_html}
+                    <tr class="tot-row">
+                        <td colspan="3" style="text-align:left;">إجمالي المقبوضات:</td>
+                        <td style="color:#047857;">{tot_rec:,.2f} ر.س</td>
+                        <td colspan="3" style="border-right:2px solid #1E3A8A; text-align:left;">إجمالي المصروفات:</td>
+                        <td style="color:#b91c1c;">{tot_pay:,.2f} ر.س</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="net-summary">
+                💵 صافي الرصيد المتبقي بالصندوق في نهاية الفترة: ({net_bal:,.2f} ريال سعودي)
+            </div>
+            <div class="sigs">
+                <div>توقيع أمين الصندوق / المحاسب: __________________</div>
+                <div>توقيع المراجع / المدير العام: __________________</div>
+            </div>
+        </div>
+    </body></html>
+    """
+    st.components.v1.html(html_t, height=480, scrolling=True)
 
 @st.dialog("✏️ تعديل عُهدة سائق")
 def edit_driver_custody_modal(item_idx):
@@ -1621,7 +1718,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق المكتمل بأزرار أفقية داكنة دون أية نوافذ أو مربعات بيضاء
+    # 8. موديول حركة الصندوق مع خاصية طباعة كشف الحساب المقابل (T-Account)
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -1645,8 +1742,10 @@ else:
         opening_bal = current_m_cash.get(active_opening_key, 0.0)
 
         st.write("")
-        if st.button("✏️ تعديل وتثبيت الرصيد الافتتاحي للصندوق", key="btn_open_dialog_bal"):
-            opening_balance_dialog(month_selected, active_target_box)
+        col_top_act1, col_top_act2 = st.columns([1, 1.2])
+        with col_top_act1:
+            if st.button("✏️ تعديل وتثبيت الرصيد الافتتاحي للصندوق", key="btn_open_dialog_bal"):
+                opening_balance_dialog(month_selected, active_target_box)
 
         curr_trans = current_m_cash.get(active_box_key, [])
         tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
@@ -1658,6 +1757,43 @@ else:
         c_m2.metric("🟢 المقبوضات", f"{tot_cash_in:,.2f} ر.س")
         c_m3.metric("🔴 المصروفات", f"{tot_cash_out:,.2f} ر.س")
         c_m4.metric("💵 المتبقي بالصندوق", f"{net_cash_now:,.2f} ر.س")
+
+        st.divider()
+
+        # قسم استخراج طباعة كشف حساب الصندوق المقابل T-Account
+        st.markdown("### 🖨️ طباعة كشف حساب الصندوق المقابل (T-Account):")
+        
+        t_col_p1, t_col_p2, t_col_p3 = st.columns([1.2, 1.5, 1.3])
+        with t_col_p1:
+            period_type_sel = st.selectbox("نطاق كشف الحساب:", ["الشهر كاملاً", "فترة مخصصة (تحديد الأيام)"], key="sel_period_t_acc")
+        
+        period_label_txt = f"شهر {month_selected} كاملاً"
+        filtered_print_trans = curr_trans.copy()
+
+        if period_type_sel == "فترة مخصصة (تحديد الأيام)":
+            with t_col_p2:
+                d_start = st.date_input("من تاريخ:", datetime.now().date(), key="d_start_t_acc")
+                d_end = st.date_input("إلى تاريخ:", datetime.now().date(), key="d_end_t_acc")
+                period_label_txt = f"من {d_start} إلى {d_end}"
+                
+                filtered_print_trans = []
+                for t in curr_trans:
+                    try:
+                        t_dt = datetime.strptime(t['date'].split(' ')[0], '%Y-%m-%d').date()
+                        if d_start <= t_dt <= d_end:
+                            filtered_print_trans.append(t)
+                    except:
+                        filtered_print_trans.append(t)
+
+        with t_col_p3:
+            st.write("")
+            st.write("")
+            if st.button("🖨️ طباعة كشف الحساب المقابل (A4)", key="btn_open_t_acc_print_modal", use_container_width=True):
+                if filtered_print_trans:
+                    target_box_txt = "الخزينة الرئيسية (wahby)" if active_target_box == "main" else "عُهدة المحاسب (omar)"
+                    print_t_account_dialog(filtered_print_trans, month_selected, period_label_txt, target_box_txt)
+                else:
+                    st.warning("لا توجد حركات تسوية بالصندوق مسجلة بالفترة المحددة.")
 
         st.divider()
 
