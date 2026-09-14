@@ -83,10 +83,15 @@ st.markdown(f"""
             border-bottom: none !important;
         }}
 
-        /* إخفاء نصوص الرموز الإنجليزية المزعجة */
-        [data-testid="stSidebarCollapseButton"] span, [data-testid="stSidebarActionButton"] span {{
-            font-size: 0px !important;
-            color: transparent !important;
+        /* تجميل وترتيب الزر الصغير لفتح وإغلاق القائمة الجانبية */
+        [data-testid="stSidebarCollapseButton"], [data-testid="stSidebarActionButton"] {{
+            display: block !important;
+            color: #F59E0B !important;
+            background-color: #1C2541 !important;
+            border: 1px solid #D97706 !important;
+            border-radius: 8px !important;
+            margin: 5px !important;
+            z-index: 999999 !important;
         }}
 
         .main .block-container {{
@@ -104,9 +109,11 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
+        /* إخفاء القائمة الجانبية كلياً إلى أقصى اليمين عند إغلاقها بالمرور */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background: {bg_sidebar} !important;
+            transition: transform 0.3s ease-in-out !important;
         }}
 
         [data-testid="stSidebarContent"] {{
@@ -386,8 +393,17 @@ st.markdown(f"""
             margin-bottom: 4px;
         }}
 
-        /* تجاوب الأعمدة المباشر للموبايل بدون المساس بـ Streamlit Sidebar */
+        /* ضوابط الآيفون القاطعة لمنع تعليق القائمة الجانبية في المنتصف عند الإغلاق */
         @media screen and (max-width: 768px) {{
+            [data-testid="stSidebar"][aria-expanded="false"] {{
+                margin-right: -100vw !important;
+            }}
+
+            [data-testid="stSidebar"][aria-expanded="true"] {{
+                width: 82vw !important;
+                margin-right: 0 !important;
+            }}
+
             .main .block-container {{
                 padding-left: 4px !important;
                 padding-right: 4px !important;
@@ -1050,7 +1066,7 @@ if not st.session_state.get('app_started', False):
                 st.error("كلمة المرور غير صحيحة! يرجى إدخال كلمة المرور للوصول للنظام.")
 
 else:
-    # 3. القائمة الجانبية الهيكلية المباشرة
+    # 3. القائمة الجانبية المباشرة
     with st.sidebar:
         st.markdown("""
             <div class="sidebar-logo-card">
