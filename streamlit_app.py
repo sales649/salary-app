@@ -78,7 +78,6 @@ st.markdown(f"""
             -webkit-text-size-adjust: 100% !important;
         }}
 
-        /* إظهار وتجميل زر الفتح والإغلاق للقائمة الجانبية بوضوح */
         [data-testid="stHeader"] {{
             background-color: {header_bg} !important;
             border-bottom: none !important;
@@ -108,7 +107,50 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* أبعاد وسلوك القائمة الجانبية الصريح للموبايل والكمبيوتر */
+        /* إصلاح حاسم لنوافذ التعديل والـ Dialogs */
+        [data-testid="stDialog"] > div:first-child, [data-testid="stModal"] > div:first-child, div[role="dialog"] {{
+            background-color: {dialog_bg} !important;
+            color: {dialog_text} !important;
+            border: 2px solid #D97706 !important;
+            border-radius: 16px !important;
+        }}
+
+        [data-testid="stDialog"] *, [data-testid="stModal"] *, div[role="dialog"] * {{
+            color: {dialog_text} !important;
+        }}
+
+        [data-testid="stDialog"] h3, [data-testid="stModal"] h3, div[role="dialog"] h3 {{
+            color: #F59E0B !important;
+            font-weight: 900 !important;
+        }}
+
+        /* إصلاح ناصع وخاص بجميع خانات التواريخ st.date_input */
+        [data-testid="stDateInput"] div[data-baseweb="input"], [data-testid="stDateInput"] input {{
+            background-color: #FFFFFF !important;
+            color: #000000 !important;
+            border: 1px solid #CBD5E1 !important;
+            border-radius: 6px !important;
+            font-weight: 900 !important;
+            font-size: 13px !important;
+            -webkit-text-fill-color: #000000 !important;
+        }}
+
+        /* إصلاح تقويم الأيام المنبثق المخصص للتواريخ */
+        div[data-baseweb="calendar"], div[data-baseweb="calendar"] * {{
+            background-color: #FFFFFF !important;
+            color: #0B132B !important;
+            font-weight: 800 !important;
+        }}
+
+        div[data-baseweb="calendar"] button {{
+            color: #0B132B !important;
+        }}
+
+        div[data-baseweb="calendar"] [aria-selected="true"] {{
+            background-color: #D97706 !important;
+            color: #FFFFFF !important;
+        }}
+
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background: {bg_sidebar} !important;
@@ -186,7 +228,7 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
+        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {{
             background-color: #FFFFFF !important;
             color: #000000 !important;
             border: 1px solid #CBD5E1 !important;
@@ -194,6 +236,7 @@ st.markdown(f"""
             font-weight: 800 !important;
             font-size: 13px !important;
             padding: 4px 8px !important;
+            -webkit-text-fill-color: #000000 !important;
         }}
 
         ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"], [data-baseweb="popover"] > div, div[data-baseweb="menu"] {{
@@ -325,7 +368,27 @@ st.markdown(f"""
             margin: 0 !important;
         }}
 
-        /* ضوابط الموبايل والآيفون الصريحة لاستقرار القائمة الشاملة */
+        .logo-lux {{
+            font-size: 50px;
+            font-weight: 900;
+            color: #EF4444 !important;
+            font-family: Arial, sans-serif;
+            line-height: 1;
+            margin-bottom: 5px;
+            text-align: center !important;
+        }}
+
+        .date-badge-lux {{
+            display: inline-block;
+            background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
+            color: #FFFFFF !important;
+            padding: 2px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }}
+
         @media screen and (max-width: 768px) {{
             [data-testid="stSidebar"] {{
                 width: 82vw !important;
@@ -345,6 +408,19 @@ st.markdown(f"""
                 flex: 1 1 100% !important;
                 min-width: 100% !important;
                 margin-bottom: 4px !important;
+            }}
+
+            div.stButton > button {{
+                font-size: 14px !important;
+                padding: 10px 12px !important;
+            }}
+
+            .sidebar-logo-text {{
+                font-size: 45px !important;
+            }}
+
+            .sidebar-company-title {{
+                font-size: 14px !important;
             }}
         }}
     </style>
@@ -452,7 +528,6 @@ def save_last_selected_month(month_name):
     save_cloud_store('last_selected_month', {'last_month': month_name})
 
 def load_monthly_payroll_store():
-    # استكمال استدعاء المخزن المحدث المباشر لشهر أغسطس
     return fetch_cloud_store('monthly_payroll_store_v4', {})
 
 def save_monthly_payroll_store(store_data):
