@@ -61,7 +61,6 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* القائمة الجانبية المرفوعة والمختصرة بوضوح ممتاز في الوضعين */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background-color: {bg_sidebar} !important;
@@ -81,7 +80,6 @@ st.markdown(f"""
             font-weight: 800 !important;
         }}
 
-        /* أزرار القائمة الجانبية المحدثة للوضع النهاري والليلي */
         [data-testid="stSidebar"] .stButton>button {{
             width: 100% !important;
             background: {btn_sidebar_bg} !important;
@@ -118,7 +116,6 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        /* حقول الإدخال والتواريخ */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: {input_bg} !important;
             color: {input_text} !important;
@@ -129,7 +126,6 @@ st.markdown(f"""
             padding: 4px 8px !important;
         }}
 
-        /* تصحيح خطوط كروت الملاحظات والإحصائيات */
         [data-testid="stMetricValue"] div {{
             font-size: 16px !important;
             font-weight: 800 !important;
@@ -779,12 +775,16 @@ else:
 
         selected_option = st.session_state.get('current_view', 'الرئيسية')
 
-    # الترحيل وتصفية الدفعات والخصومات تلقائياً بالشهر الجديد مع الثبات بجدول الرواتب الأساسية
-    if 'payroll_df' not in st.session_state or st.session_state.get('current_month') != month_selected:
-        st.session_state.current_month = month_selected
+    # الترحيل وتصفية الدفعات والخصومات فقط عند تحويل الشهر لشهر جديد
+    if 'current_active_month' not in st.session_state:
+        st.session_state.current_active_month = month_selected
+        st.session_state.payroll_df = load_data()
+
+    elif st.session_state.current_active_month != month_selected:
+        st.session_state.current_active_month = month_selected
         df_loaded = load_data()
         
-        # تصفية الدفعات والخصومات للشهر الجديد مع بقاء الرواتب الأساسية ثابتة ومحسوبة
+        # تصفية الدفعات والخصومات للشهر الجديد
         df_loaded['الدفعة 1'] = 0.0
         df_loaded['الدفعة 2'] = 0.0
         df_loaded['الخصومات'] = 0.0
@@ -941,6 +941,7 @@ else:
 
         st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
         
+        # العرض الكامل لـ wahby المشتمل الخزينة الرئيسية
         if st.session_state.user_role == "admin":
             c_box1, c_box2, c_box3, c_box4 = st.columns(4)
             with c_box1:
