@@ -147,7 +147,7 @@ st.markdown(f"""
         }}
 
         [data-testid="stMetricValue"] div {{
-            font-size: 22px !important;
+            font-size: 18px !important;
             font-weight: 900 !important;
             text-align: center !important;
             color: #F59E0B !important;
@@ -155,7 +155,7 @@ st.markdown(f"""
         }}
 
         [data-testid="stMetricLabel"] label, [data-testid="stMetricLabel"] div {{
-            font-size: 14px !important;
+            font-size: 13px !important;
             font-weight: 800 !important;
             text-align: center !important;
             white-space: nowrap !important;
@@ -171,22 +171,21 @@ st.markdown(f"""
             text-align: center !important;
         }}
 
-        /* الأزرار الخاطفة المدمجة الأصلي بدون أي مستطيل أبيض سفلي */
-        .daftra-btn-container button {{
-            background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%) !important;
-            color: {text_color} !important;
-            border: 1px solid {border_color} !important;
-            border-radius: 10px !important;
-            padding: 10px 4px !important;
-            font-size: 13px !important;
+        /* إصلاح فرض ألوان الأزرار ومنع ظهور اللون الأبيض نهائياً */
+        .stButton>button, .stDownloadButton>button, [data-testid="stFormSubmitButton"] button {{
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+            color: #FFFFFF !important;
+            border: 1px solid #D97706 !important;
+            border-radius: 8px !important;
             font-weight: 800 !important;
-            width: 100% !important;
-            text-align: center !important;
+            font-size: 12px !important;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+            padding: 5px 8px !important;
+            width: 100% !important;
         }}
 
-        .daftra-btn-container button:hover {{
-            background: #D97706 !important;
+        .stButton>button:hover {{
+            background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
             color: #FFFFFF !important;
         }}
 
@@ -194,7 +193,7 @@ st.markdown(f"""
             background-color: {bg_card};
             border: 1px solid {border_color};
             border-radius: 8px;
-            padding: 6px 10px !important;
+            padding: 8px 12px !important;
             margin-bottom: 2px !important;
             display: flex;
             justify-content: space-between;
@@ -211,15 +210,6 @@ st.markdown(f"""
             color: #EF4444 !important;
             font-weight: 900 !important;
             font-size: 17px !important;
-        }}
-
-        div[data-testid="stPopover"] > button {{
-            background-color: {bg_card} !important;
-            color: #F59E0B !important;
-            border: 1px solid #D97706 !important;
-            border-radius: 6px !important;
-            padding: 2px 6px !important;
-            font-size: 12px !important;
         }}
 
         .welcome-card-lux {{
@@ -1631,7 +1621,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق المكتمل والمصمم بـ popover مصغر
+    # 8. موديول حركة الصندوق المكتمل بأزرار أفقية داكنة دون أية نوافذ أو مربعات بيضاء
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -1791,35 +1781,31 @@ else:
                     t_sign = "+" if is_rec else "-"
                     border_c = "#10B981" if is_rec else "#EF4444"
 
-                    col_card_txt, col_popover = st.columns([4.3, 0.7])
-                    
-                    with col_card_txt:
-                        st.markdown(f"""
-                            <div class="cash-card-item" style="border-right: 5px solid {border_c};">
-                                <div>
-                                    <span style="font-weight:bold; font-size:14px;">#{t_item.get('code', t_item['id'])} - {t_item['party']}</span><br>
-                                    <span style="font-size:11px; color:#94A3B8;">📅 {t_item['date']} | 💳 {t_item['method']} | 📝 {t_item.get('notes','')}</span>
-                                </div>
-                                <div class="{amt_cls}">
-                                    {t_sign} {t_item['amount']:,.2f} ر.س
-                                </div>
+                    st.markdown(f"""
+                        <div class="cash-card-item" style="border-right: 5px solid {border_c};">
+                            <div>
+                                <span style="font-weight:bold; font-size:14px;">#{t_item.get('code', t_item['id'])} - {t_item['party']}</span><br>
+                                <span style="font-size:11px; color:#94A3B8;">📅 {t_item['date']} | 💳 {t_item['method']} | 📝 {t_item.get('notes','')}</span>
                             </div>
-                        """, unsafe_allow_html=True)
+                            <div class="{amt_cls}">
+                                {t_sign} {t_item['amount']:,.2f} ر.س
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
                     
-                    with col_popover:
-                        with st.popover("⚙️"):
-                            if st.button("🖨️ طباعة", key=f"pop_p_{real_idx}", use_container_width=True):
-                                print_cash_voucher_dialog(t_item, month_selected)
+                    b_p, b_e, b_d = st.columns(3)
+                    if b_p.button("🖨️ طباعة", key=f"btn_p_c_{real_idx}"):
+                        print_cash_voucher_dialog(t_item, month_selected)
 
-                            if st.button("✏️ تعديل", key=f"pop_e_{real_idx}", use_container_width=True):
-                                edit_cash_voucher_dialog(real_idx, month_selected, active_target_box)
+                    if b_e.button("✏️ تعديل", key=f"btn_e_c_{real_idx}"):
+                        edit_cash_voucher_dialog(real_idx, month_selected, active_target_box)
 
-                            if st.button("🗑️ حذف", key=f"pop_d_{real_idx}", use_container_width=True):
-                                curr_trans.pop(real_idx)
-                                all_cash_db[month_selected][active_box_key] = curr_trans
-                                save_cash_data(all_cash_db)
-                                st.success("تم حذف السند!")
-                                st.rerun()
+                    if b_d.button("🗑️ حذف", key=f"btn_d_c_{real_idx}"):
+                        curr_trans.pop(real_idx)
+                        all_cash_db[month_selected][active_box_key] = curr_trans
+                        save_cash_data(all_cash_db)
+                        st.success("تم الحذف!")
+                        st.rerun()
 
             else:
                 st.info("لا توجد حركات تسوية بالصندوق مسجلة لهذا الشهر.")
