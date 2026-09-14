@@ -28,7 +28,7 @@ if 'theme_mode' not in st.session_state:
 if '🌙' in st.session_state['theme_mode']:
     bg_app = "#0B132B"
     bg_card = "#1C2541"
-    bg_sidebar = "linear-gradient(180deg, #0B132B 0%, #1C2541 100%)"
+    bg_sidebar = "#0B132B"
     text_color = "#FFFFFF"
     border_color = "#D97706"
     btn_sidebar_bg = "linear-gradient(135deg, #1C2541 0%, #0B132B 100%)"
@@ -78,16 +78,26 @@ st.markdown(f"""
             -webkit-text-size-adjust: 100% !important;
         }}
 
+        /* إظهار وتجميل زر الفتح والإغلاق للقائمة الجانبية بوضوح */
         [data-testid="stHeader"] {{
             background-color: {header_bg} !important;
             border-bottom: none !important;
         }}
 
+        [data-testid="stSidebarCollapseButton"], [data-testid="stSidebarActionButton"] {{
+            display: block !important;
+            color: #F59E0B !important;
+            background-color: #1C2541 !important;
+            border: 1px solid #D97706 !important;
+            border-radius: 8px !important;
+            margin: 5px !important;
+        }}
+
         .main .block-container {{
             padding-top: 0.2rem !important;
             padding-bottom: 0.5rem !important;
-            padding-left: 1rem !important;
-            padding-right: 1rem !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
         }}
 
         h1, h2, h3, h4, h5, h6, .stMarkdown, label, p, span, div {{
@@ -98,26 +108,7 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* إصلاح حاسم لنوافذ التعديل والـ Dialogs لمنع اللون الأبيض وتوحيد الثيم الداكن */
-        [data-testid="stDialog"] > div:first-child, [data-testid="stModal"] > div:first-child, div[role="dialog"] {{
-            background-color: {dialog_bg} !important;
-            color: {dialog_text} !important;
-            border: 2px solid #D97706 !important;
-            border-radius: 16px !important;
-        }}
-
-        [data-testid="stDialog"] *, [data-testid="stModal"] *, div[role="dialog"] * {{
-            color: {dialog_text} !important;
-        }}
-
-        [data-testid="stDialog"] h3, [data-testid="stModal"] h3, div[role="dialog"] h3 {{
-            color: #F59E0B !important;
-            font-weight: 900 !important;
-        }}
-
-        [data-testid="stSidebar"] button[kind="header"] {{ display: none !important; }}
-        [data-testid="stSidebarCollapseButton"] {{ display: none !important; }}
-
+        /* أبعاد وسلوك القائمة الجانبية الصريح للموبايل والكمبيوتر */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background: {bg_sidebar} !important;
@@ -140,31 +131,29 @@ st.markdown(f"""
             background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
             border: 2px solid #D97706;
             border-radius: 12px;
-            padding: 12px 8px;
+            padding: 10px 8px;
             text-align: center !important;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }}
 
         .sidebar-logo-text {{
-            font-size: 55px !important;
+            font-size: 50px !important;
             font-weight: 900 !important;
             color: #EF4444 !important;
             font-family: Arial, sans-serif !important;
             line-height: 1 !important;
             margin: 0 !important;
             text-align: center !important;
-            text-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
         }}
 
         .sidebar-company-title {{
             color: #F59E0B !important;
-            font-size: 16px !important;
+            font-size: 15px !important;
             font-weight: 900 !important;
-            margin-top: 6px !important;
+            margin-top: 4px !important;
             margin-bottom: 0 !important;
             text-align: center !important;
-            text-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
         }}
 
         .sidebar-section-title {{
@@ -186,7 +175,7 @@ st.markdown(f"""
             border-radius: 6px !important;
             font-weight: 800 !important;
             font-size: 13px !important;
-            padding: 5px 8px !important;
+            padding: 6px 8px !important;
             margin-bottom: 3px !important;
             text-align: right !important;
             box-shadow: none !important;
@@ -197,7 +186,6 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        /* ألوان خانات الإدخال داخل وخارج النوافذ */
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: #FFFFFF !important;
             color: #000000 !important;
@@ -304,12 +292,12 @@ st.markdown(f"""
         }}
 
         .title-company-royal {{
-            font-size: 32px !important;
+            font-size: 30px !important;
             font-weight: 900 !important;
             color: #F59E0B !important;
             text-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
-            margin-top: 10px;
-            margin-bottom: 10px;
+            margin-top: 8px;
+            margin-bottom: 8px;
             text-align: center !important;
         }}
 
@@ -317,14 +305,14 @@ st.markdown(f"""
             background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%);
             border: 2px solid #D97706;
             border-radius: 12px;
-            padding: 6px 15px;
+            padding: 6px 12px;
             text-align: center !important;
             margin-top: 0px;
             margin-bottom: 8px;
         }}
 
         .company-header-inner-title {{
-            font-size: 22px !important;
+            font-size: 20px !important;
             font-weight: 900 !important;
             color: #F59E0B !important;
             margin: 0 !important;
@@ -337,36 +325,15 @@ st.markdown(f"""
             margin: 0 !important;
         }}
 
-        .logo-lux {{
-            font-size: 50px;
-            font-weight: 900;
-            color: #EF4444 !important;
-            font-family: Arial, sans-serif;
-            line-height: 1;
-            margin-bottom: 5px;
-            text-align: center !important;
-        }}
-
-        .date-badge-lux {{
-            display: inline-block;
-            background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
-            color: #FFFFFF !important;
-            padding: 2px 14px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 800;
-            margin-bottom: 4px;
-        }}
-
+        /* ضوابط الموبايل والآيفون الصريحة لاستقرار القائمة الشاملة */
         @media screen and (max-width: 768px) {{
-            .main .block-container {{
-                padding-left: 6px !important;
-                padding-right: 6px !important;
-                padding-top: 5px !important;
+            [data-testid="stSidebar"] {{
+                width: 82vw !important;
             }}
 
-            .company-header-inner-title {{
-                font-size: 18px !important;
+            .main .block-container {{
+                padding-left: 4px !important;
+                padding-right: 4px !important;
             }}
 
             [data-testid="stHorizontalBlock"] {{
@@ -377,20 +344,7 @@ st.markdown(f"""
                 width: 100% !important;
                 flex: 1 1 100% !important;
                 min-width: 100% !important;
-                margin-bottom: 6px !important;
-            }}
-
-            div.stButton > button {{
-                font-size: 14px !important;
-                padding: 10px 12px !important;
-            }}
-
-            .sidebar-logo-text {{
-                font-size: 45px !important;
-            }}
-
-            .sidebar-company-title {{
-                font-size: 14px !important;
+                margin-bottom: 4px !important;
             }}
         }}
     </style>
@@ -498,10 +452,11 @@ def save_last_selected_month(month_name):
     save_cloud_store('last_selected_month', {'last_month': month_name})
 
 def load_monthly_payroll_store():
-    return fetch_cloud_store('monthly_payroll_store_v3', {})
+    # استكمال استدعاء المخزن المحدث المباشر لشهر أغسطس
+    return fetch_cloud_store('monthly_payroll_store_v4', {})
 
 def save_monthly_payroll_store(store_data):
-    save_cloud_store('monthly_payroll_store_v3', store_data)
+    save_cloud_store('monthly_payroll_store_v4', store_data)
 
 def get_payroll_for_month(month_name):
     store = load_monthly_payroll_store()
@@ -1034,7 +989,7 @@ if not st.session_state.get('app_started', False):
                 st.error("كلمة المرور غير صحيحة! يرجى إدخال كلمة المرور للوصول للنظام.")
 
 else:
-    # 3. القائمة الجانبية الهيكلية الشاملة والمباشرة
+    # 3. القائمة الجانبية المباشرة
     with st.sidebar:
         st.markdown("""
             <div class="sidebar-logo-card">
@@ -1784,7 +1739,6 @@ else:
                                 st.success(f"تم اعتماد وتخصيم {amt_to_deduct:,.2f} ر.س كـ سند صرف (#{v_code}) بـ فرع ({b_name}) بنجاح!")
                                 st.rerun()
 
-                # ترتيب العمود المطلوبة من اليمين إلى اليسار كلياً
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'المتبقي', 'الملاحظات']
                 edited_b = st.data_editor(
                     df_b_curr[cols_rtl],
