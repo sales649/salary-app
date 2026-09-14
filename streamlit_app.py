@@ -106,6 +106,26 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
+        /* إصلاح ألوان القوائم المنسدلة بالكامل لمنع ظهور اللون الأبيض */
+        ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"], [data-baseweb="popover"] > div, div[data-baseweb="menu"] {{
+            background-color: #1E293B !important;
+            color: #FFFFFF !important;
+            border: 1px solid #D97706 !important;
+            border-radius: 8px !important;
+        }}
+
+        li[role="option"], li[role="option"] *, div[role="option"], div[role="option"] * {{
+            color: #FFFFFF !important;
+            background-color: #1E293B !important;
+            font-weight: 800 !important;
+            font-size: 13px !important;
+        }}
+
+        li[role="option"]:hover, li[role="option"]:hover *, div[role="option"]:hover, div[role="option"]:hover * {{
+            background-color: #D97706 !important;
+            color: #FFFFFF !important;
+        }}
+
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: {input_bg} !important;
             color: {input_text} !important;
@@ -141,7 +161,6 @@ st.markdown(f"""
             text-align: center !important;
         }}
 
-        /* إصلاح حاسم للتأكد من عدم تحول أي زر للون الأبيض */
         div.stButton > button, div.stDownloadButton > button, [data-testid="stFormSubmitButton"] > button {{
             background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
             color: #FFFFFF !important;
@@ -684,12 +703,12 @@ def generate_t_account_html(trans_list, month_name, period_label, target_box_lab
                 <div style="font-size:40px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
                 <div style="font-size:11px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
             </div>
-            <div class="v-title t-title">كشف حساب حركة الصندوق المقابل (T-Account) - {target_box_txt}<br>عن الفترة: {period_label} | شهر ({month_name})</div>
+            <div class="v-title t-title">كشف حساب حركة الصندوق المقابل (T-Account) - {target_box_label}<br>عن الفترة: {period_label} | شهر ({month_name})</div>
             <table class="t-table">
                 <thead>
                     <tr>
-                        <th colspan="4" style="background:#047857;">🟢 الجانب الأيمن: (المقبوضات / المقبوض)</th>
-                        <th colspan="4" style="background:#b91c1c; border-right:2px solid #fff;">🔴 الجانب الأيسر: (المصروفات / المدفوعات)</th>
+                        <th colspan="4" style="background:#047857;">🟢 المقبوضات</th>
+                        <th colspan="4" style="background:#b91c1c; border-right:2px solid #fff;">🔴 المصروفات</th>
                     </tr>
                     <tr>
                         <th>رقم السند</th><th>البيان / الجهة</th><th>طريقة السداد</th><th>المبلغ</th>
