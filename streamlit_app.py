@@ -443,12 +443,9 @@ def get_payroll_for_month(month_name):
         return pd.DataFrame(store[month_name])
     else:
         df_base = pd.DataFrame(initial_payroll_data)
-        
-        # حفظ أغسطس ببياناته المكتملة
         if month_name == 'أغسطس 2026':
             df_base = pd.DataFrame(initial_payroll_data)
         else:
-            # تصفية الدفعات والخصومات للشهر الجديد فقط عند افتتاحه لأول مرة
             df_base['الدفعة 1'] = 0.0
             df_base['الدفعة 2'] = 0.0
             df_base['الخصومات'] = 0.0
@@ -946,7 +943,6 @@ else:
 
         selected_option = st.session_state.get('current_view', 'الرئيسية')
 
-    # جلب ملف الرواتب المخصص للشهر المفضل المختار من السجل المستقل
     st.session_state.payroll_df = get_payroll_for_month(month_selected)
     st.session_state.current_active_month = month_selected
 
@@ -1251,7 +1247,6 @@ else:
                     })
                     save_drivers_data(drivers_db)
 
-                    # تسميع فوري كـ "سند صرف" صريح بصندوق omar
                     all_cash = load_cash_data()
                     if month_selected not in all_cash:
                         all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
@@ -1502,9 +1497,13 @@ else:
                 except Exception:
                     st.error("خطأ في قراءة ملف النسخة المرفوع.")
 
+    # 7. موديول إدخال الدفعات المحدث والمزود بـ تخصيص الدفعة المراد خصمها (1 أو 2 أو الكل)
     elif selected_option == 'إدخال الدفعات' and st.session_state.user_role == "admin":
-        st.subheader(f'📊 جدول إدخال وتعديل الدفعات السريع - ({month_selected})')
+        st.subheader(f'📊 جدول إدخال وتعديل الدفعات - ({month_selected})')
         
+        curr_m_idx = st.session_state.months_list.index(month_selected)
+        prev_month_label = st.session_state.months_list[curr_m_idx - 1] if curr_m_idx > 0 else None
+
         t1, t2, t3, t4 = st.tabs(['مصنع الخرج', 'مستودع الخرج', 'مستودع الرياض', 'رواتب متنوعة'])
         branches = [('مصنع ميم الخماسية الخرج', t1), ('مستودع ميم الخماسية الخرج', t2), ('مستودع ميم الخماسية الرياض', t3), ('رواتب متنوعة', t4)]
         
@@ -1513,7 +1512,7 @@ else:
                 df_b = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
                 b_tot_paid_current = df_b['الدفعة المدفوعة'].sum()
 
-                col_auto1, col_auto2 = st.columns([1.5, 1.5])
+                col_auto1, col_auto2 = st.columns([1.3, 1.7])
                 with col_auto1:
                     if st.button(f'توزيع المتبقي كـ "دفعة 2" تلقائياً ({b_name})', key=f"auto_btn_{b_name}"):
                         for idx, row in st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].iterrows():
@@ -1529,8 +1528,23 @@ else:
                         st.rerun()
 
                 with col_auto2:
-                    if b_tot_paid_current > 0:
-                        if st.button(f'💸 اعتماد وتسميع دفعات ({b_name}) كـ سند صرف بالصندوق', key=f"trf_sal_to_cash_{b_name}"):
+                    # إضافة قائمة اختيار نوع الدفعة المراد خصمها بالصندوق
+                    pay_choice = st.selectbox(
+                        "اختر الدفعة المراد خصمها بالصندوق:",
+                        ["إجمالي الدفعات معاً", "الدفعة الأولى فقط", "الدفعة الثانية فقط"],
+                        key=f"pay_choice_select_{b_name}_{month_selected}"
+                    )
+
+                    # احتساب المبلغ المسدد بناءً على نوع الدفعة المحددة
+                    if pay_choice == "الدفعة الأولى فقط":
+                        amt_to_deduct = df_b['الدفعة 1'].sum()
+                    elif pay_choice == "الدفعة الثانية فقط":
+                        amt_to_deduct = df_b['الدفعة 2'].sum()
+                    else:
+                        amt_to_deduct = df_b['الدفعة المدفوعة'].sum()
+
+                    if amt_to_deduct > 0:
+                        if st.button(f'💸 خصم وتسميع ({pay_choice}) بـ ({amt_to_deduct:,.0f} ر.س) كـ سند صرف', key=f"trf_sal_to_cash_{b_name}"):
                             all_cash = load_cash_data()
                             if month_selected not in all_cash:
                                 all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
@@ -1544,15 +1558,15 @@ else:
                                 'code': f"PAY-SAL-{(len(c_trans) + 1):03d}",
                                 'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
                                 'type': 'سند صرف / مصروف',
-                                'party': f"سداد دفع ورواتب شهر ({month_selected}) - {b_name}",
-                                'amount': b_tot_paid_current,
+                                'party': f"سداد رواتب ودفعات ({pay_choice}) - شهر ({month_selected}) - فرع ({b_name})",
+                                'amount': amt_to_deduct,
                                 'method': 'نقداً بالصندوق',
-                                'notes': f"سند صرف آلي معمد لمسير {b_name}"
+                                'notes': f"سند صرف آلي معمد لـ ({pay_choice}) بفرع {b_name}"
                             })
                             m_cash[target_trans_key] = c_trans
                             all_cash[month_selected] = m_cash
                             save_cash_data(all_cash)
-                            st.success(f"تم اعتماد وتخصيم {b_tot_paid_current:,.2f} ر.س كـ سند صرف بالصندوق بنجاح!")
+                            st.success(f"تم اعتماد وتخصيم {amt_to_deduct:,.2f} ر.س كـ سند صرف لـ ({pay_choice}) بـ فرع ({b_name}) بنجاح!")
                             st.rerun()
 
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'نوع الإجراء', 'الملاحظات']
