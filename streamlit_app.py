@@ -64,7 +64,6 @@ st.markdown(f"""
             -webkit-text-size-adjust: 100% !important;
         }}
 
-        /* ضغط وإلغاء المسافات العلوية تماماً لاستغلال الشاشة */
         .main .block-container {{
             padding-top: 0.2rem !important;
             padding-bottom: 0.5rem !important;
@@ -90,9 +89,9 @@ st.markdown(f"""
 
         [data-testid="stSidebarContent"] {{
             padding-top: 0.2rem !important;
-            padding-left: 0.6rem !important;
-            padding-right: 0.6rem !important;
-            padding-bottom: 0.5rem !important;
+            padding-left: 0.4rem !important;
+            padding-right: 0.4rem !important;
+            padding-bottom: 0.2rem !important;
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
@@ -106,12 +105,13 @@ st.markdown(f"""
             background: {btn_sidebar_bg} !important;
             color: {btn_sidebar_text} !important;
             border: 1px solid #D97706 !important;
-            border-radius: 8px !important;
+            border-radius: 6px !important;
             font-weight: 800 !important;
             font-size: 13px !important;
-            padding: 5px 8px !important;
-            margin-bottom: 2px !important;
+            padding: 4px 6px !important;
+            margin-bottom: 1px !important;
             text-align: right !important;
+            box-shadow: none !important;
         }}
 
         [data-testid="stSidebar"] .stButton>button:hover {{
@@ -119,7 +119,33 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        /* تكبير وتوسيط الخطوط بالمربعات المالية بوضوح تام */
+        ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"] div {{
+            background-color: {bg_card} !important;
+            color: {text_color} !important;
+            border: 1px solid #D97706 !important;
+        }}
+
+        li[role="option"], li[role="option"] * {{
+            color: {text_color} !important;
+            background-color: {bg_card} !important;
+            font-weight: 700 !important;
+        }}
+
+        li[role="option"]:hover, li[role="option"]:hover * {{
+            background-color: #D97706 !important;
+            color: #FFFFFF !important;
+        }}
+
+        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
+            background-color: {input_bg} !important;
+            color: {input_text} !important;
+            border: 1px solid #CBD5E1 !important;
+            border-radius: 6px !important;
+            font-weight: 700 !important;
+            font-size: 13px !important;
+            padding: 4px 8px !important;
+        }}
+
         [data-testid="stMetricValue"] div {{
             font-size: 22px !important;
             font-weight: 900 !important;
@@ -145,25 +171,25 @@ st.markdown(f"""
             text-align: center !important;
         }}
 
-        /* أزرار الإجراءات الخاطفة بدون أي مربعات بيضاء زائدة */
-        .daftra-quick-btn button {{
-            background: {bg_card} !important;
+        /* الأزرار الخاطفة المدمجة الأصلي بدون أي مستطيل أبيض سفلي */
+        .daftra-btn-container button {{
+            background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%) !important;
             color: {text_color} !important;
             border: 1px solid {border_color} !important;
             border-radius: 10px !important;
-            padding: 8px 4px !important;
-            font-size: 12px !important;
+            padding: 10px 4px !important;
+            font-size: 13px !important;
             font-weight: 800 !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
             width: 100% !important;
+            text-align: center !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
         }}
 
-        .daftra-quick-btn button:hover {{
+        .daftra-btn-container button:hover {{
             background: #D97706 !important;
             color: #FFFFFF !important;
         }}
 
-        /* تصميم كروت حركة الصندوق المضغوطة بمقدار ملليمترات فاصلة */
         .cash-card-item {{
             background-color: {bg_card};
             border: 1px solid {border_color};
@@ -187,7 +213,6 @@ st.markdown(f"""
             font-size: 17px !important;
         }}
 
-        /* إخفاء خلفيات الـ popover البيضاء المزعجة */
         div[data-testid="stPopover"] > button {{
             background-color: {bg_card} !important;
             color: #F59E0B !important;
@@ -195,6 +220,16 @@ st.markdown(f"""
             border-radius: 6px !important;
             padding: 2px 6px !important;
             font-size: 12px !important;
+        }}
+
+        .welcome-card-lux {{
+            background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
+            border-radius: 20px;
+            padding: 20px 15px;
+            text-align: center !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            margin-top: 5px;
+            border: 2px solid #D97706;
         }}
 
         .company-header-inner {{
@@ -221,6 +256,16 @@ st.markdown(f"""
             margin: 0 !important;
         }}
 
+        .logo-lux {{
+            font-size: 50px;
+            font-weight: 900;
+            color: #EF4444 !important;
+            font-family: Arial, sans-serif;
+            line-height: 1;
+            margin-bottom: 5px;
+            text-align: center !important;
+        }}
+
         .date-badge-lux {{
             display: inline-block;
             background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
@@ -230,6 +275,23 @@ st.markdown(f"""
             font-size: 12px;
             font-weight: 800;
             margin-bottom: 4px;
+        }}
+
+        @media screen and (max-width: 768px) {{
+            .main .block-container {{
+                padding-left: 8px !important;
+                padding-right: 8px !important;
+                padding-top: 10px !important;
+            }}
+
+            [data-testid="stHorizontalBlock"] {{ flex-direction: column !important; }}
+
+            [data-testid="column"], [data-testid="stColumn"] {{
+                width: 100% !important;
+                flex: 1 1 100% !important;
+                min-width: 100% !important;
+                margin-bottom: 4px !important;
+            }}
         }}
     </style>
 """, unsafe_allow_html=True)
@@ -566,31 +628,31 @@ def print_cash_voucher_dialog(trans_item, month_name):
     html_v = f"""
     <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
     <style>
-        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; margin: 0; padding: 10px; }}
-        .voucher-box {{ border: 3px solid #1E3A8A; border-radius: 12px; padding: 20px; background: #fff; }}
-        .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 10px; }}
-        .v-title {{ text-align: center; font-size: 22px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 10px; margin: 15px 0; border-radius: 6px; }}
-        .v-table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
-        .v-table td, .v-table th {{ border: 1px solid #cbd5e1; padding: 12px; text-align: right; font-size: 15px; }}
-        .amt-tag {{ font-size: 22px; font-weight: bold; color: #047857; background: #ecfdf5; border: 2px solid #10b981; text-align: center; padding: 8px; border-radius: 6px; }}
-        .sigs {{ margin-top: 50px; display: flex; justify-content: space-between; font-weight: bold; font-size: 15px; }}
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; margin: 0; padding: 5px; }}
+        .voucher-box {{ border: 2px solid #1E3A8A; border-radius: 8px; padding: 12px; background: #fff; }}
+        .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 5px; }}
+        .v-title {{ text-align: center; font-size: 18px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 6px; margin: 8px 0; border-radius: 4px; }}
+        .v-table {{ width: 100%; border-collapse: collapse; margin-top: 5px; }}
+        .v-table td, .v-table th {{ border: 1px solid #cbd5e1; padding: 8px; text-align: right; font-size: 13px; }}
+        .amt-tag {{ font-size: 18px; font-weight: bold; color: #047857; background: #ecfdf5; border: 2px solid #10b981; text-align: center; padding: 4px; border-radius: 4px; }}
+        .sigs {{ margin-top: 25px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }}
         @media print {{ .no-p {{ display: none; }} }}
     </style></head><body>
-        <div class="no-p" style="text-align:center; margin-bottom:15px;">
-            <button onclick="window.print()" style="background:#1E3A8A; color:white; border:none; padding:12px 25px; font-weight:bold; font-size:16px; border-radius:6px; cursor:pointer;">طباعة السند (A4 / PDF)</button>
+        <div class="no-p" style="text-align:center; margin-bottom:8px;">
+            <button onclick="window.print()" style="background:#1E3A8A; color:white; border:none; padding:8px 20px; font-weight:bold; font-size:14px; border-radius:4px; cursor:pointer;">طباعة السند (A4 / PDF)</button>
         </div>
         <div class="voucher-box">
             <div class="header-logo">
-                <div style="font-size:13px; font-weight:bold;">Five-M Company For Industry<br>C. R. : 1011145035</div>
-                <div style="font-size:50px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
-                <div style="font-size:13px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
+                <div style="font-size:11px; font-weight:bold;">Five-M Company For Industry<br>C. R. : 1011145035</div>
+                <div style="font-size:38px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
+                <div style="font-size:11px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
             </div>
             <div class="v-title">{t_type} | رقم السند: #{trans_item.get('code', trans_item['id'])}</div>
             <table class="v-table">
-                <tr><th>التاريخ والتوقيت</th><td style="font-size:16px; font-weight:bold;">{trans_item['date']}</td><th>طريقة السداد</th><td><strong>{trans_item['method']}</strong></td></tr>
-                <tr><th>{party_label}</th><td colspan="3"><strong style="font-size:18px; color:#1E3A8A;">{trans_item['party']}</strong></td></tr>
+                <tr><th>التاريخ والتوقيت</th><td style="font-size:14px; font-weight:bold;">{trans_item['date']}</td><th>طريقة السداد</th><td><strong>{trans_item['method']}</strong></td></tr>
+                <tr><th>{party_label}</th><td colspan="3"><strong style="font-size:16px; color:#1E3A8A;">{trans_item['party']}</strong></td></tr>
                 <tr><th>المبلغ المسدد بالسند</th><td colspan="3"><div class="amt-tag">{amt_val:,.2f} ريال سعودي</div></td></tr>
-                <tr><th>البيان والملاحظات</th><td colspan="3" style="font-size:15px;">{trans_item.get('notes', 'سداد بموجب السند المعمد بالنظام')}</td></tr>
+                <tr><th>البيان والملاحظات</th><td colspan="3" style="font-size:13px;">{trans_item.get('notes', 'سداد بموجب السند المعمد بالنظام')}</td></tr>
             </table>
             <div class="sigs">
                 <div>توقيع المستلم / الجهة: __________________</div>
@@ -599,7 +661,7 @@ def print_cash_voucher_dialog(trans_item, month_name):
         </div>
     </body></html>
     """
-    st.components.v1.html(html_v, height=480, scrolling=True)
+    st.components.v1.html(html_v, height=340, scrolling=True)
 
 @st.dialog("✏️ تعديل عُهدة سائق")
 def edit_driver_custody_modal(item_idx):
@@ -767,12 +829,12 @@ if not st.session_state.get('app_started', False):
                     st.error("كلمة المرور غير صحيحة!")
 
 else:
-    # 3. القائمة الجانبية المباشرة
+    # 3. القائمة الجانبية المباشرة المدمجة بدون فراغات فائضة
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 2px;">
-                <div style="font-size: 40px; font-weight: 900; color: #EF4444; line-height: 1; font-family: Arial; text-align: center;">5M</div>
-                <h3 style="color: #1E3A8A; margin-top: 2px; font-size: 15px; font-weight: bold; text-align: center;">شركة ميم الخماسية للتصنيع</h3>
+                <div style="font-size: 36px; font-weight: 900; color: #EF4444; line-height: 1; font-family: Arial; text-align: center;">5M</div>
+                <h3 style="color: #1E3A8A; margin-top: 2px; font-size: 14px; font-weight: bold; text-align: center;">شركة ميم الخماسية للتصنيع</h3>
             </div>
         """, unsafe_allow_html=True)
 
@@ -791,8 +853,6 @@ else:
             save_last_selected_month(month_selected)
 
         st.session_state['theme_mode'] = st.selectbox("نمط الألوان:", ["🌙 وضع ليلي", "☀️ وضع نهاري"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
-
-        st.divider()
 
         if st.button("🏠 الرئيسية", use_container_width=True):
             st.session_state['current_view'] = 'الرئيسية'
@@ -843,8 +903,6 @@ else:
                 st.session_state['current_view'] = 'الإغلاق السنوي'
                 st.rerun()
 
-        st.divider()
-
         if st.button("🚪 تسجيل الخروج", use_container_width=True):
             st.session_state.app_started = False
             st.session_state.user_role = None
@@ -870,7 +928,7 @@ else:
     day_name = days_ar[(now_dt.weekday() + 1) % 7]
     date_formatted = f"📅 {day_name}، {now_dt.day} {months_ar[now_dt.month - 1]} {now_dt.year}"
 
-    # الشريحة العلوية الفاخرة المباشرة للاستغلال الكامل
+    # الشريحة العلوية المباشرة
     st.markdown(f"""
         <div class="company-header-inner">
             <div class="date-badge-lux">{date_formatted}</div>
@@ -1035,45 +1093,45 @@ else:
             q_col1, q_col2, q_col3, q_col4, q_col5, q_col6, q_col7 = st.columns(7)
             
             with q_col1:
-                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("👤 إضافة موظف", key="q_btn_add_emp", use_container_width=True):
                     add_employee_dialog('مصنع ميم الخماسية الخرج')
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col2:
-                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🔄 تحويل عُهدة", key="q_btn_trf_cash", use_container_width=True):
                     quick_cash_voucher_dialog("تحويل عُهدة إلى (omar)", month_selected, "main")
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col3:
-                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🟢 سند قبض", key="q_btn_rec", use_container_width=True):
                     quick_cash_voucher_dialog("قبض", month_selected, "main")
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col4:
-                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🔴 سند صرف", key="q_btn_pay", use_container_width=True):
                     quick_cash_voucher_dialog("صرف", month_selected, "main")
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col5:
-                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🚚 السائقين", key="q_btn_driver_page", use_container_width=True):
                     st.session_state['current_view'] = 'عُهدة السواقين'
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col6:
-                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🔍 الجرد", key="q_btn_audit_page", use_container_width=True):
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col7:
-                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("💾 الأرشيف", key="q_btn_backup_page", use_container_width=True):
                     st.session_state['current_view'] = 'النسخ الاحتياطي'
                     st.rerun()
@@ -1091,26 +1149,26 @@ else:
             st.markdown("### ⚡ إجراءات خاطفة وسريعة (لوحة omar)")
             q_col1, q_col2, q_col3, q_col4 = st.columns(4)
             with q_col1:
-                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🟢 سند قبض", use_container_width=True, key="q_btn_rec_acc"):
                     quick_cash_voucher_dialog("قبض", month_selected, "accountant")
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col2:
-                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🔴 سند صرف", use_container_width=True, key="q_btn_pay_acc"):
                     quick_cash_voucher_dialog("صرف", month_selected, "accountant")
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col3:
-                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🚚 تصفية السائقين", use_container_width=True, key="q_btn_driver_page_acc"):
                     st.session_state['current_view'] = 'عُهدة السواقين'
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col4:
-                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
                 if st.button("🔍 جرد الخزينة", use_container_width=True, key="q_btn_audit_acc"):
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
@@ -1573,7 +1631,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق المكتمل والمصمم بمساحات دقيقة ومصغرة
+    # 8. موديول حركة الصندوق المكتمل والمصمم بـ popover مصغر
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -1733,7 +1791,7 @@ else:
                     t_sign = "+" if is_rec else "-"
                     border_c = "#10B981" if is_rec else "#EF4444"
 
-                    col_card_txt, col_popover = st.columns([4.2, 0.8])
+                    col_card_txt, col_popover = st.columns([4.3, 0.7])
                     
                     with col_card_txt:
                         st.markdown(f"""
