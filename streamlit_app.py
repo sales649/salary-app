@@ -64,12 +64,12 @@ st.markdown(f"""
             -webkit-text-size-adjust: 100% !important;
         }}
 
-        /* إلغاء الفراغات العلوية الفائضة بالكامل */
+        /* ضغط وإلغاء المسافات العلوية تماماً لاستغلال الشاشة */
         .main .block-container {{
-            padding-top: 1rem !important;
-            padding-bottom: 1rem !important;
-            padding-left: 1.5rem !important;
-            padding-right: 1.5rem !important;
+            padding-top: 0.2rem !important;
+            padding-bottom: 0.5rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
         }}
 
         h1, h2, h3, h4, h5, h6, .stMarkdown, label, p, span, div {{
@@ -89,11 +89,10 @@ st.markdown(f"""
         }}
 
         [data-testid="stSidebarContent"] {{
-            padding-top: 0.5rem !important;
-            padding-left: 0.8rem !important;
-            padding-right: 0.8rem !important;
+            padding-top: 0.2rem !important;
+            padding-left: 0.6rem !important;
+            padding-right: 0.6rem !important;
             padding-bottom: 0.5rem !important;
-            box-sizing: border-box !important;
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
@@ -113,7 +112,6 @@ st.markdown(f"""
             padding: 5px 8px !important;
             margin-bottom: 2px !important;
             text-align: right !important;
-            box-shadow: none !important;
         }}
 
         [data-testid="stSidebar"] .stButton>button:hover {{
@@ -121,19 +119,9 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
-            background-color: {input_bg} !important;
-            color: {input_text} !important;
-            border: 1px solid #CBD5E1 !important;
-            border-radius: 6px !important;
-            font-weight: 700 !important;
-            font-size: 13px !important;
-            padding: 4px 8px !important;
-        }}
-
-        /* تكبير وتوسيط الخطوط بالمربعات المدرسية */
+        /* تكبير وتوسيط الخطوط بالمربعات المالية بوضوح تام */
         [data-testid="stMetricValue"] div {{
-            font-size: 20px !important;
+            font-size: 22px !important;
             font-weight: 900 !important;
             text-align: center !important;
             color: #F59E0B !important;
@@ -141,42 +129,47 @@ st.markdown(f"""
         }}
 
         [data-testid="stMetricLabel"] label, [data-testid="stMetricLabel"] div {{
-            font-size: 13px !important;
+            font-size: 14px !important;
             font-weight: 800 !important;
             text-align: center !important;
             white-space: nowrap !important;
         }}
 
-        .stMetric, .daftra-quick-card {{
+        .stMetric {{
             background-color: {bg_card} !important;
             border-radius: 10px !important;
-            padding: 10px 12px !important;
+            padding: 8px 10px !important;
             border: 1px solid {border_color} !important;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-            margin-bottom: 6px !important;
+            margin-bottom: 4px !important;
             text-align: center !important;
         }}
 
-        .daftra-quick-card h3 {{
-            margin: 0 !important;
-            font-size: 22px !important;
-            line-height: 1 !important;
-        }}
-
-        .daftra-quick-card h4 {{
-            margin: 4px 0 0 0 !important;
-            font-size: 13px !important;
-            font-weight: 800 !important;
+        /* أزرار الإجراءات الخاطفة بدون أي مربعات بيضاء زائدة */
+        .daftra-quick-btn button {{
+            background: {bg_card} !important;
             color: {text_color} !important;
+            border: 1px solid {border_color} !important;
+            border-radius: 10px !important;
+            padding: 8px 4px !important;
+            font-size: 12px !important;
+            font-weight: 800 !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2) !important;
+            width: 100% !important;
         }}
 
-        /* تصميم كروت حركة الصندوق المضغوطة والأنيقة */
+        .daftra-quick-btn button:hover {{
+            background: #D97706 !important;
+            color: #FFFFFF !important;
+        }}
+
+        /* تصميم كروت حركة الصندوق المضغوطة بمقدار ملليمترات فاصلة */
         .cash-card-item {{
             background-color: {bg_card};
             border: 1px solid {border_color};
             border-radius: 8px;
-            padding: 8px 12px !important;
-            margin-bottom: 4px !important;
+            padding: 6px 10px !important;
+            margin-bottom: 2px !important;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -194,29 +187,28 @@ st.markdown(f"""
             font-size: 17px !important;
         }}
 
-        .welcome-card-lux {{
-            background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 100%);
-            border-radius: 20px;
-            padding: 20px 15px;
-            text-align: center !important;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-            margin-top: 5px;
-            border: 2px solid #D97706;
+        /* إخفاء خلفيات الـ popover البيضاء المزعجة */
+        div[data-testid="stPopover"] > button {{
+            background-color: {bg_card} !important;
+            color: #F59E0B !important;
+            border: 1px solid #D97706 !important;
+            border-radius: 6px !important;
+            padding: 2px 6px !important;
+            font-size: 12px !important;
         }}
 
         .company-header-inner {{
             background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%);
             border: 2px solid #D97706;
             border-radius: 12px;
-            padding: 8px 15px;
+            padding: 6px 15px;
             text-align: center !important;
             margin-top: 0px;
-            margin-bottom: 10px;
-            box-shadow: 0 5px 10px -3px rgba(0, 0, 0, 0.3);
+            margin-bottom: 8px;
         }}
 
         .company-header-inner-title {{
-            font-size: 20px !important;
+            font-size: 22px !important;
             font-weight: 900 !important;
             color: #F59E0B !important;
             margin: 0 !important;
@@ -226,31 +218,18 @@ st.markdown(f"""
         .company-header-inner-sub {{
             font-size: 12px !important;
             color: #94A3B8 !important;
-            margin: 1px 0 0 0 !important;
-        }}
-
-        .logo-lux {{
-            font-size: 50px;
-            font-weight: 900;
-            color: #EF4444 !important;
-            font-family: Arial, sans-serif;
-            line-height: 1;
-            margin-bottom: 5px;
-            text-align: center !important;
+            margin: 0 !important;
         }}
 
         .date-badge-lux {{
             display: inline-block;
             background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
             color: #FFFFFF !important;
-            padding: 3px 16px;
-            border-radius: 30px;
-            font-size: 13px;
+            padding: 2px 14px;
+            border-radius: 20px;
+            font-size: 12px;
             font-weight: 800;
-            margin-bottom: 6px;
-            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            text-align: center !important;
+            margin-bottom: 4px;
         }}
     </style>
 """, unsafe_allow_html=True)
@@ -890,11 +869,11 @@ else:
     
     day_name = days_ar[(now_dt.weekday() + 1) % 7]
     date_formatted = f"📅 {day_name}، {now_dt.day} {months_ar[now_dt.month - 1]} {now_dt.year}"
-    
-    st.markdown(f'<div style="text-align: center;"><div class="date-badge-lux">{date_formatted}</div></div>', unsafe_allow_html=True)
 
-    st.markdown("""
+    # الشريحة العلوية الفاخرة المباشرة للاستغلال الكامل
+    st.markdown(f"""
         <div class="company-header-inner">
+            <div class="date-badge-lux">{date_formatted}</div>
             <h1 class="company-header-inner-title">🏢 شركة ميم الخماسية للتصنيع</h1>
             <p class="company-header-inner-sub">النظام المحاسبي والإداري الموحد</p>
         </div>
@@ -1038,13 +1017,10 @@ else:
                 st.markdown("#### 💳 إجمالي نقدية الشركة:")
                 st.metric("مجموع الصناديق", f"{total_company_cash:,.2f} ر.س")
 
-            st.divider()
             if last_audit:
                 a_diff = last_audit['diff']
                 diff_tag = "🟢 مطابقة تامة" if a_diff == 0 else (f"🔴 عجز بقيمة ({abs(a_diff):,.2f} ر.س)" if a_diff < 0 else f"🔵 زيادة بقيمة ({a_diff:,.2f} ر.س)")
                 st.info(f"🔍 **آخر جرد معتمد للصندوق ({last_audit['box_name']}):** بتاريخ **{last_audit['date']}** | حالة الجرد: **{diff_tag}** | ملاحظات: {last_audit.get('notes', 'لا يوجد')}")
-
-            st.divider()
 
             st.markdown("### مؤشرات الرواتب والعمالة")
             st_col1, st_col2, st_col3, st_col4, st_col5, st_col6 = st.columns(6)
@@ -1055,47 +1031,53 @@ else:
             st_col5.metric("الخصومات", f"{tot_ded_all:,.0f} ر.س")
             st_col6.metric("المتبقي", f"{tot_rem:,.0f} ر.س")
 
-            st.divider()
             st.markdown("### ⚡ إجراءات خاطفة وسريعة (لوحة wahby)")
             q_col1, q_col2, q_col3, q_col4, q_col5, q_col6, q_col7 = st.columns(7)
             
             with q_col1:
-                st.markdown('<div class="daftra-quick-card"><h3>👤</h3><h4>إضافة موظف</h4></div>', unsafe_allow_html=True)
-                if st.button("إضافة", key="q_btn_add_emp", use_container_width=True):
+                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                if st.button("👤 إضافة موظف", key="q_btn_add_emp", use_container_width=True):
                     add_employee_dialog('مصنع ميم الخماسية الخرج')
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col2:
-                st.markdown('<div class="daftra-quick-card"><h3>🔄</h3><h4>تحويل عُهدة</h4></div>', unsafe_allow_html=True)
-                if st.button("تحويل", key="q_btn_trf_cash", use_container_width=True):
+                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                if st.button("🔄 تحويل عُهدة", key="q_btn_trf_cash", use_container_width=True):
                     quick_cash_voucher_dialog("تحويل عُهدة إلى (omar)", month_selected, "main")
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col3:
-                st.markdown('<div class="daftra-quick-card"><h3>🟢</h3><h4>سند قبض</h4></div>', unsafe_allow_html=True)
-                if st.button("قبض", key="q_btn_rec", use_container_width=True):
+                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                if st.button("🟢 سند قبض", key="q_btn_rec", use_container_width=True):
                     quick_cash_voucher_dialog("قبض", month_selected, "main")
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col4:
-                st.markdown('<div class="daftra-quick-card"><h3>🔴</h3><h4>سند صرف</h4></div>', unsafe_allow_html=True)
-                if st.button("صرف", key="q_btn_pay", use_container_width=True):
+                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                if st.button("🔴 سند صرف", key="q_btn_pay", use_container_width=True):
                     quick_cash_voucher_dialog("صرف", month_selected, "main")
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col5:
-                st.markdown('<div class="daftra-quick-card"><h3>🚚</h3><h4>السائقين</h4></div>', unsafe_allow_html=True)
-                if st.button("السائقين", key="q_btn_driver_page", use_container_width=True):
+                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                if st.button("🚚 السائقين", key="q_btn_driver_page", use_container_width=True):
                     st.session_state['current_view'] = 'عُهدة السواقين'
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col6:
-                st.markdown('<div class="daftra-quick-card"><h3>🔍</h3><h4>الجرد</h4></div>', unsafe_allow_html=True)
-                if st.button("الجرد", key="q_btn_audit_page", use_container_width=True):
+                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                if st.button("🔍 الجرد", key="q_btn_audit_page", use_container_width=True):
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col7:
-                st.markdown('<div class="daftra-quick-card"><h3>💾</h3><h4>الأرشيف</h4></div>', unsafe_allow_html=True)
-                if st.button("الأرشيف", key="q_btn_backup_page", use_container_width=True):
+                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                if st.button("💾 الأرشيف", key="q_btn_backup_page", use_container_width=True):
                     st.session_state['current_view'] = 'النسخ الاحتياطي'
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
         else:
             c_box1, c_box2 = st.columns(2)
@@ -1106,30 +1088,33 @@ else:
                 st.markdown("#### 🚚 عُهد السائقين المترصدة:")
                 st.metric("إجمالي المتبقي باليد", f"{open_driver_custody_sum:,.2f} ر.س")
 
-            st.divider()
             st.markdown("### ⚡ إجراءات خاطفة وسريعة (لوحة omar)")
             q_col1, q_col2, q_col3, q_col4 = st.columns(4)
             with q_col1:
-                st.markdown('<div class="daftra-quick-card"><h3>🟢</h3><h4>سند قبض</h4></div>', unsafe_allow_html=True)
-                if st.button("سند قبض سريع", use_container_width=True, key="q_btn_rec_acc"):
+                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                if st.button("🟢 سند قبض", use_container_width=True, key="q_btn_rec_acc"):
                     quick_cash_voucher_dialog("قبض", month_selected, "accountant")
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col2:
-                st.markdown('<div class="daftra-quick-card"><h3>🔴</h3><h4>سند صرف</h4></div>', unsafe_allow_html=True)
-                if st.button("سند صرف سريع", use_container_width=True, key="q_btn_pay_acc"):
+                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                if st.button("🔴 سند صرف", use_container_width=True, key="q_btn_pay_acc"):
                     quick_cash_voucher_dialog("صرف", month_selected, "accountant")
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col3:
-                st.markdown('<div class="daftra-quick-card"><h3>🚚</h3><h4>تصفية السائقين</h4></div>', unsafe_allow_html=True)
-                if st.button("تصفية عُهدة سائق", use_container_width=True, key="q_btn_driver_page_acc"):
+                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                if st.button("🚚 تصفية السائقين", use_container_width=True, key="q_btn_driver_page_acc"):
                     st.session_state['current_view'] = 'عُهدة السواقين'
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
             with q_col4:
-                st.markdown('<div class="daftra-quick-card"><h3>🔍</h3><h4>جرد الخزينة</h4></div>', unsafe_allow_html=True)
-                if st.button("جرد الصندوق", use_container_width=True, key="q_btn_audit_acc"):
+                st.markdown('<div class="daftra-quick-btn">', unsafe_allow_html=True)
+                if st.button("🔍 جرد الخزينة", use_container_width=True, key="q_btn_audit_acc"):
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
 
     # 5. موديول عُهدة السواقين
     elif selected_option == 'عُهدة السواقين':
@@ -1588,7 +1573,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق المحدث بقائمة الإجراءات المدمجة ⚙️
+    # 8. موديول حركة الصندوق المكتمل والمصمم بمساحات دقيقة ومصغرة
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -1748,7 +1733,7 @@ else:
                     t_sign = "+" if is_rec else "-"
                     border_c = "#10B981" if is_rec else "#EF4444"
 
-                    col_card_txt, col_popover = st.columns([3.5, 1])
+                    col_card_txt, col_popover = st.columns([4.2, 0.8])
                     
                     with col_card_txt:
                         st.markdown(f"""
@@ -1764,21 +1749,20 @@ else:
                         """, unsafe_allow_html=True)
                     
                     with col_popover:
-                        with st.popover("⚙️ الإجراءات"):
-                            if st.button("🖨️ طباعة السند", key=f"pop_p_{real_idx}", use_container_width=True):
+                        with st.popover("⚙️"):
+                            if st.button("🖨️ طباعة", key=f"pop_p_{real_idx}", use_container_width=True):
                                 print_cash_voucher_dialog(t_item, month_selected)
 
-                            if st.button("✏️ تعديل السند", key=f"pop_e_{real_idx}", use_container_width=True):
+                            if st.button("✏️ تعديل", key=f"pop_e_{real_idx}", use_container_width=True):
                                 edit_cash_voucher_dialog(real_idx, month_selected, active_target_box)
 
-                            if st.button("🗑️ حذف السند", key=f"pop_d_{real_idx}", use_container_width=True):
+                            if st.button("🗑️ حذف", key=f"pop_d_{real_idx}", use_container_width=True):
                                 curr_trans.pop(real_idx)
                                 all_cash_db[month_selected][active_box_key] = curr_trans
                                 save_cash_data(all_cash_db)
                                 st.success("تم حذف السند!")
                                 st.rerun()
 
-                    st.divider()
             else:
                 st.info("لا توجد حركات تسوية بالصندوق مسجلة لهذا الشهر.")
 
