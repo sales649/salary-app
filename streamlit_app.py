@@ -25,29 +25,26 @@ supabase = init_supabase()
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = '🌙 وضع ليلي'
 
-# ضبط متغيرات الألوان التفاعلية الحقيقية للتحويل بين الليلي والنهاري
 if '🌙' in st.session_state['theme_mode']:
     bg_app = "#0F172A"
     bg_card = "#1E293B"
     bg_sidebar = "#1E293B"
     text_color = "#FFFFFF"
     border_color = "#D97706"
-    input_bg = "#334155"
-    input_text = "#FFFFFF"
-    expander_bg = "#1E293B"
-    expander_text = "#F59E0B"
-    btn_bg = "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)"
+    input_bg = "#FFFFFF"
+    input_text = "#000000"
+    btn_sidebar_bg = "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)"
+    btn_sidebar_text = "#F59E0B"
 else:
     bg_app = "#F8FAFC"
     bg_card = "#FFFFFF"
     bg_sidebar = "#FFFFFF"
     text_color = "#0F172A"
     border_color = "#D97706"
-    input_bg = "#F1F5F9"
-    input_text = "#0F172A"
-    expander_bg = "#FFFFFF"
-    expander_text = "#D97706"
-    btn_bg = "linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)"
+    input_bg = "#FFFFFF"
+    input_text = "#000000"
+    btn_sidebar_bg = "linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)"
+    btn_sidebar_text = "#D97706"
 
 st.markdown(f"""
     <style>
@@ -93,43 +90,34 @@ st.markdown(f"""
             padding-bottom: 0.2rem !important;
         }}
 
-        /* إصلاح القوائم الجانبية المنسدلة ومنع تداخل النصوص والرموز الإنجليزية */
-        [data-testid="stSidebar"] details {{
-            background-color: {expander_bg} !important;
-            border: 1px solid {border_color} !important;
-            border-radius: 8px !important;
-            margin-bottom: 4px !important;
-        }}
-
-        [data-testid="stSidebar"] details summary {{
-            color: {expander_text} !important;
-            font-weight: 900 !important;
+        [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
+            color: {text_color} !important;
             font-size: 13px !important;
-            padding: 6px 10px !important;
-            cursor: pointer !important;
+            font-weight: 800 !important;
         }}
 
-        [data-testid="stSidebar"] details summary * {{
-            color: {expander_text} !important;
+        /* تصميم عناوين الأقسام الجانبية البارزة والنظيفة */
+        .sidebar-section-title {{
+            color: #F59E0B !important;
+            font-size: 13px !important;
             font-weight: 900 !important;
-        }}
-
-        /* إخفاء رموز السهم الإنجليزي المتداخلة */
-        [data-testid="stSidebar"] details summary ::after, 
-        [data-testid="stSidebar"] details summary ::before {{
-            font-family: 'Cairo', sans-serif !important;
+            border-bottom: 2px solid #D97706;
+            padding-bottom: 2px;
+            margin-top: 10px;
+            margin-bottom: 6px;
+            text-align: right !important;
         }}
 
         [data-testid="stSidebar"] .stButton>button {{
             width: 100% !important;
-            background: {btn_bg} !important;
-            color: {text_color} !important;
-            border: 1px solid {border_color} !important;
+            background: {btn_sidebar_bg} !important;
+            color: {btn_sidebar_text} !important;
+            border: 1px solid #D97706 !important;
             border-radius: 6px !important;
             font-weight: 800 !important;
-            font-size: 12px !important;
-            padding: 4px 6px !important;
-            margin-bottom: 2px !important;
+            font-size: 13px !important;
+            padding: 5px 8px !important;
+            margin-bottom: 3px !important;
             text-align: right !important;
             box-shadow: none !important;
         }}
@@ -139,17 +127,28 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        /* ألوان القوائم المنسدلة للاختيارات */
+        /* إصلاح ألوان خانات الإدخال - خلفية بيضاء وكتابة سوداء عريضة دائماً */
+        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
+            background-color: #FFFFFF !important;
+            color: #000000 !important;
+            border: 1px solid #CBD5E1 !important;
+            border-radius: 6px !important;
+            font-weight: 800 !important;
+            font-size: 13px !important;
+            padding: 4px 8px !important;
+        }}
+
+        /* ألوان القوائم المنسدلة */
         ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"], [data-baseweb="popover"] > div, div[data-baseweb="menu"] {{
-            background-color: {bg_card} !important;
-            color: {text_color} !important;
+            background-color: #1E293B !important;
+            color: #FFFFFF !important;
             border: 1px solid #D97706 !important;
             border-radius: 8px !important;
         }}
 
         li[role="option"], li[role="option"] *, div[role="option"], div[role="option"] * {{
-            color: {text_color} !important;
-            background-color: {bg_card} !important;
+            color: #FFFFFF !important;
+            background-color: #1E293B !important;
             font-weight: 800 !important;
             font-size: 13px !important;
         }}
@@ -157,16 +156,6 @@ st.markdown(f"""
         li[role="option"]:hover, li[role="option"]:hover *, div[role="option"]:hover, div[role="option"]:hover * {{
             background-color: #D97706 !important;
             color: #FFFFFF !important;
-        }}
-
-        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
-            background-color: {input_bg} !important;
-            color: {input_text} !important;
-            border: 1px solid #CBD5E1 !important;
-            border-radius: 6px !important;
-            font-weight: 700 !important;
-            font-size: 13px !important;
-            padding: 4px 8px !important;
         }}
 
         [data-testid="stMetricValue"] div {{
@@ -195,9 +184,9 @@ st.markdown(f"""
         }}
 
         div.stButton > button, div.stDownloadButton > button, [data-testid="stFormSubmitButton"] > button {{
-            background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%) !important;
-            color: {text_color} !important;
-            border: 1px solid {border_color} !important;
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+            color: #FFFFFF !important;
+            border: 1px solid #D97706 !important;
             border-radius: 8px !important;
             font-weight: 800 !important;
             font-size: 12px !important;
@@ -943,7 +932,7 @@ if not st.session_state.get('app_started', False):
                 st.error("كلمة المرور غير صحيحة! يرجى إدخال كلمة المرور للوصول للنظام.")
 
 else:
-    # 3. القائمة الجانبية المنظمة بأسلوب المجموعات المنسدلة الجمالية الصريحة
+    # 3. القائمة الجانبية المباشرة المفتوحة المرتبة والأنيقة
     with st.sidebar:
         st.markdown("""
             <div style="text-align: center; padding-bottom: 2px;">
@@ -970,53 +959,53 @@ else:
 
         st.divider()
 
-        # 1. زر الرئيسية المباشر الخارجي المميز
+        # 1. زر الرئيسية المباشر المستقل الخارجي
         if st.button("🏠 الرئيسية", use_container_width=True):
             st.session_state['current_view'] = 'الرئيسية'
             st.rerun()
 
-        # 2. القائمة المنسدلة الجمالية الأولى: الخزائن والصناديق
-        with st.expander("🏦 الخزائن والصناديق", expanded=True):
-            if st.button("حركة الصندوق", use_container_width=True):
-                st.session_state['current_view'] = 'حركة الصندوق'
-                st.rerun()
-            if st.button("عُهدة السواقين", use_container_width=True):
-                st.session_state['current_view'] = 'عُهدة السواقين'
-                st.rerun()
-            if st.button("جرد الخزينة", use_container_width=True):
-                st.session_state['current_view'] = 'جرد الخزينة'
-                st.rerun()
+        # 2. قسم الصناديق والخزائن المباشر
+        st.markdown('<div class="sidebar-section-title">🏦 الخزائن والصناديق</div>', unsafe_allow_html=True)
+        if st.button("حركة الصندوق", use_container_width=True):
+            st.session_state['current_view'] = 'حركة الصندوق'
+            st.rerun()
+        if st.button("عُهدة السواقين", use_container_width=True):
+            st.session_state['current_view'] = 'عُهدة السواقين'
+            st.rerun()
+        if st.button("جرد الخزينة", use_container_width=True):
+            st.session_state['current_view'] = 'جرد الخزينة'
+            st.rerun()
 
-        # 3. القائمة المنسدلة الجمالية الثانية: الموارد البشرية والرواتب (تضم كافة الموديولات المالية والإدارية للموظفين)
+        # 3. قسم الموارد البشرية والرواتب (يضم كافة موديولات الموظفين والدفعات)
         if st.session_state.user_role == "admin":
-            with st.expander("👥 الموارد البشرية والرواتب", expanded=False):
-                if st.button("إدخال الدفعات", use_container_width=True):
-                    st.session_state['current_view'] = 'إدخال الدفعات'
-                    st.rerun()
-                if st.button("كشف مسير الرواتب", use_container_width=True):
-                    st.session_state['current_view'] = 'مسير الرواتب'
-                    st.rerun()
-                if st.button("دليل الموظفين", use_container_width=True):
-                    st.session_state['current_view'] = 'دليل الموظفين'
-                    st.rerun()
-                if st.button("🖨️ طباعة السندات A4", use_container_width=True):
-                    st.session_state['current_view'] = 'طباعة السندات'
-                    st.rerun()
-                if st.button("حاسبة الخدمة", use_container_width=True):
-                    st.session_state['current_view'] = 'حاسبة الخدمة'
-                    st.rerun()
-                if st.button("التنبيهات الإدارية", use_container_width=True):
-                    st.session_state['current_view'] = 'التنبيهات'
-                    st.rerun()
+            st.markdown('<div class="sidebar-section-title">👥 الموارد البشرية والرواتب</div>', unsafe_allow_html=True)
+            if st.button("إدخال الدفعات", use_container_width=True):
+                st.session_state['current_view'] = 'إدخال الدفعات'
+                st.rerun()
+            if st.button("كشف مسير الرواتب", use_container_width=True):
+                st.session_state['current_view'] = 'مسير الرواتب'
+                st.rerun()
+            if st.button("دليل الموظفين", use_container_width=True):
+                st.session_state['current_view'] = 'دليل الموظفين'
+                st.rerun()
+            if st.button("🖨️ طباعة السندات A4", use_container_width=True):
+                st.session_state['current_view'] = 'طباعة السندات'
+                st.rerun()
+            if st.button("حاسبة الخدمة", use_container_width=True):
+                st.session_state['current_view'] = 'حاسبة الخدمة'
+                st.rerun()
+            if st.button("التنبيهات الإدارية", use_container_width=True):
+                st.session_state['current_view'] = 'التنبيهات'
+                st.rerun()
 
-            # 4. القائمة المنسدلة الجمالية الثالثة: أدوات النظام والأرشيف
-            with st.expander("⚙️ أدوات النظام والأرشيف", expanded=False):
-                if st.button("النسخ الاحتياطي", use_container_width=True):
-                    st.session_state['current_view'] = 'النسخ الاحتياطي'
-                    st.rerun()
-                if st.button("الإغلاق السنوي", use_container_width=True):
-                    st.session_state['current_view'] = 'الإغلاق السنوي'
-                    st.rerun()
+            # 4. قسم النظام والأرشيف
+            st.markdown('<div class="sidebar-section-title">⚙️ أدوات النظام والأرشيف</div>', unsafe_allow_html=True)
+            if st.button("النسخ الاحتياطي", use_container_width=True):
+                st.session_state['current_view'] = 'النسخ الاحتياطي'
+                st.rerun()
+            if st.button("الإغلاق السنوي", use_container_width=True):
+                st.session_state['current_view'] = 'الإغلاق السنوي'
+                st.rerun()
 
         st.divider()
 
