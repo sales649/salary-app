@@ -25,30 +25,17 @@ supabase = init_supabase()
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = '🌙 وضع ليلي'
 
-if '🌙' in st.session_state['theme_mode']:
-    bg_app = "#0F172A"
-    bg_card = "#1E293B"
-    bg_sidebar = "#1E293B"
-    text_color = "#FFFFFF"
-    border_color = "#D97706"
-    input_bg = "#F1F5F9"
-    input_text = "#0F172A"
-    modal_bg = "#1E293B"
-    modal_text = "#FFFFFF"
-    btn_sidebar_bg = "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)"
-    btn_sidebar_text = "#F59E0B"
-else:
-    bg_app = "#F8FAFC"
-    bg_card = "#FFFFFF"
-    bg_sidebar = "#FFFFFF"
-    text_color = "#0F172A"
-    border_color = "#D97706"
-    input_bg = "#FFFFFF"
-    input_text = "#0F172A"
-    modal_bg = "#FFFFFF"
-    modal_text = "#0F172A"
-    btn_sidebar_bg = "linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)"
-    btn_sidebar_text = "#0F172A"
+bg_app = "#0F172A"
+bg_card = "#1E293B"
+bg_sidebar = "#1E293B"
+text_color = "#FFFFFF"
+border_color = "#D97706"
+input_bg = "#F1F5F9"
+input_text = "#0F172A"
+modal_bg = "#1E293B"
+modal_text = "#FFFFFF"
+btn_sidebar_bg = "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)"
+btn_sidebar_text = "#F59E0B"
 
 st.markdown(f"""
     <style>
@@ -119,23 +106,6 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"] div {{
-            background-color: {bg_card} !important;
-            color: {text_color} !important;
-            border: 1px solid #D97706 !important;
-        }}
-
-        li[role="option"], li[role="option"] * {{
-            color: {text_color} !important;
-            background-color: {bg_card} !important;
-            font-weight: 700 !important;
-        }}
-
-        li[role="option"]:hover, li[role="option"]:hover * {{
-            background-color: #D97706 !important;
-            color: #FFFFFF !important;
-        }}
-
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"], [data-testid="stDateInput"] input {{
             background-color: {input_bg} !important;
             color: {input_text} !important;
@@ -171,22 +141,23 @@ st.markdown(f"""
             text-align: center !important;
         }}
 
-        .daftra-btn-container button {{
-            background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%) !important;
-            color: {text_color} !important;
-            border: 1px solid {border_color} !important;
-            border-radius: 10px !important;
-            padding: 10px 4px !important;
-            font-size: 13px !important;
+        /* إصلاح حاسم للتأكد من عدم تحول أي زر للون الأبيض */
+        div.stButton > button, div.stDownloadButton > button, [data-testid="stFormSubmitButton"] > button {{
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%) !important;
+            color: #FFFFFF !important;
+            border: 1px solid #D97706 !important;
+            border-radius: 8px !important;
             font-weight: 800 !important;
-            width: 100% !important;
-            text-align: center !important;
+            font-size: 12px !important;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+            padding: 6px 10px !important;
+            width: 100% !important;
         }}
 
-        .daftra-btn-container button:hover {{
-            background: #D97706 !important;
+        div.stButton > button:hover, div.stDownloadButton > button:hover {{
+            background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
             color: #FFFFFF !important;
+            border-color: #F59E0B !important;
         }}
 
         .cash-card-item {{
@@ -296,7 +267,6 @@ if 'user_role' not in st.session_state:
 if 'current_view' not in st.session_state:
     st.session_state['current_view'] = 'الرئيسية'
 
-# كشف شهر أغسطس الفعلي المعتمد بالكامل
 august_payroll_data = [
     {'م': 1, 'الاسم': 'مد ساجد ', 'الوظيفة': 'عامل', 'الراتب الأساسي': 5000.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-10-15', 'تاريخ انتهاء العقد': '2027-01-01', 'الخصومات': 0.0, 'الدفعة 1': 3000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 5000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 2, 'الاسم': 'فيض الإسلام', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مصنع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2026-09-20', 'تاريخ انتهاء العقد': '2026-12-31', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
@@ -626,11 +596,7 @@ def print_cash_voucher_dialog(trans_item, month_name):
         .v-table td, .v-table th {{ border: 1px solid #cbd5e1; padding: 8px; text-align: right; font-size: 13px; }}
         .amt-tag {{ font-size: 18px; font-weight: bold; color: #047857; background: #ecfdf5; border: 2px solid #10b981; text-align: center; padding: 4px; border-radius: 4px; }}
         .sigs {{ margin-top: 25px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }}
-        @media print {{ .no-p {{ display: none; }} }}
     </style></head><body>
-        <div class="no-p" style="text-align:center; margin-bottom:8px;">
-            <button onclick="window.print()" style="background:#1E3A8A; color:white; border:none; padding:8px 20px; font-weight:bold; font-size:14px; border-radius:4px; cursor:pointer;">طباعة السند (A4 / PDF)</button>
-        </div>
         <div class="voucher-box">
             <div class="header-logo">
                 <div style="font-size:11px; font-weight:bold;">Five-M Company For Industry<br>C. R. : 1011145035</div>
@@ -651,10 +617,16 @@ def print_cash_voucher_dialog(trans_item, month_name):
         </div>
     </body></html>
     """
-    st.components.v1.html(html_v, height=340, scrolling=True)
+    st.components.v1.html(html_v, height=310, scrolling=True)
+    st.download_button(
+        label="📄 تنزيل السند المباشر للطباعة (HTML / PDF)",
+        data=html_v.encode('utf-8'),
+        file_name=f"سند_{trans_item.get('code', trans_item['id'])}_{month_name}.html",
+        mime="text/html",
+        use_container_width=True
+    )
 
-@st.dialog("🖨️ طباعة كشف حساب الصندوق المقابل (T-Account)")
-def print_t_account_dialog(trans_list, month_name, period_label, target_box_label):
+def generate_t_account_html(trans_list, month_name, period_label, target_box_label):
     rec_list = [t for t in trans_list if "قبض" in t['type']]
     pay_list = [t for t in trans_list if "صرف" in t['type']]
     
@@ -692,7 +664,7 @@ def print_t_account_dialog(trans_list, month_name, period_label, target_box_labe
         </tr>
         """
 
-    html_t = f"""
+    return f"""
     <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
     <style>
         body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; margin: 0; padding: 10px; }}
@@ -705,18 +677,14 @@ def print_t_account_dialog(trans_list, month_name, period_label, target_box_labe
         .tot-row {{ background-color: #f8fafc; font-weight: bold; font-size: 13px; }}
         .net-summary {{ text-align: center; background: #ecfdf5; border: 2px solid #10b981; color: #047857; font-size: 16px; font-weight: bold; padding: 8px; border-radius: 6px; margin-top: 15px; }}
         .sigs {{ margin-top: 35px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }}
-        @media print {{ .no-p {{ display: none; }} }}
     </style></head><body>
-        <div class="no-p" style="text-align:center; margin-bottom:12px;">
-            <button onclick="window.print()" style="background:#1E3A8A; color:white; border:none; padding:10px 22px; font-weight:bold; font-size:15px; border-radius:6px; cursor:pointer;">طباعة كشف الحساب المقابل (PDF / A4)</button>
-        </div>
         <div class="t-box">
             <div class="header-logo">
                 <div style="font-size:11px; font-weight:bold;">Five-M Company For Industry<br>C. R. : 1011145035</div>
                 <div style="font-size:40px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
                 <div style="font-size:11px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
             </div>
-            <div class="v-title t-title">كشف حساب حركة الصندوق المقابل (T-Account) - {target_box_label}<br>عن الفترة: {period_label} | شهر ({month_name})</div>
+            <div class="v-title t-title">كشف حساب حركة الصندوق المقابل (T-Account) - {target_box_txt}<br>عن الفترة: {period_label} | شهر ({month_name})</div>
             <table class="t-table">
                 <thead>
                     <tr>
@@ -748,7 +716,18 @@ def print_t_account_dialog(trans_list, month_name, period_label, target_box_labe
         </div>
     </body></html>
     """
-    st.components.v1.html(html_t, height=480, scrolling=True)
+
+@st.dialog("🖨️ معاينة وتنزيل كشف حساب الصندوق المقابل (T-Account)")
+def print_t_account_dialog(trans_list, month_name, period_label, target_box_label):
+    html_content = generate_t_account_html(trans_list, month_name, period_label, target_box_label)
+    st.components.v1.html(html_content, height=380, scrolling=True)
+    st.download_button(
+        label="📄 تنزيل كشف الحساب المقابل المباشر للطباعة (HTML / PDF)",
+        data=html_content.encode('utf-8'),
+        file_name=f"كشف_حساب_الصندوق_{month_name}.html",
+        mime="text/html",
+        use_container_width=True
+    )
 
 @st.dialog("✏️ تعديل عُهدة سائق")
 def edit_driver_custody_modal(item_idx):
@@ -1788,7 +1767,7 @@ else:
         with t_col_p3:
             st.write("")
             st.write("")
-            if st.button("🖨️ طباعة كشف الحساب المقابل (A4)", key="btn_open_t_acc_print_modal", use_container_width=True):
+            if st.button("🖨️ معاينة كشف الحساب المقابل (A4)", key="btn_open_t_acc_print_modal", use_container_width=True):
                 if filtered_print_trans:
                     target_box_txt = "الخزينة الرئيسية (wahby)" if active_target_box == "main" else "عُهدة المحاسب (omar)"
                     print_t_account_dialog(filtered_print_trans, month_selected, period_label_txt, target_box_txt)
@@ -2022,13 +2001,9 @@ else:
             tr:nth-child(even) {{ background-color: #f8fafc; }}
             .totals-box {{ margin-top: 15px; padding: 10px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 5px; font-weight: bold; display: flex; justify-content: space-around; font-size: 14px; }}
             .signatures {{ margin-top: 30px; display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; padding: 0 30px; }}
-            @media print {{ .no-print {{ display: none; }} }}
         </style>
         </head>
         <body>
-            <div class="no-print" style="text-align:center; padding: 10px; margin-bottom: 15px;">
-                <button onclick="window.print()" style="background: #1E3A8A; color: white; border: none; padding: 10px 25px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer;">طباعة المسير (PDF)</button>
-            </div>
             <div class="header">
                 <h2>🏢 شركة ميم الخماسية للتصنيع</h2>
                 <h3>كشف مسير الرواتب - {filter_sheet} ({month_selected})</h3>
@@ -2084,12 +2059,13 @@ else:
         </body>
         </html>
         """
-        st.components.v1.html(sheet_html, height=450, scrolling=True)
+        st.components.v1.html(sheet_html, height=400, scrolling=True)
         st.download_button(
             label=f"📄 فتح وتحميل ملف كشف مسير {filter_sheet} (HTML / PDF) 🖨️",
             data=sheet_html.encode('utf-8'),
             file_name=f"مسير_رواتب_{filter_sheet}_{month_selected}.html",
-            mime="text/html"
+            mime="text/html",
+            use_container_width=True
         )
 
     elif selected_option == 'طباعة السندات' and st.session_state.user_role == "admin":
@@ -2103,12 +2079,13 @@ else:
         df_print = st.session_state.payroll_df if selected_b == 'جميع الفروع' else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == selected_b]
         
         pdf_bytes = generate_pretty_html_pdf(df_print, selected_b, pay_type_select)
-        st.components.v1.html(pdf_bytes.getvalue().decode('utf-8'), height=450, scrolling=True)
+        st.components.v1.html(pdf_bytes.getvalue().decode('utf-8'), height=400, scrolling=True)
         st.download_button(
             label=f"📄 تنزيل ملف سندات ({pay_type_select}) - {selected_b} للطباعة 🖨️",
             data=pdf_bytes,
             file_name=f"سندات_{pay_type_select}_{selected_b}_{month_selected}.html",
-            mime="text/html"
+            mime="text/html",
+            use_container_width=True
         )
 
     elif selected_option == 'حاسبة الخدمة' and st.session_state.user_role == "admin":
