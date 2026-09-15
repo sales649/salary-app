@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 from supabase import create_client, Client
 
-# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
+# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL مع PWA Metas
 st.set_page_config(page_title='5M', layout='wide', page_icon='🏢', initial_sidebar_state="auto")
 
 ADMIN_PASSWORD = "admin5m"
@@ -106,8 +106,12 @@ st.markdown(f"""
             border-bottom: none !important;
         }}
 
-        /* إخفاء كلي لنصوص الرموز الإنجليزية للأسهم المزعجة */
-        [data-testid="stSidebarCollapseButton"] *, [data-testid="stSidebarActionButton"] * {{
+        /* إخفاء كلي وقاطع لنصوص الأيقونات الإنجليزية المزعجة في الهيدر والأسهم */
+        [data-testid="stSidebarCollapseButton"] span, 
+        [data-testid="stSidebarActionButton"] span,
+        [data-testid="stSidebarCollapseButton"]::after,
+        [data-testid="stSidebarHeader"] span,
+        [data-testid="stSidebarHeader"] div {{
             font-size: 0px !important;
             color: transparent !important;
         }}
@@ -128,7 +132,7 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* إعدادات القائمة الجانبية للشاشات الكبيرة (الماك والكمبيوتر) */
+        /* إعدادات الشاشات الكبيرة (الماك والكمبيوتر) - ثابتة ومستقرة */
         @media screen and (min-width: 769px) {{
             [data-testid="stSidebar"] {{
                 border-left: 2px solid {border_color} !important;
@@ -142,22 +146,31 @@ st.markdown(f"""
                 padding-right: 0.8rem !important;
                 padding-bottom: 0.5rem !important;
             }}
-
-            [data-testid="stSidebarCollapseButton"] {{
-                display: none !important;
-            }}
         }}
 
-        /* إعدادات الموبايل فقط لمنع اقتطاع الشاشة الرئيسية وتسهيل الحركة واللمس */
+        /* إعدادات الموبايل القاطعة: إخفاء القائمة المغلقة تماماً خارج الشاشة لمنع الخط والنص العمودي */
         @media screen and (max-width: 768px) {{
+            [data-testid="stSidebar"][aria-expanded="false"] {{
+                margin-right: -100vw !important;
+                transform: translateX(100%) !important;
+                visibility: hidden !important;
+            }}
+
+            [data-testid="stSidebar"][aria-expanded="false"] * {{
+                display: none !important;
+            }}
+
+            [data-testid="stSidebar"][aria-expanded="true"] {{
+                width: 82vw !important;
+                margin-right: 0 !important;
+                transform: translateX(0) !important;
+                visibility: visible !important;
+                box-shadow: 0 0 25px rgba(0,0,0,0.6) !important;
+            }}
+
             .main .block-container {{
                 padding-left: 4px !important;
                 padding-right: 4px !important;
-                overflow-x: auto !important;
-            }}
-
-            [data-testid="stSidebar"] {{
-                z-index: 999999 !important;
             }}
 
             [data-testid="stHorizontalBlock"] {{
@@ -1610,7 +1623,7 @@ else:
         else:
             st.info("لا يوجد سجل عُهد سابق لـ سمان السواق.")
 
-    # 6. موديول جرد الخزينة المحدث
+    # 6. موديول جرد الخزينة المحدث مع حقل "الخزينة بالبنك" والتصفية حسب الدور
     elif selected_option == 'جرد الخزينة':
         st.subheader(f'🔍 موديول جرد الخزينة ومطابقة النقدية الفعلي - ({month_selected})')
         st.write('قم بمطابقة المبالغ النقدية الموجودة بيدك داخل الصندوق مع الرصيد الدفتري المسجل بالنظام واحتساب العجز أو الزيادة فوراً:')
