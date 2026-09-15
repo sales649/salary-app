@@ -104,16 +104,17 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* إزالة أي إطارات فائضة وضبط محاذاة القائمة الجانبية */
+        /* محاذاة القائمة الجانبية واستغلال المساحة */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background: {bg_sidebar} !important;
+            margin-right: 0 !important;
         }}
 
         [data-testid="stSidebarContent"] {{
             padding-top: 0.5rem !important;
-            padding-left: 0.6rem !important;
-            padding-right: 0.6rem !important;
+            padding-left: 0.4rem !important;
+            padding-right: 0.4rem !important;
             padding-bottom: 0.5rem !important;
         }}
 
@@ -123,32 +124,27 @@ st.markdown(f"""
             font-weight: 800 !important;
         }}
 
-        /* تصميم الشعار واسم الشركة بدون مربعات وبمحاذاة في المنتصف */
+        /* تصميم الشعار المطور في منتصف القائمة بدون عبارات وبدون إطارات */
         .sidebar-logo-container {{
             text-align: center !important;
-            margin-bottom: 15px !important;
+            margin-bottom: 10px !important;
             padding: 5px 0 !important;
+            width: 100% !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
         }}
 
         .sidebar-logo-text {{
-            font-size: 56px !important;
+            font-size: 62px !important;
             font-weight: 900 !important;
             color: #EF4444 !important;
             font-family: Arial, sans-serif !important;
             line-height: 1 !important;
-            margin: 0 !important;
+            margin: 0 auto !important;
             text-align: center !important;
             display: block !important;
-        }}
-
-        .sidebar-company-title {{
-            color: #F59E0B !important;
-            font-size: 16px !important;
-            font-weight: 900 !important;
-            margin-top: 6px !important;
-            margin-bottom: 0 !important;
-            text-align: center !important;
-            display: block !important;
+            text-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
         }}
 
         .sidebar-section-title {{
@@ -159,7 +155,7 @@ st.markdown(f"""
             padding-bottom: 3px;
             margin-top: 14px;
             margin-bottom: 8px;
-            text-align: right !important;
+            text-align: center !important;
         }}
 
         [data-testid="stSidebar"] .stButton>button {{
@@ -172,7 +168,7 @@ st.markdown(f"""
             font-size: 13px !important;
             padding: 6px 8px !important;
             margin-bottom: 3px !important;
-            text-align: right !important;
+            text-align: center !important;
             box-shadow: none !important;
         }}
 
@@ -1062,12 +1058,11 @@ if not st.session_state.get('app_started', False):
                 st.error("كلمة المرور غير صحيحة! يرجى إدخال كلمة المرور للوصول للنظام.")
 
 else:
-    # 3. القائمة الجانبية المباشرة وتوسيط الشعار والنص بدون مربعات
+    # 3. القائمة الجانبية المباشرة وتوسيط الشعار الأحمر 5M بدون أي مربعات
     with st.sidebar:
         st.markdown("""
             <div class="sidebar-logo-container">
                 <span class="sidebar-logo-text">5M</span>
-                <span class="sidebar-company-title">شركة ميم الخماسية للتصنيع</span>
             </div>
         """, unsafe_allow_html=True)
 
@@ -1572,7 +1567,7 @@ else:
         else:
             st.info("لا يوجد سجل عُهد سابق لـ سمان السواق.")
 
-    # 6. موديول جرد الخزينة المحدث
+    # 6. موديول جرد الخزينة المحدث بعبارة "الخزينة بالبنك"
     elif selected_option == 'جرد الخزينة':
         st.subheader(f'🔍 موديول جرد الخزينة ومطابقة النقدية الفعلي - ({month_selected})')
         st.write('قم بمطابقة المبالغ النقدية الموجودة بيدك داخل الصندوق مع الرصيد الدفتري المسجل بالنظام واحتساب العجز أو الزيادة فوراً:')
@@ -1612,7 +1607,8 @@ else:
                 v_20 = st.number_input("إجمالي فئة 20 ريال (ر.س):", min_value=0.0, value=0.0, step=20.0)
                 v_10 = st.number_input("إجمالي فئة 10 ريال (ر.س):", min_value=0.0, value=0.0, step=10.0)
                 v_5 = st.number_input("إجمالي فئة 5 ريال (ر.س):", min_value=0.0, value=0.0, step=5.0)
-                v_coins = st.number_input("كسور / مبالغ إضافية بالريال (ر.س):", min_value=0.0, value=0.0)
+                # استبدال خانة الكسور بـ "الخزينة بالبنك"
+                v_coins = st.number_input("الخزينة بالبنك (ر.س):", min_value=0.0, value=0.0)
 
             actual_counted_cash = v_500 + v_200 + v_100 + v_50 + v_20 + v_10 + v_5 + v_coins
 
