@@ -136,7 +136,7 @@ st.markdown(f"""
         @media screen and (min-width: 769px) {{
             [data-testid="stSidebar"] {{
                 border-left: 2px solid {border_color} !important;
-                background: {bg_sidebar} !important;
+                background-color: {bg_sidebar} !important;
                 margin-right: 0 !important;
             }}
 
@@ -145,11 +145,20 @@ st.markdown(f"""
                 padding-left: 0.8rem !important;
                 padding-right: 0.8rem !important;
                 padding-bottom: 0.5rem !important;
+                background-color: {bg_sidebar} !important;
             }}
         }}
 
-        /* إعدادات الموبايل القاطعة: إخفاء القائمة المغلقة تماماً خارج الشاشة لمنع الخط والنص العمودي */
+        /* إعدادات الموبايل والآيفون الموحدة: تثبيت اللون الكحلي ومنع الخلفية البيضاء القسرية */
         @media screen and (max-width: 768px) {{
+            [data-testid="stSidebar"], 
+            [data-testid="stSidebarContent"], 
+            [data-testid="stSidebarUserContent"],
+            [data-testid="stSidebar"] > div:first-child {{
+                background-color: {bg_sidebar} !important;
+                background: {bg_sidebar} !important;
+            }}
+
             [data-testid="stSidebar"][aria-expanded="false"] {{
                 margin-right: -100vw !important;
                 transform: translateX(100%) !important;
@@ -165,6 +174,7 @@ st.markdown(f"""
                 margin-right: 0 !important;
                 transform: translateX(0) !important;
                 visibility: visible !important;
+                background-color: {bg_sidebar} !important;
                 box-shadow: 0 0 25px rgba(0,0,0,0.6) !important;
             }}
 
@@ -1623,7 +1633,7 @@ else:
         else:
             st.info("لا يوجد سجل عُهد سابق لـ سمان السواق.")
 
-    # 6. موديول جرد الخزينة المحدث مع حقل "الخزينة بالبنك" والتصفية حسب الدور
+    # 6. موديول جرد الخزينة المحدث
     elif selected_option == 'جرد الخزينة':
         st.subheader(f'🔍 موديول جرد الخزينة ومطابقة النقدية الفعلي - ({month_selected})')
         st.write('قم بمطابقة المبالغ النقدية الموجودة بيدك داخل الصندوق مع الرصيد الدفتري المسجل بالنظام واحتساب العجز أو الزيادة فوراً:')
