@@ -1576,7 +1576,7 @@ else:
         else:
             st.info("لا يوجد سجل عُهد سابق لـ سمان السواق.")
 
-    # 6. موديول جرد الخزينة المحدث مع حقل "الخزينة بالبنك"
+    # 6. موديول جرد الخزينة المحدث مع حقل "الخزينة بالبنك" والتصفية حسب الدور
     elif selected_option == 'جرد الخزينة':
         st.subheader(f'🔍 موديول جرد الخزينة ومطابقة النقدية الفعلي - ({month_selected})')
         st.write('قم بمطابقة المبالغ النقدية الموجودة بيدك داخل الصندوق مع الرصيد الدفتري المسجل بالنظام واحتساب العجز أو الزيادة فوراً:')
@@ -1661,9 +1661,16 @@ else:
         st.divider()
         st.markdown("### 📑 سجل تسويات وجرد الخزينة التاريخي:")
         audit_history = load_audit_data()
-        if audit_history:
-            for a_idx, a_item in enumerate(reversed(audit_history)):
-                real_a_idx = len(audit_history) - 1 - a_idx
+        
+        # تصفية سجلات الجرد بحيث يرى المستخدم فقط الخزينة المسموح له برؤيتها
+        if st.session_state.user_role == "accountant":
+            filtered_audit_history = [a for a in audit_history if "omar" in a.get('box_name', '')]
+        else:
+            filtered_audit_history = audit_history.copy()
+
+        if filtered_audit_history:
+            for a_idx, a_item in enumerate(reversed(filtered_audit_history)):
+                real_a_idx = audit_history.index(a_item)
                 col_rec1, col_rec2, col_rec3, col_rec4, col_rec5 = st.columns([1, 2, 2, 2, 1])
                 col_rec1.write(f"#{a_item['id']}")
                 col_rec2.write(f"📅 **{a_item['date']}**\n{a_item['box_name']}")
@@ -1680,7 +1687,7 @@ else:
                     st.rerun()
                 st.divider()
         else:
-            st.info("لا توجد جلسات جرد سابقة محفوظة بالنظام.")
+            st.info("لا توجد جلسات جرد سابقة محفوظة لهذا الصندوق.")
 
     elif selected_option == 'النسخ الاحتياطي' and st.session_state.user_role == "admin":
         st.subheader(f'💾 مركز إدارة النسخ الاحتياطي والأرشيف المالي - ({month_selected})')
