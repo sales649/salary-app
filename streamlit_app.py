@@ -106,7 +106,6 @@ st.markdown(f"""
             border-bottom: none !important;
         }}
 
-        /* إخفاء كلي وقاطع لنصوص الأيقونات الإنجليزية المزعجة في الهيدر والأسهم */
         [data-testid="stSidebarCollapseButton"] span, 
         [data-testid="stSidebarActionButton"] span,
         [data-testid="stSidebarCollapseButton"]::after,
@@ -132,7 +131,6 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* إعدادات الشاشات الكبيرة (الماك والكمبيوتر) - ثابتة ومستقرة */
         @media screen and (min-width: 769px) {{
             [data-testid="stSidebar"] {{
                 border-left: 2px solid {border_color} !important;
@@ -149,7 +147,6 @@ st.markdown(f"""
             }}
         }}
 
-        /* إعدادات الموبايل والآيفون الموحدة: تثبيت اللون الكحلي ومنع الخلفية البيضاء القسرية */
         @media screen and (max-width: 768px) {{
             [data-testid="stSidebar"], 
             [data-testid="stSidebarContent"], 
@@ -212,7 +209,6 @@ st.markdown(f"""
             font-weight: 800 !important;
         }}
 
-        /* الشعار الأحمر 5M بمنتصف القائمة */
         .sidebar-logo-container {{
             text-align: center !important;
             margin-bottom: 10px !important;
@@ -617,13 +613,23 @@ def save_monthly_payroll_store(store_data):
 
 def get_payroll_for_month(month_name):
     store = load_monthly_payroll_store()
+    
+    # دمج وتحديث قائمة الموظفين الـ 17 الجدد بداخل السحابة تلقائياً فوراً
     if month_name in store and len(store[month_name]) > 0:
-        return pd.DataFrame(store[month_name])
+        existing_list = store[month_name]
+        existing_ids = {m['م'] for m in existing_list}
+        has_new = False
+        for new_emp in august_payroll_data:
+            if new_emp['م'] not in existing_ids:
+                existing_list.append(new_emp)
+                has_new = True
+        if has_new:
+            store[month_name] = existing_list
+            save_monthly_payroll_store(store)
+        return pd.DataFrame(existing_list)
     else:
-        if month_name == 'أغسطس 2026':
-            df_base = pd.DataFrame(august_payroll_data)
-        else:
-            df_base = pd.DataFrame(august_payroll_data)
+        df_base = pd.DataFrame(august_payroll_data)
+        if month_name != 'أغسطس 2026':
             df_base['الدفعة 1'] = 0.0
             df_base['الدفعة 2'] = 0.0
             df_base['الخصومات'] = 0.0
@@ -1075,8 +1081,8 @@ def edit_employee_dialog(emp_idx, month_selected):
         with col_e3:
             st.markdown("### التواريخ والوثائق")
             st_val = datetime.strptime(str(emp_data.get('تاريخ بداية العمل', '2024-01-01')), '%Y-%m-%d')
-            iq_val = datetime.strptime(str(emp_data['تاريخ انتهاء الإقامة']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء الإقامة']) else datetime(2027, 12, 31)
-            ct_val = datetime.strptime(str(emp_data['تاريخ انتهاء العقد']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء العقد']) else datetime(2027, 12, 31)
+            iq_val = datetime.strptime(str(emp_data['تاريخ انتهاء الإقامة']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء الإقامة']) and emp_data['تاريخ انتهاء الإقامة'] != '13/04/1450' else datetime(2027, 12, 31)
+            ct_val = datetime.strptime(str(emp_data['تاريخ انتهاء العقد']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء العقد']) and emp_data['تاريخ انتهاء العقد'] != '18/0/2027' else datetime(2027, 12, 31)
             
             up_start_date = st.date_input("تاريخ بداية العمل:", st_val)
             up_iqama_date = st.date_input("تاريخ انتهاء الإقامة:", iq_val)
