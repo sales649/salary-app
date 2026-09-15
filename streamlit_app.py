@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 from supabase import create_client, Client
 
-# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL مع تغيير اسم التبويب إلى 5M فقط
+# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL مع إبقاء عنوان التبويب 5M
 st.set_page_config(page_title='5M', layout='wide', page_icon='🏢')
 
 ADMIN_PASSWORD = "admin5m"
@@ -83,8 +83,8 @@ st.markdown(f"""
             border-bottom: none !important;
         }}
 
-        /* إخفاء نصوص الرموز الإنجليزية المزعجة */
-        [data-testid="stSidebarCollapseButton"] span, [data-testid="stSidebarActionButton"] span {{
+        /* إخفاء كلي لنصوص الرموز الإنجليزية للأسهم المزعجة */
+        [data-testid="stSidebarCollapseButton"] *, [data-testid="stSidebarActionButton"] * {{
             font-size: 0px !important;
             color: transparent !important;
         }}
@@ -104,22 +104,81 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
+        /* إزالة أي إطارات فائضة وضبط محاذاة القائمة الجانبية */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background: {bg_sidebar} !important;
         }}
 
         [data-testid="stSidebarContent"] {{
-            padding-top: 0.2rem !important;
-            padding-left: 0.5rem !important;
-            padding-right: 0.5rem !important;
-            padding-bottom: 0.2rem !important;
+            padding-top: 0.5rem !important;
+            padding-left: 0.6rem !important;
+            padding-right: 0.6rem !important;
+            padding-bottom: 0.5rem !important;
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
             color: {text_color} !important;
             font-size: 13px !important;
             font-weight: 800 !important;
+        }}
+
+        /* تصميم الشعار واسم الشركة بدون مربعات وبمحاذاة في المنتصف */
+        .sidebar-logo-container {{
+            text-align: center !important;
+            margin-bottom: 15px !important;
+            padding: 5px 0 !important;
+        }}
+
+        .sidebar-logo-text {{
+            font-size: 56px !important;
+            font-weight: 900 !important;
+            color: #EF4444 !important;
+            font-family: Arial, sans-serif !important;
+            line-height: 1 !important;
+            margin: 0 !important;
+            text-align: center !important;
+            display: block !important;
+        }}
+
+        .sidebar-company-title {{
+            color: #F59E0B !important;
+            font-size: 16px !important;
+            font-weight: 900 !important;
+            margin-top: 6px !important;
+            margin-bottom: 0 !important;
+            text-align: center !important;
+            display: block !important;
+        }}
+
+        .sidebar-section-title {{
+            color: #F59E0B !important;
+            font-size: 14px !important;
+            font-weight: 900 !important;
+            border-bottom: 2px solid #D97706;
+            padding-bottom: 3px;
+            margin-top: 14px;
+            margin-bottom: 8px;
+            text-align: right !important;
+        }}
+
+        [data-testid="stSidebar"] .stButton>button {{
+            width: 100% !important;
+            background: {btn_sidebar_bg} !important;
+            color: {btn_sidebar_text} !important;
+            border: 1px solid #D97706 !important;
+            border-radius: 6px !important;
+            font-weight: 800 !important;
+            font-size: 13px !important;
+            padding: 6px 8px !important;
+            margin-bottom: 3px !important;
+            text-align: right !important;
+            box-shadow: none !important;
+        }}
+
+        [data-testid="stSidebar"] .stButton>button:hover {{
+            background: #D97706 !important;
+            color: #FFFFFF !important;
         }}
 
         /* إصلاح حاسم لنوافذ التعديل والـ Dialogs */
@@ -163,65 +222,6 @@ st.markdown(f"""
 
         div[data-baseweb="calendar"] [aria-selected="true"] {{
             background-color: #D97706 !important;
-            color: #FFFFFF !important;
-        }}
-
-        .sidebar-logo-card {{
-            background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
-            border: 2px solid #D97706;
-            border-radius: 12px;
-            padding: 10px 8px;
-            text-align: center !important;
-            margin-bottom: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }}
-
-        .sidebar-logo-text {{
-            font-size: 50px !important;
-            font-weight: 900 !important;
-            color: #EF4444 !important;
-            font-family: Arial, sans-serif !important;
-            line-height: 1 !important;
-            margin: 0 !important;
-            text-align: center !important;
-        }}
-
-        .sidebar-company-title {{
-            color: #F59E0B !important;
-            font-size: 15px !important;
-            font-weight: 900 !important;
-            margin-top: 4px !important;
-            margin-bottom: 0 !important;
-            text-align: center !important;
-        }}
-
-        .sidebar-section-title {{
-            color: #F59E0B !important;
-            font-size: 14px !important;
-            font-weight: 900 !important;
-            border-bottom: 2px solid #D97706;
-            padding-bottom: 3px;
-            margin-top: 12px;
-            margin-bottom: 6px;
-            text-align: right !important;
-        }}
-
-        [data-testid="stSidebar"] .stButton>button {{
-            width: 100% !important;
-            background: {btn_sidebar_bg} !important;
-            color: {btn_sidebar_text} !important;
-            border: 1px solid #D97706 !important;
-            border-radius: 6px !important;
-            font-weight: 800 !important;
-            font-size: 13px !important;
-            padding: 6px 8px !important;
-            margin-bottom: 3px !important;
-            text-align: right !important;
-            box-shadow: none !important;
-        }}
-
-        [data-testid="stSidebar"] .stButton>button:hover {{
-            background: #D97706 !important;
             color: #FFFFFF !important;
         }}
 
@@ -398,7 +398,7 @@ st.markdown(f"""
             margin-top: 4px;
         }}
 
-        /* ضوابط الموبايل فقط دون التأثير إطلاقاً على الماك أو البي سي */
+        /* ضوابط الموبايل فقط دون التأثير على البي سي والماك */
         @media screen and (max-width: 768px) {{
             .main .block-container {{
                 padding-left: 4px !important;
@@ -1062,12 +1062,12 @@ if not st.session_state.get('app_started', False):
                 st.error("كلمة المرور غير صحيحة! يرجى إدخال كلمة المرور للوصول للنظام.")
 
 else:
-    # 3. القائمة الجانبية المباشرة المفتوحة المرتبة والأنيقة
+    # 3. القائمة الجانبية المباشرة وتوسيط الشعار والنص بدون مربعات
     with st.sidebar:
         st.markdown("""
-            <div class="sidebar-logo-card">
-                <div class="sidebar-logo-text">5M</div>
-                <div class="sidebar-company-title">شركة ميم الخماسية للتصنيع</div>
+            <div class="sidebar-logo-container">
+                <span class="sidebar-logo-text">5M</span>
+                <span class="sidebar-company-title">شركة ميم الخماسية للتصنيع</span>
             </div>
         """, unsafe_allow_html=True)
 
