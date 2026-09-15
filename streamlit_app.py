@@ -106,7 +106,7 @@ st.markdown(f"""
             border-bottom: none !important;
         }}
 
-        /* إخفاء كلي وقاطع لنصوص الأيقونات الإنجليزية المزعجة في الهيدر والأسهم */
+        /* إخفاء كلي لنصوص الأيقونات الإنجليزية المزعجة */
         [data-testid="stSidebarCollapseButton"] span, 
         [data-testid="stSidebarActionButton"] span,
         [data-testid="stSidebarCollapseButton"]::after,
@@ -484,12 +484,15 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# إدارة الدخول والجلسة
+# إدارة الدخول والجلسة مع التثبيت الدائم (تذكرني تلقائياً)
 if 'app_started' not in st.session_state:
-    st.session_state['app_started'] = False
-
-if 'user_role' not in st.session_state:
-    st.session_state['user_role'] = None
+    saved_role = st.query_params.get("saved_role", None)
+    if saved_role in ["admin", "accountant"]:
+        st.session_state['app_started'] = True
+        st.session_state['user_role'] = saved_role
+    else:
+        st.session_state['app_started'] = False
+        st.session_state['user_role'] = None
 
 if 'current_view' not in st.session_state:
     st.session_state['current_view'] = 'الرئيسية'
@@ -1113,11 +1116,13 @@ if not st.session_state.get('app_started', False):
             if username_selected == "wahby" and pwd_input == ADMIN_PASSWORD:
                 st.session_state.app_started = True
                 st.session_state.user_role = "admin"
+                st.query_params["saved_role"] = "admin"
                 st.success("أهلاً بك (wahby)!")
                 st.rerun()
             elif username_selected == "omar" and pwd_input == USER_PASSWORD:
                 st.session_state.app_started = True
                 st.session_state.user_role = "accountant"
+                st.query_params["saved_role"] = "accountant"
                 st.success("أهلاً بك (omar)!")
                 st.rerun()
             else:
@@ -1206,6 +1211,7 @@ else:
         if st.button("🚪 تسجيل الخروج", use_container_width=True):
             st.session_state.app_started = False
             st.session_state.user_role = None
+            st.query_params.clear()
             st.rerun()
 
         selected_option = st.session_state.get('current_view', 'الرئيسية')
@@ -1633,7 +1639,7 @@ else:
         else:
             st.info("لا يوجد سجل عُهد سابق لـ سمان السواق.")
 
-    # 6. موديول جرد الخزينة المحدث
+    # 6. موديول جرد الخزينة المحدث مع حقل "الخزينة بالبنك" والتصفية حسب الدور
     elif selected_option == 'جرد الخزينة':
         st.subheader(f'🔍 موديول جرد الخزينة ومطابقة النقدية الفعلي - ({month_selected})')
         st.write('قم بمطابقة المبالغ النقدية الموجودة بيدك داخل الصندوق مع الرصيد الدفتري المسجل بالنظام واحتساب العجز أو الزيادة فوراً:')
