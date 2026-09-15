@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 from supabase import create_client, Client
 
-# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
+# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL مع PWA Metas
 st.set_page_config(page_title='5M', layout='wide', page_icon='🏢')
 
 ADMIN_PASSWORD = "admin5m"
@@ -70,7 +70,31 @@ else:
     btn_main_text = "#0B132B"
     stars_css = ""
 
+# حقن ملفات الـ PWA لتوفير تجربة التطبيق المباشرة على الهاتف
+pwa_manifest_json = json.dumps({
+    "name": "5M Accounting System",
+    "short_name": "5M",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0B132B",
+    "theme_color": "#0B132B",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "https://raw.githubusercontent.com/streamlit/streamlit/develop/docs/static/favicon.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        }
+    ]
+})
+
 st.markdown(f"""
+    <head>
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="5M">
+        <link rel="manifest" href='data:application/manifest+json,{pwa_manifest_json}'>
+    </head>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
 
@@ -110,17 +134,21 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        [data-testid="stSidebar"] {{
-            border-left: 2px solid {border_color} !important;
-            background: {bg_sidebar} !important;
-            margin-right: 0 !important;
-        }}
+        /* تنسيقات الشاشات العريضة والـ Desktop (ماك وبي سي) */
+        @media screen and (min-width: 1024px) {{
+            [data-testid="stSidebar"] {{
+                border-left: 2px solid {border_color} !important;
+                background: {bg_sidebar} !important;
+                margin-right: 0 !important;
+                width: 280px !important;
+            }}
 
-        [data-testid="stSidebarContent"] {{
-            padding-top: 0.5rem !important;
-            padding-left: 0.8rem !important;
-            padding-right: 0.8rem !important;
-            padding-bottom: 0.5rem !important;
+            [data-testid="stSidebarContent"] {{
+                padding-top: 0.5rem !important;
+                padding-left: 0.8rem !important;
+                padding-right: 0.8rem !important;
+                padding-bottom: 0.5rem !important;
+            }}
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
@@ -398,10 +426,11 @@ st.markdown(f"""
             margin-top: 4px;
         }}
 
+        /* ضوابط وتنسيقات الـ Mobile المحددة كلياً دون التأثير على الكمبيوتر */
         @media screen and (max-width: 768px) {{
             .main .block-container {{
-                padding-left: 4px !important;
-                padding-right: 4px !important;
+                padding-left: 6px !important;
+                padding-right: 6px !important;
             }}
 
             [data-testid="stHorizontalBlock"] {{
@@ -412,12 +441,18 @@ st.markdown(f"""
                 width: 100% !important;
                 flex: 1 1 100% !important;
                 min-width: 100% !important;
-                margin-bottom: 4px !important;
+                margin-bottom: 6px !important;
             }}
 
             div.stButton > button {{
-                font-size: 14px !important;
-                padding: 10px 12px !important;
+                font-size: 15px !important;
+                padding: 12px 14px !important;
+                border-radius: 10px !important;
+            }}
+
+            .cash-card-item {{
+                padding: 10px !important;
+                border-radius: 10px !important;
             }}
         }}
     </style>
