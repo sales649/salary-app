@@ -6,8 +6,8 @@ import os
 from datetime import datetime
 from supabase import create_client, Client
 
-# 1. إعداد الصفحة وتثبيت القائمة الجانبية مفتوحة دائماً لمنع الانكماش الشريطي
-st.set_page_config(page_title='5M', layout='wide', page_icon='🏢', initial_sidebar_state="expanded")
+# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
+st.set_page_config(page_title='5M', layout='wide', page_icon='🏢', initial_sidebar_state="auto")
 
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
@@ -106,19 +106,8 @@ st.markdown(f"""
             border-bottom: none !important;
         }}
 
-        /* إخفاء زر الطي/الانكماش لمنع ظهور الشريط البرتقالي والنصوص العمودية بالمنتصف */
-        [data-testid="stSidebarCollapseButton"], 
-        [data-testid="stSidebarHeader"] button, 
-        button[aria-label="Close sidebar"], 
-        button[aria-label="Open sidebar"] {{
-            display: none !important;
-            visibility: hidden !important;
-            width: 0px !important;
-            height: 0px !important;
-        }}
-
-        /* إخفاء كلي لأي نصوص إنجليزية غريبة داخل الهيدر والقائمة */
-        [data-testid="stSidebarHeader"] *, [data-testid="stSidebarCollapseButton"] * {{
+        /* إخفاء كلي لنصوص الرموز الإنجليزية للأسهم المزعجة */
+        [data-testid="stSidebarCollapseButton"] *, [data-testid="stSidebarActionButton"] * {{
             font-size: 0px !important;
             color: transparent !important;
         }}
@@ -128,6 +117,7 @@ st.markdown(f"""
             padding-bottom: 0.5rem !important;
             padding-left: 0.8rem !important;
             padding-right: 0.8rem !important;
+            max-width: 100% !important;
         }}
 
         h1, h2, h3, h4, h5, h6, .stMarkdown, label, p, span, div {{
@@ -138,21 +128,59 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* ضبط القائمة الجانبية وإلغاء أي حدود مسببة للخطوط الفاصلة في المنتصف */
-        [data-testid="stSidebar"] {{
-            border-left: 2px solid {border_color} !important;
-            border-right: none !important;
-            background: {bg_sidebar} !important;
-            box-shadow: none !important;
+        /* إعدادات القائمة الجانبية للشاشات الكبيرة (الماك والكمبيوتر) */
+        @media screen and (min-width: 769px) {{
+            [data-testid="stSidebar"] {{
+                border-left: 2px solid {border_color} !important;
+                background: {bg_sidebar} !important;
+                margin-right: 0 !important;
+            }}
+
+            [data-testid="stSidebarContent"] {{
+                padding-top: 0.5rem !important;
+                padding-left: 0.8rem !important;
+                padding-right: 0.8rem !important;
+                padding-bottom: 0.5rem !important;
+            }}
+
+            [data-testid="stSidebarCollapseButton"] {{
+                display: none !important;
+            }}
         }}
 
-        [data-testid="stSidebarContent"] {{
-            padding-top: 0.5rem !important;
-            padding-left: 0.8rem !important;
-            padding-right: 0.8rem !important;
-            padding-bottom: 0.5rem !important;
-            border-left: none !important;
-            border-right: none !important;
+        /* إعدادات الموبايل فقط لمنع اقتطاع الشاشة الرئيسية وتسهيل الحركة واللمس */
+        @media screen and (max-width: 768px) {{
+            .main .block-container {{
+                padding-left: 4px !important;
+                padding-right: 4px !important;
+                overflow-x: auto !important;
+            }}
+
+            [data-testid="stSidebar"] {{
+                z-index: 999999 !important;
+            }}
+
+            [data-testid="stHorizontalBlock"] {{
+                flex-direction: column !important;
+            }}
+
+            [data-testid="column"], [data-testid="stColumn"] {{
+                width: 100% !important;
+                flex: 1 1 100% !important;
+                min-width: 100% !important;
+                margin-bottom: 6px !important;
+            }}
+
+            div.stButton > button {{
+                font-size: 15px !important;
+                padding: 12px 14px !important;
+                border-radius: 10px !important;
+            }}
+
+            .cash-card-item {{
+                padding: 10px !important;
+                border-radius: 10px !important;
+            }}
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
@@ -161,6 +189,7 @@ st.markdown(f"""
             font-weight: 800 !important;
         }}
 
+        /* الشعار الأحمر 5M بمنتصف القائمة */
         .sidebar-logo-container {{
             text-align: center !important;
             margin-bottom: 10px !important;
@@ -428,35 +457,6 @@ st.markdown(f"""
             font-size: 11px;
             font-weight: 800;
             margin-top: 4px;
-        }}
-
-        @media screen and (max-width: 768px) {{
-            .main .block-container {{
-                padding-left: 6px !important;
-                padding-right: 6px !important;
-            }}
-
-            [data-testid="stHorizontalBlock"] {{
-                flex-direction: column !important;
-            }}
-
-            [data-testid="column"], [data-testid="stColumn"] {{
-                width: 100% !important;
-                flex: 1 1 100% !important;
-                min-width: 100% !important;
-                margin-bottom: 6px !important;
-            }}
-
-            div.stButton > button {{
-                font-size: 15px !important;
-                padding: 12px 14px !important;
-                border-radius: 10px !important;
-            }}
-
-            .cash-card-item {{
-                padding: 10px !important;
-                border-radius: 10px !important;
-            }}
         }}
     </style>
 """, unsafe_allow_html=True)
@@ -1101,7 +1101,7 @@ if not st.session_state.get('app_started', False):
                 st.error("كلمة المرور غير صحيحة! يرجى إدخال كلمة المرور للوصول للنظام.")
 
 else:
-    # 3. القائمة الجانبية المباشرة المفتوحة المرتبة والأنيقة
+    # 3. القائمة الجانبية المباشرة وتوسيط الشعار الأحمر 5M بدون أي مربعات
     with st.sidebar:
         st.markdown("""
             <div class="sidebar-logo-container">
@@ -1610,7 +1610,7 @@ else:
         else:
             st.info("لا يوجد سجل عُهد سابق لـ سمان السواق.")
 
-    # 6. موديول جرد الخزينة المحدث مع حقل "الخزينة بالبنك" والتصفية حسب الدور
+    # 6. موديول جرد الخزينة المحدث
     elif selected_option == 'جرد الخزينة':
         st.subheader(f'🔍 موديول جرد الخزينة ومطابقة النقدية الفعلي - ({month_selected})')
         st.write('قم بمطابقة المبالغ النقدية الموجودة بيدك داخل الصندوق مع الرصيد الدفتري المسجل بالنظام واحتساب العجز أو الزيادة فوراً:')
@@ -1696,7 +1696,6 @@ else:
         st.markdown("### 📑 سجل تسويات وجرد الخزينة التاريخي:")
         audit_history = load_audit_data()
         
-        # تصفية سجلات الجرد بحيث يرى المستخدم فقط الخزينة المسموح له برؤيتها
         if st.session_state.user_role == "accountant":
             filtered_audit_history = [a for a in audit_history if "omar" in a.get('box_name', '')]
         else:
@@ -1917,7 +1916,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق المحدث (عرض أحدث السندات بالأعلى دائماً)
+    # 8. موديول حركة الصندوق
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -1959,7 +1958,6 @@ else:
 
         st.divider()
 
-        # قسم استخراج وطباعة وتصدير كشف حساب الصندوق المقابل Excel / PDF
         st.markdown("### 🖨️ طباعة وتصدير كشف حساب الصندوق المقابل (T-Account):")
         
         t_col_p1, t_col_p2, t_col_p3, t_col_p4 = st.columns([1.2, 1.3, 1.2, 1.2])
@@ -2108,7 +2106,6 @@ else:
                 with cf2:
                     cash_filter_type = st.selectbox("تصفية بالحركة:", ["جميع الحركات", "سند قبض", "سند صرف"], key="filter_cash_type")
 
-                # عكس مصفوفة السندات المباشرة ليصبح أحدث سند بالأعلى دائماً 100%
                 reversed_trans = curr_trans[::-1]
 
                 filtered_cash = reversed_trans.copy()
@@ -2222,7 +2219,6 @@ else:
         filter_sheet = st.selectbox('اختر الفرع للكشف:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
         df_sheet = st.session_state.payroll_df if 'جميع الفروع' in filter_sheet else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == filter_sheet]
         
-        # تصدير جدول مسير الرواتب الموحد بملف Excel مباشر
         csv_payroll_bytes = df_sheet.to_csv(index=False).encode('utf-8-sig')
         st.download_button(
             label=f"📊 تصدير كشف المسير إلى Excel / CSV ({filter_sheet})",
