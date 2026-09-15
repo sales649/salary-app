@@ -70,7 +70,6 @@ else:
     btn_main_text = "#0B132B"
     stars_css = ""
 
-# حقن ملفات الـ PWA لتوفير تجربة التطبيق المباشرة على الهاتف
 pwa_manifest_json = json.dumps({
     "name": "5M Accounting System",
     "short_name": "5M",
@@ -78,14 +77,7 @@ pwa_manifest_json = json.dumps({
     "display": "standalone",
     "background_color": "#0B132B",
     "theme_color": "#0B132B",
-    "orientation": "portrait-primary",
-    "icons": [
-        {
-            "src": "https://raw.githubusercontent.com/streamlit/streamlit/develop/docs/static/favicon.png",
-            "sizes": "192x192",
-            "type": "image/png"
-        }
-    ]
+    "orientation": "portrait-primary"
 })
 
 st.markdown(f"""
@@ -114,9 +106,21 @@ st.markdown(f"""
             border-bottom: none !important;
         }}
 
-        [data-testid="stSidebarCollapseButton"] *, [data-testid="stSidebarActionButton"] * {{
+        /* إخفاء تام ومطلق لكافة نصوص الأيقونات الإنجليزية المزعجة */
+        [data-testid="stSidebarCollapseButton"] span, 
+        [data-testid="stSidebarActionButton"] span,
+        [data-testid="stSidebarCollapseButton"]::after,
+        [data-testid="stSidebarHeader"] * {{
             font-size: 0px !important;
             color: transparent !important;
+            content: "" !important;
+        }}
+
+        /* إصلاح زر طي/فتح القائمة المباشر */
+        [data-testid="stSidebarCollapseButton"] button {{
+            color: #F59E0B !important;
+            background-color: transparent !important;
+            border: none !important;
         }}
 
         .main .block-container {{
@@ -134,21 +138,18 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* تنسيقات الشاشات العريضة والـ Desktop (ماك وبي سي) */
-        @media screen and (min-width: 1024px) {{
-            [data-testid="stSidebar"] {{
-                border-left: 2px solid {border_color} !important;
-                background: {bg_sidebar} !important;
-                margin-right: 0 !important;
-                width: 280px !important;
-            }}
+        /* إصلاح حاسم للحد الفاصل: يوضع داخل محتوى القائمة نفسها ليختفي تلقائياً عند الطي */
+        [data-testid="stSidebar"] {{
+            border-left: none !important;
+            background: {bg_sidebar} !important;
+        }}
 
-            [data-testid="stSidebarContent"] {{
-                padding-top: 0.5rem !important;
-                padding-left: 0.8rem !important;
-                padding-right: 0.8rem !important;
-                padding-bottom: 0.5rem !important;
-            }}
+        [data-testid="stSidebarContent"] {{
+            padding-top: 0.5rem !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+            padding-bottom: 0.5rem !important;
+            border-left: 2px solid {border_color} !important;
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
@@ -426,7 +427,6 @@ st.markdown(f"""
             margin-top: 4px;
         }}
 
-        /* ضوابط وتنسيقات الـ Mobile المحددة كلياً دون التأثير على الكمبيوتر */
         @media screen and (max-width: 768px) {{
             .main .block-container {{
                 padding-left: 6px !important;
@@ -529,7 +529,6 @@ august_payroll_data = [
     {'م': 55, 'الاسم': 'عبد الرحمن محمد', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مستودع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-03-30', 'تاريخ انتهاء العقد': '2027-05-25', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''}
 ]
 
-# استخدام الـ Cache لمنع تكرار التحميل وزيادة السرعة
 @st.cache_data(ttl=600)
 def fetch_cloud_store(key_name, default_data):
     session_key = f"cloud_cache_{key_name}"
