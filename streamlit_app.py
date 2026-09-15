@@ -9,7 +9,7 @@ from supabase import create_client, Client
 # 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL مع إبقاء عنوان التبويب 5M
 st.set_page_config(page_title='5M', layout='wide', page_icon='🏢')
 
-ADMIN_PASSWORD = "6826"
+ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
 
 # إعدادات الربط السحابي بـ Supabase
@@ -1886,7 +1886,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق المحدث (عرض أحدث السندات بالأعلى)
+    # 8. موديول حركة الصندوق المحدث (عرض أحدث السندات بالأعلى دائماً)
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -2077,14 +2077,14 @@ else:
                 with cf2:
                     cash_filter_type = st.selectbox("تصفية بالحركة:", ["جميع الحركات", "سند قبض", "سند صرف"], key="filter_cash_type")
 
-                filtered_cash = curr_trans.copy()
+                # عكس مصفوفة السندات المباشرة ليصبح أحدث سند بالأعلى دائماً 100%
+                reversed_trans = curr_trans[::-1]
+
+                filtered_cash = reversed_trans.copy()
                 if cash_search:
                     filtered_cash = [t for t in filtered_cash if cash_search.lower() in t['party'].lower()]
                 if cash_filter_type != "جميع الحركات":
                     filtered_cash = [t for t in filtered_cash if t['type'] == cash_filter_type]
-
-                # عكس الترتيب ليكون أحدث سند بالأعلى دائماً
-                filtered_cash.reverse()
 
                 items_per_page = 15
                 total_items = len(filtered_cash)
