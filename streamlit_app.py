@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 from supabase import create_client, Client
 
-# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL مع إبقاء عنوان التبويب 5M
+# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
 st.set_page_config(page_title='5M', layout='wide', page_icon='🏢')
 
 ADMIN_PASSWORD = "admin5m"
@@ -68,7 +68,6 @@ else:
     
     btn_main_bg = "linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 100%)"
     btn_main_text = "#0B132B"
-    
     stars_css = ""
 
 st.markdown(f"""
@@ -91,7 +90,6 @@ st.markdown(f"""
             border-bottom: none !important;
         }}
 
-        /* إخفاء كلي لنصوص الرموز الإنجليزية للأسهم المزعجة */
         [data-testid="stSidebarCollapseButton"] *, [data-testid="stSidebarActionButton"] * {{
             font-size: 0px !important;
             color: transparent !important;
@@ -112,7 +110,6 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* إزالة الهوامش ومنع اقتصاص أزرار القائمة الجانبية من اليمين */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background: {bg_sidebar} !important;
@@ -132,7 +129,6 @@ st.markdown(f"""
             font-weight: 800 !important;
         }}
 
-        /* الشعار الأحمر 5M بمنتصف القائمة بدون أي مربعات */
         .sidebar-logo-container {{
             text-align: center !important;
             margin-bottom: 10px !important;
@@ -185,7 +181,6 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        /* تخصيص الأزرار العامة بصفحة المحتوى وتعديل ألوانها حسب النمط (نهاري / ليلي) */
         div.stButton > button, div.stDownloadButton > button, [data-testid="stFormSubmitButton"] > button {{
             background: {btn_main_bg} !important;
             color: {btn_main_text} !important;
@@ -204,7 +199,6 @@ st.markdown(f"""
             border-color: #F59E0B !important;
         }}
 
-        /* إصلاح حاسم لنوافذ التعديل والـ Dialogs */
         [data-testid="stDialog"] > div:first-child, [data-testid="stModal"] > div:first-child, div[role="dialog"] {{
             background-color: {dialog_bg} !important;
             color: {dialog_text} !important;
@@ -221,7 +215,6 @@ st.markdown(f"""
             font-weight: 900 !important;
         }}
 
-        /* إصلاح ناصع وقاطع لخانات التواريخ والتقويم المنبثق st.date_input */
         [data-testid="stDateInput"] div[data-baseweb="input"], [data-testid="stDateInput"] input {{
             background-color: #FFFFFF !important;
             color: #000000 !important;
@@ -232,7 +225,6 @@ st.markdown(f"""
             -webkit-text-fill-color: #000000 !important;
         }}
 
-        /* إجبار ألوان تقويم الأيام المنبثق بالكامل على الظهور بخلفية بيضاء ونصوص كحلية ناصعة */
         div[data-baseweb="calendar"], div[data-baseweb="calendar"] *, [data-baseweb="popover"] div[data-baseweb="calendar"] * {{
             background-color: #FFFFFF !important;
             color: #0B132B !important;
@@ -406,7 +398,6 @@ st.markdown(f"""
             margin-top: 4px;
         }}
 
-        /* ضوابط الموبايل فقط دون التأثير على البي سي والماك */
         @media screen and (max-width: 768px) {{
             .main .block-container {{
                 padding-left: 4px !important;
@@ -503,6 +494,8 @@ august_payroll_data = [
     {'م': 55, 'الاسم': 'عبد الرحمن محمد', 'الوظيفة': 'عامل', 'الراتب الأساسي': 2500.0, 'الفرع': 'مستودع ميم الخماسية الخرج', 'تاريخ بداية العمل': '2024-01-01', 'تاريخ انتهاء الإقامة': '2027-03-30', 'تاريخ انتهاء العقد': '2027-05-25', 'الخصومات': 0.0, 'الدفعة 1': 1500.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''}
 ]
 
+# استخدام الـ Cache لمنع تكرار التحميل وزيادة السرعة
+@st.cache_data(ttl=600)
 def fetch_cloud_store(key_name, default_data):
     session_key = f"cloud_cache_{key_name}"
     if session_key in st.session_state:
@@ -521,6 +514,7 @@ def fetch_cloud_store(key_name, default_data):
 def save_cloud_store(key_name, data_val):
     session_key = f"cloud_cache_{key_name}"
     st.session_state[session_key] = data_val
+    fetch_cloud_store.clear()
     try:
         supabase.table('app_stores').upsert({'store_key': key_name, 'data_val': data_val}).execute()
     except Exception:
