@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 from supabase import create_client, Client
 
-# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL مع إبقاء عنوان التبويب 5M
+# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
 st.set_page_config(page_title='5M', layout='wide', page_icon='🏢')
 
 ADMIN_PASSWORD = "admin5m"
@@ -36,6 +36,11 @@ if '🌙' in st.session_state['theme_mode']:
     header_bg = "#0B132B"
     dialog_bg = "#1C2541"
     dialog_text = "#FFFFFF"
+    
+    # ألوان الأزرار العامة بـ الوضع الليلي
+    btn_main_bg = "linear-gradient(135deg, #1C2541 0%, #0B132B 100%)"
+    btn_main_text = "#FFFFFF"
+    
     stars_css = """
         body, .stApp, [data-testid="stHeader"] {
             background-color: #0B132B !important;
@@ -61,6 +66,11 @@ else:
     header_bg = "#F8FAFC"
     dialog_bg = "#FFFFFF"
     dialog_text = "#0F172A"
+    
+    # ألوان الأزرار العامة بـ الوضع النهاري (ناصعة وواضحة جداً بخط كحلي)
+    btn_main_bg = "linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 100%)"
+    btn_main_text = "#0B132B"
+    
     stars_css = ""
 
 st.markdown(f"""
@@ -104,17 +114,16 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* محاذاة القائمة الجانبية واستغلال المساحة */
+        /* إزالة الهوامش ومنع اقتصاص أزرار القائمة الجانبية من اليمين */
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background: {bg_sidebar} !important;
-            margin-right: 0 !important;
         }}
 
         [data-testid="stSidebarContent"] {{
             padding-top: 0.5rem !important;
-            padding-left: 0.4rem !important;
-            padding-right: 0.4rem !important;
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
             padding-bottom: 0.5rem !important;
         }}
 
@@ -124,7 +133,7 @@ st.markdown(f"""
             font-weight: 800 !important;
         }}
 
-        /* تصميم الشعار المطور في منتصف القائمة بدون عبارات وبدون إطارات */
+        /* الشعار الأحمر 5M بمنتصف القائمة */
         .sidebar-logo-container {{
             text-align: center !important;
             margin-bottom: 10px !important;
@@ -175,6 +184,25 @@ st.markdown(f"""
         [data-testid="stSidebar"] .stButton>button:hover {{
             background: #D97706 !important;
             color: #FFFFFF !important;
+        }}
+
+        /* تخصيص الأزرار العامة بصفحة المحتوى وتعديل ألوانها حسب النمط (نهاري / ليلي) */
+        div.stButton > button, div.stDownloadButton > button, [data-testid="stFormSubmitButton"] > button {{
+            background: {btn_main_bg} !important;
+            color: {btn_main_text} !important;
+            border: 1.5px solid #D97706 !important;
+            border-radius: 8px !important;
+            font-weight: 900 !important;
+            font-size: 13px !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15) !important;
+            padding: 8px 12px !important;
+            width: 100% !important;
+        }}
+
+        div.stButton > button:hover, div.stDownloadButton > button:hover {{
+            background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
+            color: #FFFFFF !important;
+            border-color: #F59E0B !important;
         }}
 
         /* إصلاح حاسم لنوافذ التعديل والـ Dialogs */
@@ -274,24 +302,6 @@ st.markdown(f"""
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
             margin-bottom: 4px !important;
             text-align: center !important;
-        }}
-
-        div.stButton > button, div.stDownloadButton > button, [data-testid="stFormSubmitButton"] > button {{
-            background: linear-gradient(135deg, #1C2541 0%, #0B132B 100%) !important;
-            color: #FFFFFF !important;
-            border: 1px solid #D97706 !important;
-            border-radius: 8px !important;
-            font-weight: 800 !important;
-            font-size: 12px !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-            padding: 6px 10px !important;
-            width: 100% !important;
-        }}
-
-        div.stButton > button:hover, div.stDownloadButton > button:hover {{
-            background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
-            color: #FFFFFF !important;
-            border-color: #F59E0B !important;
         }}
 
         .cash-card-item {{
@@ -1567,7 +1577,7 @@ else:
         else:
             st.info("لا يوجد سجل عُهد سابق لـ سمان السواق.")
 
-    # 6. موديول جرد الخزينة المحدث بعبارة "الخزينة بالبنك"
+    # 6. موديول جرد الخزينة المحدث مع حقل "الخزينة بالبنك"
     elif selected_option == 'جرد الخزينة':
         st.subheader(f'🔍 موديول جرد الخزينة ومطابقة النقدية الفعلي - ({month_selected})')
         st.write('قم بمطابقة المبالغ النقدية الموجودة بيدك داخل الصندوق مع الرصيد الدفتري المسجل بالنظام واحتساب العجز أو الزيادة فوراً:')
@@ -1607,10 +1617,10 @@ else:
                 v_20 = st.number_input("إجمالي فئة 20 ريال (ر.س):", min_value=0.0, value=0.0, step=20.0)
                 v_10 = st.number_input("إجمالي فئة 10 ريال (ر.س):", min_value=0.0, value=0.0, step=10.0)
                 v_5 = st.number_input("إجمالي فئة 5 ريال (ر.س):", min_value=0.0, value=0.0, step=5.0)
-                # استبدال خانة الكسور بـ "الخزينة بالبنك"
-                v_coins = st.number_input("الخزينة بالبنك (ر.س):", min_value=0.0, value=0.0)
+                # تعديل التسمية حسب طلبك المباشر
+                v_bank = st.number_input("الخزينة بالبنك (ر.س):", min_value=0.0, value=0.0)
 
-            actual_counted_cash = v_500 + v_200 + v_100 + v_50 + v_20 + v_10 + v_5 + v_coins
+            actual_counted_cash = v_500 + v_200 + v_100 + v_50 + v_20 + v_10 + v_5 + v_bank
 
             st.write("")
             manual_override = st.checkbox("أو كتابة المجموع الكلي الفعلي مباشرة دون تفصيل الفئات")
