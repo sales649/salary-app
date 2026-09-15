@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 from supabase import create_client, Client
 
-# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
+# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL مع إبقاء عنوان التبويب 5M
 st.set_page_config(page_title='5M', layout='wide', page_icon='🏢')
 
 ADMIN_PASSWORD = "admin5m"
@@ -37,7 +37,6 @@ if '🌙' in st.session_state['theme_mode']:
     dialog_bg = "#1C2541"
     dialog_text = "#FFFFFF"
     
-    # ألوان الأزرار العامة بـ الوضع الليلي
     btn_main_bg = "linear-gradient(135deg, #1C2541 0%, #0B132B 100%)"
     btn_main_text = "#FFFFFF"
     
@@ -67,7 +66,6 @@ else:
     dialog_bg = "#FFFFFF"
     dialog_text = "#0F172A"
     
-    # ألوان الأزرار العامة بـ الوضع النهاري (ناصعة وواضحة جداً بخط كحلي)
     btn_main_bg = "linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 100%)"
     btn_main_text = "#0B132B"
     
@@ -118,6 +116,7 @@ st.markdown(f"""
         [data-testid="stSidebar"] {{
             border-left: 2px solid {border_color} !important;
             background: {bg_sidebar} !important;
+            margin-right: 0 !important;
         }}
 
         [data-testid="stSidebarContent"] {{
@@ -133,7 +132,7 @@ st.markdown(f"""
             font-weight: 800 !important;
         }}
 
-        /* الشعار الأحمر 5M بمنتصف القائمة */
+        /* الشعار الأحمر 5M بمنتصف القائمة بدون أي مربعات */
         .sidebar-logo-container {{
             text-align: center !important;
             margin-bottom: 10px !important;
@@ -1617,7 +1616,6 @@ else:
                 v_20 = st.number_input("إجمالي فئة 20 ريال (ر.س):", min_value=0.0, value=0.0, step=20.0)
                 v_10 = st.number_input("إجمالي فئة 10 ريال (ر.س):", min_value=0.0, value=0.0, step=10.0)
                 v_5 = st.number_input("إجمالي فئة 5 ريال (ر.س):", min_value=0.0, value=0.0, step=5.0)
-                # تعديل التسمية حسب طلبك المباشر
                 v_bank = st.number_input("الخزينة بالبنك (ر.س):", min_value=0.0, value=0.0)
 
             actual_counted_cash = v_500 + v_200 + v_100 + v_50 + v_20 + v_10 + v_5 + v_bank
@@ -1878,7 +1876,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق مع خاصية طباعة وتصدير الكشف
+    # 8. موديول حركة الصندوق المحدث (عرض أحدث السندات بالأعلى)
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -2074,6 +2072,9 @@ else:
                     filtered_cash = [t for t in filtered_cash if cash_search.lower() in t['party'].lower()]
                 if cash_filter_type != "جميع الحركات":
                     filtered_cash = [t for t in filtered_cash if t['type'] == cash_filter_type]
+
+                # عكس الترتيب ليكون أحدث سند بالأعلى دائماً
+                filtered_cash.reverse()
 
                 items_per_page = 15
                 total_items = len(filtered_cash)
