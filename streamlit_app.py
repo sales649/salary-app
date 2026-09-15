@@ -9,7 +9,7 @@ from supabase import create_client, Client
 # 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL مع إبقاء عنوان التبويب 5M
 st.set_page_config(page_title='5M', layout='wide', page_icon='🏢')
 
-ADMIN_PASSWORD = "admin5m"
+ADMIN_PASSWORD = "6826"
 USER_PASSWORD = "user5m"
 
 # إعدادات الربط السحابي بـ Supabase
@@ -221,31 +221,34 @@ st.markdown(f"""
             font-weight: 900 !important;
         }}
 
-        /* إصلاح ناصع وخاص بجميع خانات التواريخ st.date_input */
+        /* إصلاح ناصع وقاطع لخانات التواريخ والتقويم المنبثق st.date_input */
         [data-testid="stDateInput"] div[data-baseweb="input"], [data-testid="stDateInput"] input {{
             background-color: #FFFFFF !important;
             color: #000000 !important;
             border: 1px solid #CBD5E1 !important;
             border-radius: 6px !important;
             font-weight: 900 !important;
-            font-size: 13px !important;
+            font-size: 14px !important;
             -webkit-text-fill-color: #000000 !important;
         }}
 
-        /* إصلاح تقويم الأيام المنبثق المخصص للتواريخ */
-        div[data-baseweb="calendar"], div[data-baseweb="calendar"] * {{
+        /* إجبار ألوان تقويم الأيام المنبثق بالكامل على الظهور بخلفية بيضاء ونصوص كحلية ناصعة */
+        div[data-baseweb="calendar"], div[data-baseweb="calendar"] *, [data-baseweb="popover"] div[data-baseweb="calendar"] * {{
             background-color: #FFFFFF !important;
             color: #0B132B !important;
-            font-weight: 800 !important;
+            font-weight: 900 !important;
+            -webkit-text-fill-color: #0B132B !important;
         }}
 
         div[data-baseweb="calendar"] button {{
             color: #0B132B !important;
+            -webkit-text-fill-color: #0B132B !important;
         }}
 
         div[data-baseweb="calendar"] [aria-selected="true"] {{
             background-color: #D97706 !important;
             color: #FFFFFF !important;
+            -webkit-text-fill-color: #FFFFFF !important;
         }}
 
         .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {{
