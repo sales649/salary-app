@@ -6,8 +6,8 @@ import os
 from datetime import datetime
 from supabase import create_client, Client
 
-# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL مع PWA Metas
-st.set_page_config(page_title='5M', layout='wide', page_icon='🏢')
+# 1. إعداد الصفحة وتثبيت القائمة الجانبية مفتوحة دائماً لمنع الانكماش الشريطي
+st.set_page_config(page_title='5M', layout='wide', page_icon='🏢', initial_sidebar_state="expanded")
 
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
@@ -106,21 +106,21 @@ st.markdown(f"""
             border-bottom: none !important;
         }}
 
-        /* إخفاء تام ومطلق لكافة نصوص الأيقونات الإنجليزية المزعجة */
-        [data-testid="stSidebarCollapseButton"] span, 
-        [data-testid="stSidebarActionButton"] span,
-        [data-testid="stSidebarCollapseButton"]::after,
-        [data-testid="stSidebarHeader"] * {{
-            font-size: 0px !important;
-            color: transparent !important;
-            content: "" !important;
+        /* إخفاء زر الطي/الانكماش لمنع ظهور الشريط البرتقالي والنصوص العمودية بالمنتصف */
+        [data-testid="stSidebarCollapseButton"], 
+        [data-testid="stSidebarHeader"] button, 
+        button[aria-label="Close sidebar"], 
+        button[aria-label="Open sidebar"] {{
+            display: none !important;
+            visibility: hidden !important;
+            width: 0px !important;
+            height: 0px !important;
         }}
 
-        /* إصلاح زر طي/فتح القائمة المباشر */
-        [data-testid="stSidebarCollapseButton"] button {{
-            color: #F59E0B !important;
-            background-color: transparent !important;
-            border: none !important;
+        /* إخفاء كلي لأي نصوص إنجليزية غريبة داخل الهيدر والقائمة */
+        [data-testid="stSidebarHeader"] *, [data-testid="stSidebarCollapseButton"] * {{
+            font-size: 0px !important;
+            color: transparent !important;
         }}
 
         .main .block-container {{
@@ -138,10 +138,12 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* إصلاح حاسم للحد الفاصل: يوضع داخل محتوى القائمة نفسها ليختفي تلقائياً عند الطي */
+        /* ضبط القائمة الجانبية وإلغاء أي حدود مسببة للخطوط الفاصلة في المنتصف */
         [data-testid="stSidebar"] {{
-            border-left: none !important;
+            border-left: 2px solid {border_color} !important;
+            border-right: none !important;
             background: {bg_sidebar} !important;
+            box-shadow: none !important;
         }}
 
         [data-testid="stSidebarContent"] {{
@@ -149,7 +151,8 @@ st.markdown(f"""
             padding-left: 0.8rem !important;
             padding-right: 0.8rem !important;
             padding-bottom: 0.5rem !important;
-            border-left: 2px solid {border_color} !important;
+            border-left: none !important;
+            border-right: none !important;
         }}
 
         [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
@@ -1098,7 +1101,7 @@ if not st.session_state.get('app_started', False):
                 st.error("كلمة المرور غير صحيحة! يرجى إدخال كلمة المرور للوصول للنظام.")
 
 else:
-    # 3. القائمة الجانبية المباشرة وتوسيط الشعار الأحمر 5M بدون أي مربعات
+    # 3. القائمة الجانبية المباشرة المفتوحة المرتبة والأنيقة
     with st.sidebar:
         st.markdown("""
             <div class="sidebar-logo-container">
