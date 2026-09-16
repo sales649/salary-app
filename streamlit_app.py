@@ -116,20 +116,24 @@ st.markdown(f"""
             border-bottom: none !important;
         }}
 
-        /* 🎨 إصلاح لون الخط بداخل الخيارات والقوائم المنسدلة Dropdowns */
-        div[data-baseweb="select"] ul, 
-        div[data-baseweb="menu"], 
+        /* 🎨 إصلاح قاطع وشامل للون خط القوائم المنسدلة Dropdowns */
+        div[data-baseweb="popover"],
+        div[data-baseweb="menu"],
         div[role="listbox"],
-        ul[role="listbox"] {{
+        ul[role="listbox"],
+        div[data-baseweb="popover"] *,
+        div[data-baseweb="menu"] *,
+        div[role="listbox"] *,
+        ul[role="listbox"] * {{
             background-color: #FFFFFF !important;
-        }}
-
-        div[data-baseweb="select"] li, 
-        div[role="option"], 
-        div[data-baseweb="menu"] * {{
             color: #0F172A !important;
             font-weight: 800 !important;
             font-size: 14px !important;
+        }}
+
+        li[role="option"]:hover, div[role="option"]:hover {{
+            background-color: #F1F5F9 !important;
+            color: #D97706 !important;
         }}
 
         [data-testid="stSidebarCollapseButton"] span, 
@@ -697,7 +701,7 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# 🛠️ دالة قراءة الإجمالي لشيتات الوعلان
+# 🛠️ دالة قراءة المبالغ والضريبة التلقائية المباشرة من شيت الوعلان
 def parse_vat_total_row_smart(uploaded_file):
     if uploaded_file is None:
         return 0.0, 0.0, 0.0
@@ -1562,7 +1566,7 @@ else:
         else:
             st.info("لا توجد جلسات جرد سابقة محفوظة لهذا الصندوق.")
 
-    # 🏛️ موديول ضريبة القيمة المضافة (ZATCA) المطور بـ 0.00 الافتراضية
+    # 🏛️ موديول ضريبة القيمة المضافة (ZATCA) المطور المباشر بـ 0.00 الافتراضية
     elif selected_option == 'تقرير القيمة المضافة' and st.session_state.user_role == "admin":
         st.subheader('🏛️ موديول إقرار ضريبة القيمة المضافة الربع سنوي (ZATCA)')
         st.write('قم برفع شيتات ERP الوعلان المخصصة للفروع وسيتم توزيع مبيعات ومشتريات الـ 15% والصفرية تلقائياً بموجب معادلة الضريبة العكسية[cite: 1]:')
@@ -1626,7 +1630,7 @@ else:
             tot_purch_gross_input = st.number_input("إجمالي تقرير المشتريات (الصافي الكلي):", min_value=0.0, value=float(auto_p_s_net), key="tot_purch_gross_input")
             tot_purch_vat_input = st.number_input("إجمالي ضريبة المشتريات العامة (15%):", min_value=0.0, value=float(auto_p_s_vat), key="tot_purch_vat_input")
 
-            # تقسيم المشتريات تلقائياً للنسبة 15% والصفرية
+            # تقسيم المشتريات آلياً للنسبة 15% والصفرية
             calc_purch_taxable = round(tot_purch_vat_input / 0.15, 2) if tot_purch_vat_input > 0 else 0.0
             calc_purch_zero = max(0.0, round(tot_purch_gross_input - calc_purch_taxable, 2))
 
@@ -1637,7 +1641,7 @@ else:
             in_rcm_net = st.number_input("مبلغ التوريدات الخاضعة لآلية الاحتساب العكسي (قبل الضريبة):", min_value=0.0, value=0.0, key="in_rcm_net")
             in_rcm_vat = st.number_input("مبلغ ضريبة الاحتساب العكسي (15%):", min_value=0.0, value=float(round(in_rcm_net * 0.15, 2)), key="in_rcm_vat")
 
-        # التجميع النهائي المعمد للإقرار بحسب نموذج هيئة الزكاة والضريبة (ZATCA)
+        # التجميع النهائي المعمد للإقرار بحسب نموذج هيئة الزكاة والضريبة (ZATCA) مع تجميع البند 9 الحصري
         total_taxable_sales = calc_ry_s_taxable + calc_jd_s_taxable
         total_sales_vat = tot_ry_s_vat_input + tot_jd_s_vat_input
 
@@ -1651,6 +1655,7 @@ else:
         total_purch_zero = calc_purch_zero
 
         net_output_vat = total_sales_vat - total_sales_ret_vat
+        # تجميع ضريبة المشتريات مع ضريبة الاحتساب العكسي البند (9)
         net_input_vat = total_purch_vat + in_rcm_vat
         net_vat_payable = (net_output_vat - net_input_vat) - prev_carried_vat
 
@@ -1744,7 +1749,7 @@ else:
                     <td>0.00</td>
                 </tr>
                 <tr class="zatca-total-row">
-                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات[cite: 1]</td>
+                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات (تجميع البند 7 و 9 و 10)[cite: 1]</td>
                     <td>{(total_purch_net + total_purch_zero + in_rcm_net):,.2f}</td>
                     <td style="color:#F59E0B; font-size:15px;">{net_input_vat:,.2f}</td>
                 </tr>
@@ -1783,7 +1788,7 @@ else:
                 {'البند': 'مرتجعات مبيعات جدة', 'المبلغ قبل الضريبة': tot_jd_r_gross_input, 'الضريبة (15%)': tot_jd_r_vat_input},
                 {'البند': 'المشتريات العامة الخاضعة للنسبة الأساسية (15%)', 'المبلغ قبل الضريبة': total_purch_net, 'الضريبة (15%)': total_purch_vat},
                 {'البند': 'المشتريات العامة الخاضعة للنسبة الصفرية (0%)', 'المبلغ قبل الضريبة': total_purch_zero, 'الضريبة (15%)': 0.0},
-                {'البند': 'المشتريات الخاضعة لآلية الاحتساب العكسي (فسح)', 'المبلغ قبل الضريبة': in_rcm_net, 'الضريبة (15%)': in_rcm_vat},
+                {'البند': 'المشتريات الخاضعة لآلية الاحتساب العكسي (فسح - بند 9)', 'المبلغ قبل الضريبة': in_rcm_net, 'الضريبة (15%)': in_rcm_vat},
                 {'البند': 'صافي الضريبة المستحقة للهيئة (ZATCA)', 'المبلغ قبل الضريبة': (total_taxable_sales + total_zero_sales - total_sales_ret_net) - (total_purch_net + total_purch_zero + in_rcm_net), 'الضريبة (15%)': net_vat_payable}
             ])
             csv_vat_bytes = vat_export_df.to_csv(index=False).encode('utf-8-sig')
