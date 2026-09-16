@@ -556,6 +556,7 @@ august_payroll_data = [
     {'م': 66, 'الاسم': 'محمد روبيل', 'الوظيفة': 'عامل وضع ملصقات', 'الراتب الأساسي': 2000.0, 'الفرع': 'رواتب متنوعة', 'تاريخ بداية العمل': '2026-04-29', 'تاريخ انتهاء الإقامة': '2027-12-31', 'تاريخ انتهاء العقد': '2024-04-28', 'الخصومات': 0.0, 'الدفعة 1': 1000.0, 'الدفعة 2': 1000.0, 'الدفعة المدفوعة': 2000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 67, 'الاسم': 'مازن سعد ابن رفيع', 'الوظيفة': 'دكتور صيدلي', 'الراتب الأساسي': 4000.0, 'الفرع': 'رواتب متنوعة', 'تاريخ بداية العمل': '2025-12-28', 'تاريخ انتهاء الإقامة': '2027-12-31', 'تاريخ انتهاء العقد': '2026-12-27', 'الخصومات': 0.0, 'الدفعة 1': 2000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 4000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 68, 'الاسم': 'اسامه خالد عبد الرحمن', 'الوظيفة': 'مشرف صيانه', 'الراتب الأساسي': 4000.0, 'الفرع': 'رواتب متنوعة', 'تاريخ بداية العمل': '2026-01-08', 'تاريخ انتهاء الإقامة': '2027-12-31', 'تاريخ انتهاء العقد': '2027-01-07', 'الخصومات': 0.0, 'الدفعة 1': 2000.0, 'الدفعة 2': 2000.0, 'الدفعة المدفوعة': 4000.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
+    {'م': 69, 'الاسم': 'محمود محمد عثمان احمد', 'الوظيفة': 'عامل تحميل وتنزيل', 'الراتب الأساسي': 3500.0, 'الفرع': 'رواتب متنوعة', 'تاريخ بداية العمل': '2026-09-03', 'تاريخ انتهاء الإقامة': '2027-12-31', 'تاريخ انتهاء العقد': '2027-03-08', 'الخصومات': 0.0, 'الدفعة 1': 1750.0, 'الدفعة 2': 1750.0, 'الدفعة المدفوعة': 3500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 70, 'الاسم': 'شوقي كامل محمد شوقي', 'الوظيفة': 'عامل تحميل وتنزيل', 'الراتب الأساسي': 1500.0, 'الفرع': 'رواتب متنوعة', 'تاريخ بداية العمل': '2025-04-09', 'تاريخ انتهاء الإقامة': '2025-12-31', 'تاريخ انتهاء العقد': '2026-04-09', 'الخصومات': 0.0, 'الدفعة 1': 750.0, 'الدفعة 2': 750.0, 'الدفعة المدفوعة': 1500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 71, 'الاسم': 'سمير المغازي كمال', 'الوظيفة': 'الإنتاج الكميائي', 'الراتب الأساسي': 5500.0, 'الفرع': 'رواتب متنوعة', 'تاريخ بداية العمل': '2025-07-07', 'تاريخ انتهاء الإقامة': '2027-01-25', 'تاريخ انتهاء العقد': '2026-07-06', 'الخصومات': 0.0, 'الدفعة 1': 2750.0, 'الدفعة 2': 2750.0, 'الدفعة المدفوعة': 5500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''},
     {'م': 72, 'الاسم': 'علي إسماعيل علي محمد', 'الوظيفة': 'مندوب مبيعات', 'الراتب الأساسي': 4500.0, 'الفرع': 'رواتب متنوعة', 'تاريخ بداية العمل': '2026-02-26', 'تاريخ انتهاء الإقامة': '2027-12-31', 'تاريخ انتهاء العقد': '2027-02-25', 'الخصومات': 0.0, 'الدفعة 1': 2250.0, 'الدفعة 2': 2250.0, 'الدفعة المدفوعة': 4500.0, 'المتبقي': 0.0, 'نوع الإجراء': 'صرف كامل', 'الملاحظات': ''}
@@ -741,7 +742,7 @@ def process_vat_file(uploaded_file):
 
         return round(net_sum, 2), round(vat_sum, 2), round(gross_sum, 2)
 
-    except Exception as e:
+    except Exception:
         return 0.0, 0.0, 0.0
 
 @st.dialog("تعديل الرصيد الافتتاحي للصندوق")
@@ -761,143 +762,6 @@ def opening_balance_dialog(month_name, target_box):
             save_cash_data(all_cash_db)
             st.success("تم التثبيت السحابي!")
             st.rerun()
-
-@st.dialog("✏️ تعديل بيانات السند")
-def edit_cash_voucher_dialog(trans_idx, month_name, target_box="main"):
-    all_cash_db = load_cash_data()
-    m_cash = all_cash_db.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
-    box_key = 'transactions' if target_box == 'main' else 'acc_transactions'
-    c_trans = m_cash.get(box_key, [])
-    
-    if trans_idx < len(c_trans):
-        t_item = c_trans[trans_idx]
-        st.write(f"تعديل السند رقم: **#{t_item.get('code', t_item['id'])}**")
-        
-        with st.form(f"edit_voucher_form_{trans_idx}"):
-            e_party = st.text_input("صادر إلى / مستلم من:", value=t_item['party'])
-            e_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=float(t_item['amount']))
-            e_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"], index=["نقداً بالصندوق", "تحويل بنكي", "شيك"].index(t_item.get('method', 'نقداً بالصندوق')))
-            e_notes = st.text_input("البيان والملاحظات:", value=t_item.get('notes', ''))
-            
-            sub_e_voucher = st.form_submit_button("💾 حفظ تعديلات السند")
-            if sub_e_voucher:
-                c_trans[trans_idx]['party'] = e_party
-                c_trans[trans_idx]['amount'] = e_amt
-                c_trans[trans_idx]['method'] = e_method
-                c_trans[trans_idx]['notes'] = e_notes
-                m_cash[box_key] = c_trans
-                all_cash_db[month_name] = m_cash
-                save_cash_data(all_cash_db)
-                st.success("تم تعديل بيانات السند بنجاح!")
-                st.rerun()
-
-@st.dialog("إنشاء سند جديد")
-def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
-    st.write(f"إضافة سند لشهر: **{month_name}** ({'الرئيسية' if target_box == 'main' else 'omar'})")
-    
-    if target_box == "main":
-        type_options = ["سند قبض", "سند صرف", "🔄 تحويل عُهدة إلى (omar)"]
-    else:
-        type_options = ["سند قبض", "سند صرف", "🔄 تحويل عُهدة إلى (wahby)"]
-
-    with st.form("quick_cash_form", clear_on_submit=True):
-        q_type = st.selectbox("نوع السند:", type_options, index=0 if "قبض" in default_type else 1)
-        q_party = st.text_input("صادر إلى / مستلم من:", placeholder="اسم الجهة...")
-        q_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
-        q_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
-        q_notes = st.text_input("البيان والملاحظات:")
-        
-        q_sub = st.form_submit_button("حفظ السند")
-        if q_sub:
-            if q_party and q_amt > 0:
-                all_cash = load_cash_data()
-                if month_name not in all_cash:
-                    all_cash[month_name] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
-                
-                m_cash = all_cash[month_name]
-                box_key = 'transactions' if target_box == 'main' else 'acc_transactions'
-                if box_key not in m_cash:
-                    m_cash[box_key] = []
-                    
-                c_trans = m_cash[box_key]
-                
-                if "تحويل عُهدة إلى (omar)" in q_type and target_box == "main":
-                    v_code = f"TRF-{(len(c_trans) + 1):03d}"
-                    c_trans.append({
-                        'id': len(c_trans) + 1,
-                        'code': v_code,
-                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                        'type': 'سند صرف',
-                        'party': f"تحويل عُهدة إلى المحاسب (omar) - {q_party}",
-                        'amount': q_amt,
-                        'method': q_method,
-                        'notes': q_notes
-                    })
-                    
-                    if 'acc_transactions' not in m_cash:
-                        m_cash['acc_transactions'] = []
-                    acc_trans = m_cash['acc_transactions']
-                    acc_trans.append({
-                        'id': len(acc_trans) + 1,
-                        'code': f"REC-TRF-{(len(acc_trans) + 1):03d}",
-                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                        'type': 'سند قبض',
-                        'party': f"استلام عُهدة محولة من الخزينة الرئيسية (wahby)",
-                        'amount': q_amt,
-                        'method': q_method,
-                        'notes': q_notes
-                    })
-                    m_cash['acc_transactions'] = acc_trans
-
-                elif "تحويل عُهدة إلى (wahby)" in q_type and target_box == "accountant":
-                    v_code = f"TRF-ACC-{(len(c_trans) + 1):03d}"
-                    c_trans.append({
-                        'id': len(c_trans) + 1,
-                        'code': v_code,
-                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                        'type': 'سند صرف',
-                        'party': f"تحويل نقدية واسترداد إلى الخزينة الرئيسية (wahby) - {q_party}",
-                        'amount': q_amt,
-                        'method': q_method,
-                        'notes': q_notes
-                    })
-                    
-                    if 'transactions' not in m_cash:
-                        m_cash['transactions'] = []
-                    main_trans = m_cash['transactions']
-                    main_trans.append({
-                        'id': len(main_trans) + 1,
-                        'code': f"REC-TRF-{(len(main_trans) + 1):03d}",
-                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                        'type': 'سند قبض',
-                        'party': f"استلام نقدية محولة من عُهدة المحاسب (omar)",
-                        'amount': q_amt,
-                        'method': q_method,
-                        'notes': q_notes
-                    })
-                    m_cash['transactions'] = main_trans
-
-                else:
-                    rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
-                    pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
-                    v_code = f"REC-{(rec_count + 1):03d}" if "قبض" in q_type else f"PAY-{(pay_count + 1):03d}"
-                    
-                    c_trans.append({
-                        'id': len(c_trans) + 1,
-                        'code': v_code,
-                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
-                        'type': q_type,
-                        'party': q_party,
-                        'amount': q_amt,
-                        'method': q_method,
-                        'notes': q_notes
-                    })
-
-                m_cash[box_key] = c_trans
-                all_cash[month_name] = m_cash
-                save_cash_data(all_cash)
-                st.success(f"تم الحفظ السحابي بنجاح برقم #{v_code}!")
-                st.rerun()
 
 # الشاشة الافتتاحية وواجهة المستخدم الموحدة
 if not st.session_state.get('app_started', False):
