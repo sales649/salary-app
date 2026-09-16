@@ -3,8 +3,10 @@ import pandas as pd
 import io
 import json
 import os
+import re
 from datetime import datetime
 from supabase import create_client, Client
+import pypdf
 
 # 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL مع PWA Metas
 st.set_page_config(page_title='5M', layout='wide', page_icon='🏢', initial_sidebar_state="auto")
@@ -758,98 +760,106 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# دالة ذكية وشاملة معتمدة لقراءة ملفات إكسيل المبيعات والمشتريات - تدعم الترميز المعكوس والأعمدة الرقمية
-def process_vat_excel_file(uploaded_file):
+# دالة ذكية وشاملة معتمدة لقراءة ملفات إكسيل و PDF المبيعات والمشتريات
+def process_vat_file(uploaded_file):
     if uploaded_file is None:
         return 0.0, 0.0, 0.0
-    try:
-        # قراءة البيانات الخام بدون هيدر
+    
+    filename = uploaded_file.name.lower()
+    
+    # معالجة ملفات الـ PDF المرفوعة
+    if filename.endswith('.pdf'):
         try:
-            df_raw = pd.read_excel(uploaded_file, header=None)
-        except Exception:
-            uploaded_file.seek(0)
-            df_raw = pd.read_csv(uploaded_file, header=None)
-
-        # دالة فك ترميز النصوص العربية المعكوسة تلقائياً
-        def fix_text_cell(val):
-            if isinstance(val, str):
-                try:
-                    return val.encode('iso-8859-1').decode('cp1256')
-                except:
-                    return val
-            return val
-
-        df_decoded = df_raw.applymap(fix_text_cell)
-
-        # البحث الذكي عن سطر رأس الجدول بوجود كلمتين مفتاحيتين على الأقل بالسطر
-        header_idx = None
-        target_kws = ['الصافي', 'الصافى', 'الضريبة', 'الأجمالي', 'الأجمالى', 'الإجمالي', 'العميل', 'المورد', 'رقم السند', 'تاريخ السند', 'المبلغ الخاضع']
-        
-        for idx, row in df_decoded.iterrows():
-            row_str_combined = " ".join([str(v) for v in row.values if pd.notnull(v)])
-            matched_cnt = sum(1 for kw in target_kws if kw in row_str_combined)
-            if matched_cnt >= 2:
-                header_idx = idx
-                break
-
-        if header_idx is not None:
-            headers = [str(v).strip() for v in df_decoded.iloc[header_idx].values]
-            # التأكد من عدم تكرار أسماء الأعمدة
-            unique_headers = []
-            counts = {}
-            for h in headers:
-                if h in counts:
-                    counts[h] += 1
-                    unique_headers.append(f"{h}_{counts[h]}")
-                else:
-                    counts[h] = 0
-                    unique_headers.append(h)
-
-            df_data = df_decoded.iloc[header_idx + 1:].reset_index(drop=True)
-            df_data.columns = unique_headers
-        else:
-            df_data = df_decoded.copy()
-
-        # استبعاد أسطر الإجماليات وملخصات أخر الجدول لمنع تكرار الحساب دبل
-        is_summary_row = df_data.apply(lambda r: any('الأجمال' in str(v) or 'إجمال' in str(v) or 'total' in str(v).lower() for v in r.values if pd.notnull(v)), axis=1)
-        df_valid = df_data[~is_summary_row].copy()
-
-        net_amt, vat_amt, gross_amt = 0.0, 0.0, 0.0
-
-        for col in df_valid.columns:
-            col_clean = str(col).strip().lower()
-            vals = pd.to_numeric(df_valid[col], errors='coerce').fillna(0.0)
-            col_sum = float(vals.sum())
+            reader = pypdf.PdfReader(uploaded_file)
+            full_text = ""
+            for page in reader.pages:
+                full_text += page.extract_text() or ""
             
-            # التعرف على عمود الصافي (قبل الضريبة)
-            if ('الصاف' in col_clean or 'صاف' in col_clean or 'المبلغ قبل' in col_clean or 'net' in col_clean) and not ('بعد' in col_clean or 'شامل' in col_clean):
-                net_amt = col_sum
-            # التعرف على عمود الضريبة
-            elif 'ضريب' in col_clean or 'vat' in col_clean or 'tax' in col_clean:
-                vat_amt = col_sum
-            # التعرف على عمود الإجمالي (شامل الضريبة)
-            elif ('أجمال' in col_clean or 'إجمال' in col_clean or 'gross' in col_clean or 'total' in col_clean) and not ('بعد' in col_clean):
-                gross_amt = col_sum
+            # البحث عن المبالغ بواسطة Regex
+            numbers = [float(n.replace(',', '')) for n in re.findall(r'\b\d{1,3}(?:,\d{3})*(?:\.\d+)?\b', full_text)]
+            if len(numbers) >= 2:
+                # أكبر رقم عادة ما يكون المبلغ قبل أو بعد الضريبة والضريبة
+                vat_amt = [n for n in numbers if 10 <= n <= 1000000]
+                if vat_amt:
+                    calculated_vat = max(vat_amt)
+                    return round(calculated_vat / 0.15, 2), round(calculated_vat, 2), round(calculated_vat / 0.15 * 1.15, 2)
+            return 0.0, 0.0, 0.0
+        except Exception:
+            return 0.0, 0.0, 0.0
 
-        # آلية حماية احتياطية: إذا أخفق التعرف على الاسم بسب الترميز، أوجد الأعمدة التي تحوي أكبر مجموع أرقام
-        if net_amt == 0.0:
-            numeric_sums = []
+    # معالجة ملفات الإكسيل والـ CSV
+    else:
+        try:
+            try:
+                df_raw = pd.read_excel(uploaded_file, header=None)
+            except Exception:
+                uploaded_file.seek(0)
+                df_raw = pd.read_csv(uploaded_file, header=None)
+
+            def fix_text_cell(val):
+                if isinstance(val, str):
+                    try:
+                        return val.encode('iso-8859-1').decode('cp1256')
+                    except:
+                        return val
+                return val
+
+            df_decoded = df_raw.applymap(fix_text_cell)
+
+            header_idx = None
+            target_kws = ['الصافي', 'الصافى', 'الضريبة', 'الأجمالي', 'الأجمالى', 'الإجمالي', 'العميل', 'المورد', 'رقم السند', 'تاريخ السند', 'المبلغ الخاضع']
+            
+            for idx, row in df_decoded.iterrows():
+                row_str_combined = " ".join([str(v) for v in row.values if pd.notnull(v)])
+                matched_cnt = sum(1 for kw in target_kws if kw in row_str_combined)
+                if matched_cnt >= 2:
+                    header_idx = idx; break
+
+            if header_idx is not None:
+                headers = [str(v).strip() for v in df_decoded.iloc[header_idx].values]
+                unique_headers = []
+                counts = {}
+                for h in headers:
+                    if h in counts:
+                        counts[h] += 1
+                        unique_headers.append(f"{h}_{counts[h]}")
+                    else:
+                        counts[h] = 0
+                        unique_headers.append(h)
+
+                df_data = df_decoded.iloc[header_idx + 1:].reset_index(drop=True)
+                df_data.columns = unique_headers
+            else:
+                df_data = df_decoded.copy()
+
+            is_summary_row = df_data.apply(lambda r: any('الأجمال' in str(v) or 'إجمال' in str(v) or 'total' in str(v).lower() for v in r.values if pd.notnull(v)), axis=1)
+            df_valid = df_data[~is_summary_row].copy()
+
+            net_amt, vat_amt, gross_amt = 0.0, 0.0, 0.0
+
             for col in df_valid.columns:
-                v_sum = pd.to_numeric(df_valid[col], errors='coerce').fillna(0.0).sum()
-                if v_sum > 100:  # قيم مبالغ الفواتير الفعلي
-                    numeric_sums.append(v_sum)
-            if numeric_sums:
-                net_amt = max(numeric_sums)
+                col_clean = str(col).strip().lower()
+                vals = pd.to_numeric(df_valid[col], errors='coerce').fillna(0.0)
+                col_sum = float(vals.sum())
+                
+                if ('الصاف' in col_clean or 'صاف' in col_clean or 'المبلغ قبل' in col_clean or 'net' in col_clean) and not ('بعد' in col_clean or 'شامل' in col_clean):
+                    net_amt = col_sum
+                elif 'ضريب' in col_clean or 'vat' in col_clean or 'tax' in col_clean:
+                    vat_amt = col_sum
+                elif ('أجمال' in col_clean or 'إجمال' in col_clean or 'gross' in col_clean or 'total' in col_clean) and not ('بعد' in col_clean):
+                    gross_amt = col_sum
 
-        if gross_amt == 0.0 and net_amt > 0.0:
-            gross_amt = net_amt + vat_amt
-        if vat_amt == 0.0 and net_amt > 0.0:
-            vat_amt = net_amt * 0.15
+            if net_amt == 0.0:
+                numeric_sums = [pd.to_numeric(df_valid[c], errors='coerce').fillna(0.0).sum() for c in df_valid.columns if pd.to_numeric(df_valid[c], errors='coerce').fillna(0.0).sum() > 100]
+                if numeric_sums: net_amt = max(numeric_sums)
 
-        return round(net_amt, 2), round(vat_amt, 2), round(gross_amt, 2)
+            if gross_amt == 0.0 and net_amt > 0.0: gross_amt = net_amt + vat_amt
+            if vat_amt == 0.0 and net_amt > 0.0: vat_amt = net_amt * 0.15
 
-    except Exception:
-        return 0.0, 0.0, 0.0
+            return round(net_amt, 2), round(vat_amt, 2), round(gross_amt, 2)
+
+        except Exception:
+            return 0.0, 0.0, 0.0
 
 @st.dialog("تعديل الرصيد الافتتاحي للصندوق")
 def opening_balance_dialog(month_name, target_box):
@@ -1952,7 +1962,7 @@ else:
     # 7. موديول ضريبة القيمة المضافة (ZATCA VAT Return Generator)
     elif selected_option == 'تقرير القيمة المضافة' and st.session_state.user_role == "admin":
         st.subheader('🏛️ موديول إقرار ضريبة القيمة المضافة الربع سنوي (ZATCA)')
-        st.write('قم برفع شيتات الإكسيل للفروع والمشتريات لاستخراج وتوليد تقرير الإقرار الضريبي الرسمي الموحد المعمد[cite: 1]:')
+        st.write('قم برفع شيتات الإكسيل أو ملفات الـ PDF للفروع والمشتريات لاستخراج وتوليد تقرير الإقرار الضريبي الرسمي الموحد المعمد[cite: 1]:')
 
         v_top1, v_top2 = st.columns(2)
         with v_top1:
@@ -1961,36 +1971,36 @@ else:
             prev_carried_vat = st.number_input("ضريبة القيمة المضافة المترحلة من الفترة/الفترات السابقة (ر.س):", min_value=0.0, value=0.0, step=1000.0)
 
         st.divider()
-        st.markdown("### 📥 1. رفع ملفات الفروع والمشتريات (Excel/CSV):")
+        st.markdown("### 📥 1. رفع ملفات الفروع والمشتريات (Excel/CSV/PDF):")
 
         v_col1, v_col2, v_col3 = st.columns(3)
         with v_col1:
             st.markdown("#### 🏢 مبيعات ومرتجعات الرياض:")
-            file_sales_ry = st.file_uploader("شيت مبيعات فرع الرياض:", type=['xlsx', 'xls', 'csv'], key="vat_ry_sales_file")
-            file_ret_ry = st.file_uploader("شيت مرتجعات فرع الرياض:", type=['xlsx', 'xls', 'csv'], key="vat_ry_ret_file")
+            file_sales_ry = st.file_uploader("شيت مبيعات فرع الرياض:", type=['xlsx', 'xls', 'csv', 'pdf'], key="vat_ry_sales_file")
+            file_ret_ry = st.file_uploader("شيت مرتجعات فرع الرياض:", type=['xlsx', 'xls', 'csv', 'pdf'], key="vat_ry_ret_file")
 
         with v_col2:
             st.markdown("#### 🌊 مبيعات ومرتجعات جدة:")
-            file_sales_jd = st.file_uploader("شيت مبيعات فرع جدة:", type=['xlsx', 'xls', 'csv'], key="vat_jd_sales_file")
-            file_ret_jd = st.file_uploader("شيت مرتجعات فرع جدة:", type=['xlsx', 'xls', 'csv'], key="vat_jd_ret_file")
+            file_sales_jd = st.file_uploader("شيت مبيعات فرع جدة:", type=['xlsx', 'xls', 'csv', 'pdf'], key="vat_jd_sales_file")
+            file_ret_jd = st.file_uploader("شيت مرتجعات فرع جدة:", type=['xlsx', 'xls', 'csv', 'pdf'], key="vat_jd_ret_file")
 
         with v_col3:
             st.markdown("#### 📦 المشتريات والمدخلات:")
-            file_purch = st.file_uploader("شيت المشتريات العامة:", type=['xlsx', 'xls', 'csv'], key="vat_purch_file")
-            file_purch_ret = st.file_uploader("شيت مرتجعات المشتريات (اختياري):", type=['xlsx', 'xls', 'csv'], key="vat_purch_ret_file")
+            file_purch = st.file_uploader("شيت المشتريات العامة:", type=['xlsx', 'xls', 'csv', 'pdf'], key="vat_purch_file")
+            file_purch_ret = st.file_uploader("شيت مرتجعات المشتريات (اختياري):", type=['xlsx', 'xls', 'csv', 'pdf'], key="vat_purch_ret_file")
 
         st.write("")
         trigger_vat_calc = st.button("🚀 احتساب وتوليد تقرير الإقرار الضريبي الموحد", use_container_width=True)
 
         # معالجة وحساب أرقام الملفات المرفوعة مرونة تامة للترك الفارغ والتعرف الذكي على الهيدر
-        ry_s_net, ry_s_vat, ry_s_tot = process_vat_excel_file(file_sales_ry)
-        ry_r_net, ry_r_vat, ry_r_tot = process_vat_excel_file(file_ret_ry)
+        ry_s_net, ry_s_vat, ry_s_tot = process_vat_file(file_sales_ry)
+        ry_r_net, ry_r_vat, ry_r_tot = process_vat_file(file_ret_ry)
 
-        jd_s_net, jd_s_vat, jd_s_tot = process_vat_excel_file(file_sales_jd)
-        jd_r_net, jd_r_vat, jd_r_tot = process_vat_excel_file(file_ret_jd)
+        jd_s_net, jd_s_vat, jd_s_tot = process_vat_file(file_sales_jd)
+        jd_r_net, jd_r_vat, jd_r_tot = process_vat_file(file_ret_jd)
 
-        p_s_net, p_s_vat, p_s_tot = process_vat_excel_file(file_purch)
-        p_r_net, p_r_vat, p_r_tot = process_vat_excel_file(file_purch_ret)
+        p_s_net, p_s_vat, p_s_tot = process_vat_file(file_purch)
+        p_r_net, p_r_vat, p_r_tot = process_vat_file(file_purch_ret)
 
         # تجميع المبيعات والمرتجعات والمشتريات
         total_sales_net = ry_s_net + jd_s_net
@@ -2566,7 +2576,7 @@ else:
 
                     st.info(f"📆 **حركة يوم ({selected_day_page}):** مقبوضات اليوم: `{d_in:,.2f} ر.س` | مصروفات اليوم: `{d_out:,.2f} ر.س` | صافي الحركة اليومية: `{d_net:,.2f} ر.س`")
 
-                    for t_idx, t_item in enumerate(page_trans if 'page_trans' in locals() else day_trans):
+                    for t_idx, t_item in enumerate(day_trans):
                         real_idx = curr_trans.index(t_item)
                         
                         is_rec = "قبض" in t_item['type']
