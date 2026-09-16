@@ -133,7 +133,7 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* إعادة إظهار وتثبيت كروت Metric الرئيسية بإطاراتها الذهبية */
+        /* كروت الـ Metric بالصفحة الرئيسية */
         [data-testid="stMetricValue"] div {{
             font-size: 22px !important;
             font-weight: 900 !important;
@@ -758,7 +758,7 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# دالة ذكية وشاملة لمعالجة قراءة أي شيت إكسيل مبيعات/مشتريات مهما كان موقع رأس الجدول (Header Index)
+# دالة ذكية وشاملة معتمدة لقراءة ملفات إكسيل المبيعات والمشتريات - تدعم الترميز المعكوس والأعمدة الرقمية
 def process_vat_excel_file(uploaded_file):
     if uploaded_file is None:
         return 0.0, 0.0, 0.0
@@ -830,6 +830,16 @@ def process_vat_excel_file(uploaded_file):
             # التعرف على عمود الإجمالي (شامل الضريبة)
             elif ('أجمال' in col_clean or 'إجمال' in col_clean or 'gross' in col_clean or 'total' in col_clean) and not ('بعد' in col_clean):
                 gross_amt = col_sum
+
+        # آلية حماية احتياطية: إذا أخفق التعرف على الاسم بسب الترميز، أوجد الأعمدة التي تحوي أكبر مجموع أرقام
+        if net_amt == 0.0:
+            numeric_sums = []
+            for col in df_valid.columns:
+                v_sum = pd.to_numeric(df_valid[col], errors='coerce').fillna(0.0).sum()
+                if v_sum > 100:  # قيم مبالغ الفواتير الفعلي
+                    numeric_sums.append(v_sum)
+            if numeric_sums:
+                net_amt = max(numeric_sums)
 
         if gross_amt == 0.0 and net_amt > 0.0:
             gross_amt = net_amt + vat_amt
@@ -2556,7 +2566,7 @@ else:
 
                     st.info(f"📆 **حركة يوم ({selected_day_page}):** مقبوضات اليوم: `{d_in:,.2f} ر.س` | مصروفات اليوم: `{d_out:,.2f} ر.س` | صافي الحركة اليومية: `{d_net:,.2f} ر.س`")
 
-                    for t_idx, t_item in enumerate(day_trans):
+                    for t_idx, t_item in enumerate(page_trans if 'page_trans' in locals() else day_trans):
                         real_idx = curr_trans.index(t_item)
                         
                         is_rec = "قبض" in t_item['type']
