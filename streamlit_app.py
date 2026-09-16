@@ -3,7 +3,6 @@ import pandas as pd
 import io
 import json
 import os
-import re
 from datetime import datetime
 from supabase import create_client, Client
 
@@ -134,6 +133,7 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
+        /* كروت الـ Metric بالصفحة الرئيسية */
         [data-testid="stMetricValue"] div {{
             font-size: 22px !important;
             font-weight: 900 !important;
@@ -157,25 +157,6 @@ st.markdown(f"""
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
             margin-bottom: 6px !important;
             text-align: center !important;
-        }}
-
-        [data-testid="stFileUploader"] section {{
-            background-color: {file_uploader_bg} !important;
-            border: 2px dashed #D97706 !important;
-            border-radius: 10px !important;
-            padding: 10px !important;
-        }}
-
-        [data-testid="stFileUploader"] section * {{
-            color: {file_uploader_text} !important;
-            font-weight: 800 !important;
-        }}
-
-        [data-testid="stFileUploader"] button {{
-            background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
-            color: #FFFFFF !important;
-            border-radius: 6px !important;
-            border: none !important;
         }}
 
         @media screen and (min-width: 769px) {{
@@ -425,47 +406,6 @@ st.markdown(f"""
             font-weight: 800;
             margin-top: 4px;
         }}
-
-        .zatca-table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            font-size: 13px;
-            background-color: {bg_card};
-        }}
-        .zatca-table th {{
-            background-color: #1E3A8A;
-            color: #FFFFFF;
-            padding: 10px;
-            border: 1px solid #D97706;
-            text-align: center;
-            font-weight: bold;
-        }}
-        .zatca-table td {{
-            border: 1px solid #334155;
-            padding: 8px 12px;
-            text-align: center;
-        }}
-        .zatca-section-header {{
-            background-color: #1C2541;
-            color: #F59E0B;
-            font-weight: bold;
-            text-align: right !important;
-            padding-right: 15px !important;
-            font-size: 14px;
-        }}
-        .zatca-total-row {{
-            background-color: #0F172A;
-            color: #F59E0B;
-            font-weight: bold;
-            font-size: 14px;
-        }}
-        .zatca-final-row {{
-            background-color: #047857;
-            color: #FFFFFF;
-            font-weight: bold;
-            font-size: 16px;
-        }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -674,78 +614,442 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# 🛠️ دالة معالجة واستخراج المبالغ والضريبة المعتمدة والمحصنة لـ ERP الوعلان
-def process_vat_file(uploaded_file):
-    if uploaded_file is None:
-        return 0.0, 0.0, 0.0
-    try:
-        uploaded_file.seek(0)
-        df_raw = pd.read_excel(uploaded_file, header=None)
+@st.dialog("تعديل الرصيد الافتتاحي للصندوق")
+def opening_balance_dialog(month_name, target_box):
+    all_cash_db = load_cash_data()
+    m_cash = all_cash_db.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
+    active_opening_key = 'opening' if target_box == 'main' else 'acc_opening'
+    opening_bal = m_cash.get(active_opening_key, 0.0)
+
+    st.write(f"تثبيت وتعديل الرصيد الافتتاحي لـ **{'الخزينة الرئيسية' if target_box == 'main' else 'عُهدة omar'}** لشهر ({month_name}):")
+    with st.form("set_opening_balance_dialog_form"):
+        new_opening_val = st.number_input("الرصيد الافتتاحي (ر.س):", min_value=0.0, value=float(opening_bal))
+        sub_op = st.form_submit_button("💾 تثبيت الرصيد الافتتاحي")
+        if sub_op:
+            m_cash[active_opening_key] = new_opening_val
+            all_cash_db[month_name] = m_cash
+            save_cash_data(all_cash_db)
+            st.success("تم التثبيت السحابي!")
+            st.rerun()
+
+@st.dialog("✏️ تعديل بيانات السند")
+def edit_cash_voucher_dialog(trans_idx, month_name, target_box="main"):
+    all_cash_db = load_cash_data()
+    m_cash = all_cash_db.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
+    box_key = 'transactions' if target_box == 'main' else 'acc_transactions'
+    c_trans = m_cash.get(box_key, [])
+    
+    if trans_idx < len(c_trans):
+        t_item = c_trans[trans_idx]
+        st.write(f"تعديل السند رقم: **#{t_item.get('code', t_item['id'])}**")
         
-        header_idx = None
-        target_kws = ['الصافي', 'الصافى', 'الضريبة', 'ضريبة', 'الإجمالي', 'الأجمالى', 'صافى بعد ضريبة', 'اسم المورد', 'اسم العميل', 'العميل', 'رقم الفاتورة', 'رقم السند']
-        
-        for idx, row in df_raw.iterrows():
-            row_str = " ".join([str(v) for v in row.values if pd.notnull(v)])
-            matches = [kw for kw in target_kws if kw in row_str]
-            if len(matches) >= 2:
-                header_idx = idx
-                break
-                
-        if header_idx is None:
-            header_idx = 0
+        with st.form(f"edit_voucher_form_{trans_idx}"):
+            e_party = st.text_input("صادر إلى / مستلم من:", value=t_item['party'])
+            e_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=float(t_item['amount']))
+            e_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"], index=["نقداً بالصندوق", "تحويل بنكي", "شيك"].index(t_item.get('method', 'نقداً بالصندوق')))
+            e_notes = st.text_input("البيان والملاحظات:", value=t_item.get('notes', ''))
             
-        headers = [str(v).strip() for v in df_raw.iloc[header_idx].values]
-        df_data = df_raw.iloc[header_idx + 1:].reset_index(drop=True)
-        df_data.columns = headers
+            sub_e_voucher = st.form_submit_button("💾 حفظ تعديلات السند")
+            if sub_e_voucher:
+                c_trans[trans_idx]['party'] = e_party
+                c_trans[trans_idx]['amount'] = e_amt
+                c_trans[trans_idx]['method'] = e_method
+                c_trans[trans_idx]['notes'] = e_notes
+                m_cash[box_key] = c_trans
+                all_cash_db[month_name] = m_cash
+                save_cash_data(all_cash_db)
+                st.success("تم تعديل بيانات السند بنجاح!")
+                st.rerun()
+
+@st.dialog("إنشاء سند جديد")
+def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
+    st.write(f"إضافة سند لشهر: **{month_name}** ({'الرئيسية' if target_box == 'main' else 'omar'})")
+    
+    if target_box == "main":
+        type_options = ["سند قبض", "سند صرف", "🔄 تحويل عُهدة إلى (omar)"]
+    else:
+        type_options = ["سند قبض", "سند صرف", "🔄 تحويل عُهدة إلى (wahby)"]
+
+    with st.form("quick_cash_form", clear_on_submit=True):
+        q_type = st.selectbox("نوع السند:", type_options, index=0 if "قبض" in default_type else 1)
+        q_party = st.text_input("صادر إلى / مستلم من:", placeholder="اسم الجهة...")
+        q_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
+        q_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
+        q_notes = st.text_input("البيان والملاحظات:")
         
-        doc_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['رقم الفاتورة', 'رقم السند'])), None)
-        name_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['اسم المورد', 'اسم العميل', 'العميل'])), None)
+        q_sub = st.form_submit_button("حفظ السند")
+        if q_sub:
+            if q_party and q_amt > 0:
+                all_cash = load_cash_data()
+                if month_name not in all_cash:
+                    all_cash[month_name] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                
+                m_cash = all_cash[month_name]
+                box_key = 'transactions' if target_box == 'main' else 'acc_transactions'
+                if box_key not in m_cash:
+                    m_cash[box_key] = []
+                    
+                c_trans = m_cash[box_key]
+                
+                if "تحويل عُهدة إلى (omar)" in q_type and target_box == "main":
+                    v_code = f"TRF-{(len(c_trans) + 1):03d}"
+                    c_trans.append({
+                        'id': len(c_trans) + 1,
+                        'code': v_code,
+                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'type': 'سند صرف',
+                        'party': f"تحويل عُهدة إلى المحاسب (omar) - {q_party}",
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
+                    
+                    if 'acc_transactions' not in m_cash:
+                        m_cash['acc_transactions'] = []
+                    acc_trans = m_cash['acc_transactions']
+                    acc_trans.append({
+                        'id': len(acc_trans) + 1,
+                        'code': f"REC-TRF-{(len(acc_trans) + 1):03d}",
+                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'type': 'سند قبض',
+                        'party': f"استلام عُهدة محولة من الخزينة الرئيسية (wahby)",
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
+                    m_cash['acc_transactions'] = acc_trans
 
-        def is_valid_transaction(row):
-            if row.dropna().empty: return False
-            row_text = " ".join([str(v) for v in row.values if pd.notnull(v)]).strip()
-            if any(k in row_text for k in ['الأجمالى', 'الأجمالي', 'إجمالي السندات', 'إجمالي التقارير', 'Page -1', 'Page ']):
-                return False
-            if doc_col and pd.notnull(row[doc_col]):
-                val = pd.to_numeric(str(row[doc_col]).replace(',', '').strip(), errors='coerce')
-                if pd.isna(val): return False
-            elif name_col and pd.isna(row[name_col]):
-                return False
-            return True
+                elif "تحويل عُهدة إلى (wahby)" in q_type and target_box == "accountant":
+                    v_code = f"TRF-ACC-{(len(c_trans) + 1):03d}"
+                    c_trans.append({
+                        'id': len(c_trans) + 1,
+                        'code': v_code,
+                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'type': 'سند صرف',
+                        'party': f"تحويل نقدية واسترداد إلى الخزينة الرئيسية (wahby) - {q_party}",
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
+                    
+                    if 'transactions' not in m_cash:
+                        m_cash['transactions'] = []
+                    main_trans = m_cash['transactions']
+                    main_trans.append({
+                        'id': len(main_trans) + 1,
+                        'code': f"REC-TRF-{(len(main_trans) + 1):03d}",
+                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'type': 'سند قبض',
+                        'party': f"استلام نقدية محولة من عُهدة المحاسب (omar)",
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
+                    m_cash['transactions'] = main_trans
 
-        df_valid = df_data[df_data.apply(is_valid_transaction, axis=1)].copy()
+                else:
+                    rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
+                    pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
+                    v_code = f"REC-{(rec_count + 1):03d}" if "قبض" in q_type else f"PAY-{(pay_count + 1):03d}"
+                    
+                    c_trans.append({
+                        'id': len(c_trans) + 1,
+                        'code': v_code,
+                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'type': q_type,
+                        'party': q_party,
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
 
-        net_col, vat_col, gross_col = None, None, None
-        for col in df_valid.columns:
-            c_clean = str(col).strip()
-            if c_clean in ['الصافي', 'الصافى']:
-                net_col = col
-            elif c_clean in ['الضريبة', 'ضريبة']:
-                vat_col = col
-            elif c_clean in ['صافى بعد ضريبة', 'الإجمالي', 'الأجمالى']:
-                if gross_col is None or c_clean == 'صافى بعد ضريبة':
-                    gross_col = col
+                m_cash[box_key] = c_trans
+                all_cash[month_name] = m_cash
+                save_cash_data(all_cash)
+                st.success(f"تم الحفظ السحابي بنجاح برقم #{v_code}!")
+                st.rerun()
 
-        def clean_sum(col_name):
-            if not col_name or col_name not in df_valid.columns:
-                return 0.0
-            s = df_valid[col_name].astype(str).str.replace(',', '').str.strip()
-            return float(pd.to_numeric(s, errors='coerce').fillna(0.0).sum())
+@st.dialog("طباعة سند الصندوق A4")
+def print_cash_voucher_dialog(trans_item, month_name):
+    st.write(f"معاينة السند رقم: **#{trans_item.get('code', trans_item['id'])}**")
+    amt_val = trans_item['amount']
+    t_type = trans_item['type']
+    party_label = "استلمنا من السيد / الشركَة:" if "قبض" in t_type else "تم الصرف للسيد / الشركَة:"
+    
+    html_v = f"""
+    <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; margin: 0; padding: 5px; }}
+        .voucher-box {{ border: 2px solid #1E3A8A; border-radius: 8px; padding: 12px; background: #fff; }}
+        .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 5px; }}
+        .v-title {{ text-align: center; font-size: 18px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 6px; margin: 8px 0; border-radius: 4px; }}
+        .v-table {{ width: 100%; border-collapse: collapse; margin-top: 5px; }}
+        .v-table td, .v-table th {{ border: 1px solid #cbd5e1; padding: 8px; text-align: right; font-size: 13px; }}
+        .amt-tag {{ font-size: 18px; font-weight: bold; color: #047857; background: #ecfdf5; border: 2px solid #10b981; text-align: center; padding: 4px; border-radius: 4px; }}
+        .sigs {{ margin-top: 25px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }}
+    </style></head><body>
+        <div class="voucher-box">
+            <div class="header-logo">
+                <div style="font-size:11px; font-weight:bold;">Five-M Company For Industry<br>C. R. : 1011145035</div>
+                <div style="font-size:38px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
+                <div style="font-size:11px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
+            </div>
+            <div class="v-title">{t_type} | رقم السند: #{trans_item.get('code', trans_item['id'])}</div>
+            <table class="v-table">
+                <tr><th>التاريخ والتوقيت</th><td style="font-size:14px; font-weight:bold;">{trans_item['date']}</td><th>طريقة السداد</th><td><strong>{trans_item['method']}</strong></td></tr>
+                <tr><th>{party_label}</th><td colspan="3"><strong style="font-size:16px; color:#1E3A8A;">{trans_item['party']}</strong></td></tr>
+                <tr><th>المبلغ المسدد بالسند</th><td colspan="3"><div class="amt-tag">{amt_val:,.2f} ريال سعودي</div></td></tr>
+                <tr><th>البيان والملاحظات</th><td colspan="3" style="font-size:13px;">{trans_item.get('notes', 'سداد بموجب السند المعمد بالنظام')}</td></tr>
+            </table>
+            <div class="sigs">
+                <div>توقيع المستلم / الجهة: __________________</div>
+                <div>توقيع أمين الصندوق / المحاسب: __________________</div>
+            </div>
+        </div>
+    </body></html>
+    """
+    st.components.v1.html(html_v, height=310, scrolling=True)
+    st.download_button(
+        label="📄 تنزيل السند المباشر للطباعة (HTML / PDF)",
+        data=html_v.encode('utf-8'),
+        file_name=f"سند_{trans_item.get('code', trans_item['id'])}_{month_name}.html",
+        mime="text/html",
+        use_container_width=True
+    )
 
-        net_sum = clean_sum(net_col)
-        vat_sum = clean_sum(vat_col)
-        gross_sum = clean_sum(gross_col)
+def generate_t_account_html(trans_list, month_name, period_label, target_box_label):
+    rec_list = [t for t in trans_list if "قبض" in t['type']]
+    pay_list = [t for t in trans_list if "صرف" in t['type']]
+    
+    tot_rec = sum(t['amount'] for t in rec_list)
+    tot_pay = sum(t['amount'] for t in pay_list)
+    net_bal = tot_rec - tot_pay
 
-        if gross_sum == 0.0 and net_sum > 0.0: gross_sum = net_sum + vat_sum
-        if vat_sum == 0.0 and net_sum > 0.0: vat_sum = net_sum * 0.15
+    max_len = max(len(rec_list), len(pay_list))
 
-        return round(net_sum, 2), round(vat_sum, 2), round(gross_sum, 2)
+    rows_html = ""
+    for i in range(max_len):
+        r_item = rec_list[i] if i < len(rec_list) else None
+        p_item = pay_list[i] if i < len(pay_list) else None
 
-    except Exception as e:
-        return 0.0, 0.0, 0.0
+        r_code = f"#{r_item.get('code', r_item['id'])}" if r_item else ""
+        r_party = r_item['party'] if r_item else ""
+        r_method = r_item['method'] if r_item else ""
+        r_amt = f"{r_item['amount']:,.2f}" if r_item else ""
 
-# الشاشة الافتتاحية وواجهة المستخدم الموحدة
+        p_code = f"#{p_item.get('code', p_item['id'])}" if p_item else ""
+        p_party = p_item['party'] if p_item else ""
+        p_method = p_item['method'] if p_item else ""
+        p_amt = f"{p_item['amount']:,.2f}" if p_item else ""
+
+        rows_html += f"""
+        <tr>
+            <td style="color:#047857; font-weight:bold;">{r_code}</td>
+            <td style="text-align:right;">{r_party}</td>
+            <td>{r_method}</td>
+            <td style="color:#047857; font-weight:bold;">{r_amt}</td>
+            <td style="border-right:2px solid #1E3A8A; color:#b91c1c; font-weight:bold;">{p_code}</td>
+            <td style="text-align:right;">{p_party}</td>
+            <td>{p_method}</td>
+            <td style="color:#b91c1c; font-weight:bold;">{p_amt}</td>
+        </tr>
+        """
+
+    return f"""
+    <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; margin: 0; padding: 10px; }}
+        .t-box {{ border: 3px solid #1E3A8A; border-radius: 10px; padding: 15px; background: #fff; }}
+        .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 8px; }}
+        .t-title {{ text-align: center; font-size: 18px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 8px; margin: 10px 0; border-radius: 6px; }}
+        .t-table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }}
+        .t-table th {{ background-color: #1E3A8A; color: white; padding: 8px; border: 1px solid #334155; text-align: center; }}
+        .t-table td {{ border: 1px solid #cbd5e1; padding: 6px; text-align: center; }}
+        .tot-row {{ background-color: #f8fafc; font-weight: bold; font-size: 13px; }}
+        .net-summary {{ text-align: center; background: #ecfdf5; border: 2px solid #10b981; color: #047857; font-size: 16px; font-weight: bold; padding: 8px; border-radius: 6px; margin-top: 15px; }}
+        .sigs {{ margin-top: 35px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }}
+    </style></head><body>
+        <div class="t-box">
+            <div class="header-logo">
+                <div style="font-size:11px; font-weight:bold;">Five-M Company For Industry<br>C. R. : 1011145035</div>
+                <div style="font-size:40px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
+                <div style="font-size:11px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
+            </div>
+            <div class="v-title t-title">كشف حساب حركة الصندوق المقابل (T-Account) - {target_box_label}<br>عن الفترة: {period_label} | شهر ({month_name})</div>
+            <table class="t-table">
+                <thead>
+                    <tr>
+                        <th colspan="4" style="background:#047857;">🟢 المقبوضات</th>
+                        <th colspan="4" style="background:#b91c1c; border-right:2px solid #fff;">🔴 المصروفات</th>
+                    </tr>
+                    <tr>
+                        <th>رقم السند</th><th>البيان / الجهة</th><th>طريقة السداد</th><th>المبلغ</th>
+                        <th style="border-right:2px solid #1E3A8A;">رقم السند</th><th>البيان / الجهة</th><th>طريقة السداد</th><th>المبلغ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows_html}
+                    <tr class="tot-row">
+                        <td colspan="3" style="text-align:left;">إجمالي المقبوضات:</td>
+                        <td style="color:#047857;">{tot_rec:,.2f} ر.س</td>
+                        <td colspan="3" style="border-right:2px solid #1E3A8A; text-align:left;">إجمالي المصروفات:</td>
+                        <td style="color:#b91c1c;">{tot_pay:,.2f} ر.س</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="net-summary">
+                💵 صافي الرصيد المتبقي بالصندوق في نهاية الفترة: ({net_bal:,.2f} ريال سعودي)
+            </div>
+            <div class="sigs">
+                <div>توقيع أمين الصندوق / المحاسب: __________________</div>
+                <div>توقيع المراجع / المدير العام: __________________</div>
+            </div>
+        </div>
+    </body></html>
+    """
+
+@st.dialog("🖨️ معاينة وتنزيل كشف حساب الصندوق المقابل (T-Account)")
+def print_t_account_dialog(trans_list, month_name, period_label, target_box_label):
+    html_content = generate_t_account_html(trans_list, month_name, period_label, target_box_label)
+    st.components.v1.html(html_content, height=380, scrolling=True)
+    st.download_button(
+        label="📄 تنزيل كشف الحساب المقابل المباشر للطباعة (HTML / PDF)",
+        data=html_content.encode('utf-8'),
+        file_name=f"كشف_حساب_الصندوق_{month_name}.html",
+        mime="text/html",
+        use_container_width=True
+    )
+
+@st.dialog("✏️ تعديل عُهدة سائق")
+def edit_driver_custody_modal(item_idx):
+    drivers_db = load_drivers_data()
+    if item_idx < len(drivers_db):
+        curr_d = drivers_db[item_idx]
+        st.write(f"تعديل العُهدة رقم: **#{curr_d['id']} - السائق: {curr_d['driver']}**")
+        with st.form("edit_driver_custody_form"):
+            e_given = st.number_input("المبلغ المسلم للعُهدة (ر.س):", min_value=0.0, value=float(curr_d['given_amt']))
+            e_spent = st.number_input("المصروف بالفواتير (ر.س):", min_value=0.0, value=float(curr_d.get('spent_amt', 0.0)))
+            e_purpose = st.text_input("الغرض والبيان:", value=curr_d.get('purpose', ''))
+            e_status = st.selectbox("حالة العُهدة:", ["مفتوحة", "تمت التصفية"], index=0 if curr_d['status'] == "مفتوحة" else 1)
+            
+            sub_e_driver = st.form_submit_button("💾 حفظ التعديلات")
+            if sub_e_driver:
+                drivers_db[item_idx]['given_amt'] = e_given
+                drivers_db[item_idx]['spent_amt'] = e_spent
+                drivers_db[item_idx]['diff_amt'] = e_given - e_spent
+                drivers_db[item_idx]['purpose'] = e_purpose
+                drivers_db[item_idx]['status'] = e_status
+                save_drivers_data(drivers_db)
+                st.success("تم تعديل بيانات عُهدة السائق سحابياً بنجاح!")
+                st.rerun()
+
+@st.dialog("إضافة موظف جديد")
+def add_employee_dialog(default_branch):
+    st.write(f"إضافة موظف لفرع: **{default_branch}**")
+    with st.form("add_emp_modal_form"):
+        c1, c2 = st.columns(2)
+        with c1:
+            new_name = st.text_input("اسم الموظف الثلاثي:")
+            new_job = st.text_input("الوظيفة:", "عامل")
+            new_branch = st.selectbox("الفرع:", ['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'], index=['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'].index(default_branch))
+        with c2:
+            new_sal = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=2500.0)
+            new_start = st.date_input("تاريخ بداية العمل:", datetime(2024, 1, 1))
+            new_iq = st.date_input("تاريخ انتهاء الإقامة:", datetime(2027, 12, 31))
+            new_ct = st.date_input("تاريخ انتهاء العقد:", datetime(2027, 12, 31))
+            
+        sub_btn = st.form_submit_button("حفظ وإضافة الموظف")
+        if sub_btn:
+            if new_name:
+                max_id = st.session_state.payroll_df['م'].max() + 1 if not st.session_state.payroll_df.empty else 1
+                new_dict = {
+                    'م': max_id,
+                    'الاسم': new_name,
+                    'الوظيفة': new_job,
+                    'الراتب الأساسي': new_sal,
+                    'الفرع': new_branch,
+                    'تاريخ بداية العمل': str(new_start),
+                    'تاريخ انتهاء الإقامة': str(new_iq),
+                    'تاريخ انتهاء العقد': str(new_ct),
+                    'الخصومات': 0.0,
+                    'الدفعة 1': new_sal / 2.0,
+                    'الدفعة 2': new_sal / 2.0,
+                    'الدفعة المدفوعة': new_sal,
+                    'المتبقي': 0.0,
+                    'نوع الإجراء': 'صرف كامل',
+                    'الملاحظات': ''
+                }
+                st.session_state.payroll_df = pd.concat([st.session_state.payroll_df, pd.DataFrame([new_dict])], ignore_index=True)
+                save_payroll_for_month(st.session_state.payroll_df, st.session_state.current_active_month)
+                st.success(f"تمت إضافة ({new_name}) بنجاح!")
+                st.rerun()
+
+@st.dialog("تعديل ملف الموظف")
+def edit_employee_dialog(emp_idx, month_selected):
+    emp_data = st.session_state.payroll_df.loc[emp_idx]
+    st.write(f"تعديل الموظف: **{emp_data['الاسم']}** (كود: #{emp_data['م']})")
+    
+    with st.form(f'edit_modal_{emp_data["م"]}'):
+        col_e1, col_e2, col_e3 = st.columns(3)
+        with col_e1:
+            st.markdown("### البيانات الإدارية")
+            up_name = st.text_input("اسم الموظف الثلاثي:", value=emp_data['الاسم'])
+            up_job = st.text_input("الوظيفة:", value=emp_data['الوظيفة'])
+            up_branch = st.selectbox("الفرع التابع له:", [
+                'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'
+            ], index=['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'].index(emp_data['الفرع']))
+            
+        with col_e2:
+            st.markdown("### المالية (" + month_selected + ")")
+            up_salary = st.number_input("الراتب الأساسي (ر.س):", min_value=0.0, value=float(emp_data['الراتب الأساسي']))
+            up_pay1 = st.number_input("الدفعة 1 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 1', 0)))
+            up_pay2 = st.number_input("الدفعة 2 (ر.س):", min_value=0.0, value=float(emp_data.get('الدفعة 2', 0)))
+            up_ded = st.number_input("الخصومات (ر.س):", min_value=0.0, value=float(emp_data.get('الخصومات', 0)))
+            up_action = st.selectbox("نوع الإجراء:", ["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"], index=["صرف كامل", "خصم غياب", "جزاء إداري", "حوافز وأداء", "سداد سلفة", "لم يُصرف"].index(emp_data['نوع الإجراء']))
+            up_notes = st.text_input("الملاحظات:", value=emp_data['الملاحظات'])
+            
+        with col_e3:
+            st.markdown("### التواريخ والوثائق")
+            st_val = datetime.strptime(str(emp_data.get('تاريخ بداية العمل', '2024-01-01')), '%Y-%m-%d')
+            iq_val = datetime.strptime(str(emp_data['تاريخ انتهاء الإقامة']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء الإقامة']) and emp_data['تاريخ انتهاء الإقامة'] != '13/04/1450' else datetime(2027, 12, 31)
+            ct_val = datetime.strptime(str(emp_data['تاريخ انتهاء العقد']), '%Y-%m-%d') if pd.notnull(emp_data['تاريخ انتهاء العقد']) and emp_data['تاريخ انتهاء العقد'] != '18/0/2027' else datetime(2027, 12, 31)
+            
+            up_start_date = st.date_input("تاريخ بداية العمل:", st_val)
+            up_iqama_date = st.date_input("تاريخ انتهاء الإقامة:", iq_val)
+            up_contract_date = st.date_input("تاريخ انتهاء العقد:", ct_val)
+            
+        st.divider()
+        save_btn = st.form_submit_button('حفظ وتحديث البيانات')
+        
+        if save_btn:
+            tot_paid_emp = up_pay1 + up_pay2
+            st.session_state.payroll_df.loc[emp_idx, 'الاسم'] = up_name
+            st.session_state.payroll_df.loc[emp_idx, 'الوظيفة'] = up_job
+            st.session_state.payroll_df.loc[emp_idx, 'الفرع'] = up_branch
+            st.session_state.payroll_df.loc[emp_idx, 'الراتب الأساسي'] = up_salary
+            st.session_state.payroll_df.loc[emp_idx, 'الخصومات'] = up_ded
+            st.session_state.payroll_df.loc[emp_idx, 'الدفعة 1'] = up_pay1
+            st.session_state.payroll_df.loc[emp_idx, 'الدفعة 2'] = up_pay2
+            st.session_state.payroll_df.loc[emp_idx, 'الدفعة المدفوعة'] = tot_paid_emp
+            st.session_state.payroll_df.loc[emp_idx, 'المتبقي'] = up_salary - (tot_paid_emp + up_ded)
+            st.session_state.payroll_df.loc[emp_idx, 'نوع الإجراء'] = up_action
+            st.session_state.payroll_df.loc[emp_idx, 'الملاحظات'] = up_notes
+            st.session_state.payroll_df.loc[emp_idx, 'تاريخ بداية العمل'] = str(up_start_date)
+            st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء الإقامة'] = str(up_iqama_date)
+            st.session_state.payroll_df.loc[emp_idx, 'تاريخ انتهاء العقد'] = str(up_contract_date)
+            
+            save_payroll_for_month(st.session_state.payroll_df, month_selected)
+            st.success("تم الحفظ بنجاح!")
+            st.rerun()
+
+    with st.expander(f"حذف الموظف ({emp_data['الاسم']})"):
+        if st.button(f"تأكيد الحذف النهائياً", key=f"del_modal_{emp_data['م']}"):
+            st.session_state.payroll_df = st.session_state.payroll_df.drop(emp_idx).reset_index(drop=True)
+            save_payroll_for_month(st.session_state.payroll_df, month_selected)
+            st.success("تم الحذف!")
+            st.rerun()
+
+# 2. الشاشة الافتتاحية الملكية بكلمة المرور المشددة
 if not st.session_state.get('app_started', False):
     st.markdown("""
         <div class="welcome-card-lux">
@@ -804,10 +1108,12 @@ else:
 
         st.divider()
 
+        # 1. زر الرئيسية المباشر الخارجي المميز
         if st.button("🏠 الرئيسية", use_container_width=True):
             st.session_state['current_view'] = 'الرئيسية'
             st.rerun()
 
+        # 2. قسم الخزائن والصناديق
         st.markdown('<div class="sidebar-section-title">🏦 الخزائن والصناديق</div>', unsafe_allow_html=True)
         if st.button("حركة الصندوق", use_container_width=True):
             st.session_state['current_view'] = 'حركة الصندوق'
@@ -819,6 +1125,7 @@ else:
             st.session_state['current_view'] = 'جرد الخزينة'
             st.rerun()
 
+        # 3. قسم إدارة الرواتب والدفعات
         if st.session_state.user_role == "admin":
             st.markdown('<div class="sidebar-section-title">📊 إدارة الرواتب والدفعات</div>', unsafe_allow_html=True)
             if st.button("إدخال الدفعات", use_container_width=True):
@@ -827,10 +1134,29 @@ else:
             if st.button("كشف مسير الرواتب", use_container_width=True):
                 st.session_state['current_view'] = 'مسير الرواتب'
                 st.rerun()
+            if st.button("🖨️ طباعة سندات الرواتب A4", use_container_width=True):
+                st.session_state['current_view'] = 'طباعة السندات'
+                st.rerun()
 
-            st.markdown('<div class="sidebar-section-title">🏛️ الزكاة والضريبة (ZATCA)</div>', unsafe_allow_html=True)
-            if st.button("🏛️ تقرير القيمة المضافة", use_container_width=True):
-                st.session_state['current_view'] = 'تقرير القيمة المضافة'
+            # 4. قسم الموارد البشرية HR
+            st.markdown('<div class="sidebar-section-title">👤 الموارد البشرية (HR)</div>', unsafe_allow_html=True)
+            if st.button("دليل الموظفين", use_container_width=True):
+                st.session_state['current_view'] = 'دليل الموظفين'
+                st.rerun()
+            if st.button("حاسبة نهاية الخدمة", use_container_width=True):
+                st.session_state['current_view'] = 'حاسبة الخدمة'
+                st.rerun()
+            if st.button("التنبيهات الإدارية", use_container_width=True):
+                st.session_state['current_view'] = 'التنبيهات'
+                st.rerun()
+
+            # 5. قسم النظام والأرشيف
+            st.markdown('<div class="sidebar-section-title">⚙️ أدوات النظام والأرشيف</div>', unsafe_allow_html=True)
+            if st.button("النسخ الاحتياطي", use_container_width=True):
+                st.session_state['current_view'] = 'النسخ الاحتياطي'
+                st.rerun()
+            if st.button("الإغلاق السنوي", use_container_width=True):
+                st.session_state['current_view'] = 'الإغلاق السنوي'
                 st.rerun()
 
         st.divider()
@@ -846,10 +1172,20 @@ else:
     st.session_state.payroll_df = get_payroll_for_month(month_selected)
     st.session_state.current_active_month = month_selected
 
+    tot_emp = len(st.session_state.payroll_df)
+    tot_req = st.session_state.payroll_df['الراتب الأساسي'].sum()
+    tot_p1_all = st.session_state.payroll_df['الدفعة 1'].sum()
+    tot_p2_all = st.session_state.payroll_df['الدفعة 2'].sum()
+    tot_ded_all = st.session_state.payroll_df['الخصومات'].sum()
+    tot_paid = st.session_state.payroll_df['الدفعة المدفوعة'].sum()
+    tot_rem = st.session_state.payroll_df['المتبقي'].sum()
+
     now_dt = datetime.now()
     days_ar = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"]
     months_ar = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
-    date_formatted = f"📅 {days_ar[(now_dt.weekday() + 1) % 7]}، {now_dt.day} {months_ar[now_dt.month - 1]} {now_dt.year}"
+    
+    day_name = days_ar[(now_dt.weekday() + 1) % 7]
+    date_formatted = f"📅 {day_name}، {now_dt.day} {months_ar[now_dt.month - 1]} {now_dt.year}"
 
     st.markdown(f"""
         <div class="company-header-inner">
@@ -862,257 +1198,1159 @@ else:
         </div>
     """, unsafe_allow_html=True)
 
-    if selected_option == 'الرئيسية':
-        st.subheader("🏠 الصفحة الرئيسية")
-        st.info("مرحباً بك في نظام 5M المحاسبي.")
-
-    # 🏛️ موديول ضريبة القيمة المضافة المطور والمحصن لقراءة شيتات الوعلان
-    elif selected_option == 'تقرير القيمة المضافة' and st.session_state.user_role == "admin":
-        st.subheader('🏛️ موديول إقرار ضريبة القيمة المضافة الربع سنوي (ZATCA)')
-        st.write('قم برفع شيتات الإكسيل المستخرجة من ERP الوعلان لكل فرع وسيقوم النظام بتجميعها فورياً[cite: 1]:')
-
-        v_top1, v_top2 = st.columns(2)
-        with v_top1:
-            vat_quarter = st.selectbox("اختر الربع المالي للإقرار:", ["الربع الأول (يناير - مارس)", "الربع الثاني (أبريل - يونيو)", "الربع الثالث (يوليو - سبتمبر)", "الربع الرابع (أكتوبر - ديسمبر)"], index=1)
-        with v_top2:
-            prev_carried_vat = st.number_input("ضريبة القيمة المضافة المترحلة من الفترة/الفترات السابقة (ر.س):", min_value=0.0, value=0.0, step=1000.0)
-
-        st.divider()
-        st.markdown("### 📥 1. رفع ملفات الفروع والمشتريات (Excel/CSV):")
-
-        v_col1, v_col2, v_col3 = st.columns(3)
-        
-        with v_col1:
-            st.markdown("#### 🏢 مبيعات ومرتجعات الرياض:")
-            file_sales_ry = st.file_uploader("شيت مبيعات فرع الرياض:", type=['xlsx', 'xls', 'csv'], key="vat_ry_sales_file")
-            if file_sales_ry is not None:
-                st.session_state['ry_s_res'] = process_vat_file(file_sales_ry)
-                st.success(f"✅ تم القراءة: مبيعات الرياض ({st.session_state['ry_s_res'][0]:,.2f} ر.س)")
-
-            file_ret_ry = st.file_uploader("شيت مرتجعات فرع الرياض:", type=['xlsx', 'xls', 'csv'], key="vat_ry_ret_file")
-            if file_ret_ry is not None:
-                st.session_state['ry_r_res'] = process_vat_file(file_ret_ry)
-                st.warning(f"✅ تم القراءة: مرتجعات الرياض ({st.session_state['ry_r_res'][0]:,.2f} ر.س)")
-
-        with v_col2:
-            st.markdown("#### 🌊 مبيعات ومرتجعات جدة:")
-            file_sales_jd = st.file_uploader("شيت مبيعات فرع جدة:", type=['xlsx', 'xls', 'csv'], key="vat_jd_sales_file")
-            if file_sales_jd is not None:
-                st.session_state['jd_s_res'] = process_vat_file(file_sales_jd)
-                st.success(f"✅ تم القراءة: مبيعات جدة ({st.session_state['jd_s_res'][0]:,.2f} ر.س)")
-
-            file_ret_jd = st.file_uploader("شيت مرتجعات فرع جدة:", type=['xlsx', 'xls', 'csv'], key="vat_jd_ret_file")
-            if file_ret_jd is not None:
-                st.session_state['jd_r_res'] = process_vat_file(file_ret_jd)
-                st.warning(f"✅ تم القراءة: مرتجعات جدة ({st.session_state['jd_r_res'][0]:,.2f} ر.س)")
-
-        with v_col3:
-            st.markdown("#### 📦 المشتريات والمدخلات:")
-            file_purch = st.file_uploader("شيت المشتريات العامة:", type=['xlsx', 'xls', 'csv'], key="vat_purch_file")
-            if file_purch is not None:
-                st.session_state['p_s_res'] = process_vat_file(file_purch)
-                st.info(f"✅ تم القراءة: المشتريات العامة ({st.session_state['p_s_res'][0]:,.2f} ر.س)")
-
-            file_purch_ret = st.file_uploader("شيت مرتجعات المشتريات (اختياري):", type=['xlsx', 'xls', 'csv'], key="vat_purch_ret_file")
-            if file_purch_ret is not None:
-                st.session_state['p_r_res'] = process_vat_file(file_purch_ret)
-
-        # استرجاع المبالغ المحسوبة فوراً
-        ry_s_net, ry_s_vat, ry_s_tot = st.session_state.get('ry_s_res', (0.0, 0.0, 0.0))
-        ry_r_net, ry_r_vat, ry_r_tot = st.session_state.get('ry_r_res', (0.0, 0.0, 0.0))
-
-        jd_s_net, jd_s_vat, jd_s_tot = st.session_state.get('jd_s_res', (0.0, 0.0, 0.0))
-        jd_r_net, jd_r_vat, jd_r_tot = st.session_state.get('jd_r_res', (0.0, 0.0, 0.0))
-
-        p_s_net, p_s_vat, p_s_tot = st.session_state.get('p_s_res', (0.0, 0.0, 0.0))
-        p_r_net, p_r_vat, p_r_tot = st.session_state.get('p_r_res', (0.0, 0.0, 0.0))
-
-        total_sales_net = ry_s_net + jd_s_net
-        total_sales_vat = ry_s_vat + jd_s_vat
-
-        total_sales_ret_net = ry_r_net + jd_r_net
-        total_sales_ret_vat = ry_r_vat + jd_r_vat
-
-        total_purch_net = p_s_net
-        total_purch_vat = p_s_vat
-
-        total_purch_ret_net = p_r_net
-        total_purch_ret_vat = p_r_vat
-
-        net_output_vat = total_sales_vat - total_sales_ret_vat
-        net_input_vat = total_purch_vat - total_purch_ret_vat
-        net_vat_payable = (net_output_vat - net_input_vat) - prev_carried_vat
-
-        st.divider()
-        st.markdown(f"### 📋 2. نموذج الإقرار الضريبي المعمد المطابق لهيئة الزكاة والضريبة والجمارك (ZATCA) - {vat_quarter}[cite: 1]:")
-
-        m_v1, m_v2, m_v3 = st.columns(3)
-        m_v1.metric("إجمالي ضريبة المبيعات (المخرجات)", f"{net_output_vat:,.2f} ر.س")
-        m_v2.metric("إجمالي ضريبة المشتريات (المدخلات)", f"{net_input_vat:,.2f} ر.س")
-        
-        if net_vat_payable >= 0:
-            m_v3.metric("🔴 صافي الضريبة المستحقة للسداد", f"{net_vat_payable:,.2f} ر.س")
-        else:
-            m_v3.metric("🟢 صافي الضريبة المستحقة للاسترداد", f"{abs(net_vat_payable):,.2f} ر.س")
-
-        zatca_official_html = f"""
-        <table class="zatca-table">
-            <thead>
-                <tr>
-                    <th style="width: 50%;">البند / الوصف الرسمي[cite: 1]</th>
-                    <th style="width: 25%;">المبلغ (بين ريال)[cite: 1]</th>
-                    <th style="width: 25%;">مبلغ ضريبة القيمة المضافة (ريال)[cite: 1]</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr><td colspan="3" class="zatca-section-header">ضريبة القيمة المضافة على المبيعات (المخرجات)[cite: 1]</td></tr>
-                <tr>
-                    <td style="text-align:right;">1. المبيعات الخاضعة للنسبة الأساسية (15%)[cite: 1]</td>
-                    <td>{total_sales_net:,.2f}</td>
-                    <td style="color:#10B981; font-weight:bold;">{total_sales_vat:,.2f}</td>
-                </tr>
-                <tr>
-                    <td style="text-align:right;">- تعديلات ومرتجعات المبيعات الخاضعة للنسبة الأساسية[cite: 1]</td>
-                    <td>({total_sales_ret_net:,.2f})</td>
-                    <td style="color:#EF4444; font-weight:bold;">({total_sales_ret_vat:,.2f})</td>
-                </tr>
-                <tr>
-                    <td style="text-align:right;">2. المبيعات التي تتحمل الدولة ضريبتها[cite: 1]</td>
-                    <td>0.00</td>
-                    <td>0.00</td>
-                </tr>
-                <tr>
-                    <td style="text-align:right;">3. المبيعات المحلية الخاضعة للنسبة الصفرية[cite: 1]</td>
-                    <td>0.00</td>
-                    <td>0.00</td>
-                </tr>
-                <tr>
-                    <td style="text-align:right;">4. الصادرات[cite: 1]</td>
-                    <td>0.00</td>
-                    <td>0.00</td>
-                </tr>
-                <tr>
-                    <td style="text-align:right;">5. المبيعات المعفاة من الضريبة[cite: 1]</td>
-                    <td>0.00</td>
-                    <td>0.00</td>
-                </tr>
-                <tr class="zatca-total-row">
-                    <td style="text-align:right;">6. إجمالي المبيعات وصافي ضريبة المخرجات[cite: 1]</td>
-                    <td>{(total_sales_net - total_sales_ret_net):,.2f}</td>
-                    <td style="color:#F59E0B; font-size:15px;">{net_output_vat:,.2f}</td>
-                </tr>
-                <tr><td colspan="3" class="zatca-section-header">ضريبة القيمة المضافة على المشتريات (المدخلات)[cite: 1]</td></tr>
-                <tr>
-                    <td style="text-align:right;">7. المشتريات الخاضعة للنسبة الأساسية (15%)[cite: 1]</td>
-                    <td>{total_purch_net:,.2f}</td>
-                    <td style="color:#10B981; font-weight:bold;">{total_purch_vat:,.2f}</td>
-                </tr>
-                <tr>
-                    <td style="text-align:right;">- تعديلات ومرتجعات المشتريات الخاضعة للنسبة الأساسية[cite: 1]</td>
-                    <td>({total_purch_ret_net:,.2f})</td>
-                    <td style="color:#EF4444; font-weight:bold;">({total_purch_ret_vat:,.2f})</td>
-                </tr>
-                <tr>
-                    <td style="text-align:right;">8. الاستيرادات الخاضعة لضريبة القيمة المضافة بالنسبة الأساسية[cite: 1]</td>
-                    <td>0.00</td>
-                    <td>0.00</td>
-                </tr>
-                <tr>
-                    <td style="text-align:right;">9. التوريدات الخاضعة لضريبة القيمة المضافة التي تطبق عليها الاحتساب العكسي[cite: 1]</td>
-                    <td>0.00</td>
-                    <td>0.00</td>
-                </tr>
-                <tr>
-                    <td style="text-align:right;">10. المشتريات الخاضعة للنسبة الصفرية[cite: 1]</td>
-                    <td>0.00</td>
-                    <td>0.00</td>
-                </tr>
-                <tr>
-                    <td style="text-align:right;">11. مشتريات معفاة من الضريبة[cite: 1]</td>
-                    <td>0.00</td>
-                    <td>0.00</td>
-                </tr>
-                <tr class="zatca-total-row">
-                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات[cite: 1]</td>
-                    <td>{(total_purch_net - total_purch_ret_net):,.2f}</td>
-                    <td style="color:#F59E0B; font-size:15px;">{net_input_vat:,.2f}</td>
-                </tr>
-                <tr class="zatca-total-row">
-                    <td style="text-align:right;">13. إجمالي ضريبة القيمة المضافة المستحقة للفترة الحالية[cite: 1]</td>
-                    <td colspan="2" style="font-size:15px;">{(net_output_vat - net_input_vat):,.2f} ريال سعودي</td>
-                </tr>
-                <tr>
-                    <td style="text-align:right;">14. تصحيحات من الفترات السابقة[cite: 1]</td>
-                    <td colspan="2">0.00</td>
-                </tr>
-                <tr>
-                    <td style="text-align:right;">15. ضريبة القيمة المضافة التي تم ترحيلها من الفترة / الفترات السابقة[cite: 1]</td>
-                    <td colspan="2">({prev_carried_vat:,.2f})</td>
-                </tr>
-                <tr class="zatca-final-row">
-                    <td style="text-align:right;">16. صافي الضريبة المستحق (أو المستعادة)[cite: 1]</td>
-                    <td colspan="2" style="font-size:18px;">{net_vat_payable:,.2f} ريال سعودي</td>
-                </tr>
-            </tbody>
-        </table>
+    def generate_pretty_html_pdf(df_subset, branch_name, payment_type="جميع الدفعات"):
+        output = io.BytesIO()
+        html = f"""
+        <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+        <style>
+            @page {{ size: A4 portrait; margin: 8mm; }}
+            body {{ font-family: Arial, sans-serif; background-color: #fff; margin: 0; }}
+            .page {{ height: 275mm; page-break-after: always; display: flex; flex-direction: column; justify-content: space-between; }}
+            .voucher-box {{ border: 2px solid #1E3A8A; border-radius: 8px; padding: 12px 18px; height: 128mm; box-sizing: border-box; }}
+            .header-logo-container {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 6px; }}
+            .header-en {{ text-align: left; font-size: 11px; color: #1E3A8A; font-weight: bold; width: 38%; }}
+            .header-logo {{ text-align: center; width: 24%; font-size: 38px; font-weight: 900; color: #DC2626; }}
+            .header-ar {{ text-align: right; font-size: 12px; color: #1E3A8A; font-weight: bold; width: 38%; }}
+            .voucher-title {{ text-align: center; font-size: 15px; font-weight: bold; color: #1E3A8A; margin: 6px 0; background: #f1f5f9; padding: 5px; }}
+            .info-table {{ width: 100%; border-collapse: collapse; margin-top: 8px; }}
+            .info-table td, .info-table th {{ padding: 8px; font-size: 13px; border: 1px solid #cbd5e1; text-align: right; }}
+            .info-table th {{ background-color: #f8fafc; color: #1E3A8A; }}
+            .amount-box {{ background-color: #ecfdf5; border: 2px solid #10b981; color: #047857; font-size: 16px; font-weight: bold; text-align: center; padding: 4px; border-radius: 4px; }}
+            .signatures {{ margin-top: 20px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }}
+            .cut-line {{ border-top: 2px dashed #94a3b8; text-align: center; margin: 4mm 0; }}
+        </style></head><body>
         """
-        st.markdown(zatca_official_html, unsafe_allow_html=True)
+        rows = [row for _, row in df_subset.iterrows()]
+        for i in range(0, len(rows), 2):
+            html += '<div class="page">'
+            v1 = rows[i]
+            
+            if payment_type == "الدفعة الأولى فقط":
+                amt_str = f"{v1.get('الدفعة 1', 0):,.0f} ر.س"
+                rem_str = f"{(v1['الراتب الأساسي'] - v1.get('الدفعة 1', 0)):,.0f} ر.س"
+                note_str = f"سداد الدفعة الأولى من راتب شهر ({month_selected})"
+            elif payment_type == "الدفعة الثانية فقط":
+                amt_str = f"{v1.get('الدفعة 2', 0):,.0f} ر.س"
+                rem_str = f"{(v1['الراتب الأساسي'] - (v1.get('الدفعة 1', 0) + v1.get('الدفعة 2', 0))):,.0f} ر.س"
+                note_str = f"سداد الدفعة الثانية والنهائية من راتب شهر ({month_selected})"
+            else:
+                amt_str = f"{v1['الدفعة المدفوعة']:,.0f} ر.س"
+                rem_str = f"{v1['المتبقي']:,.0f} ر.س"
+                note_str = f"سداد إجمالي دفعات راتب شهر ({month_selected})"
+
+            html += f"""
+            <div class="voucher-box">
+                <div class="header-logo-container">
+                    <div class="header-en">Five-M Company For Industry<br>C. R. : 1011145035</div>
+                    <div class="header-logo">5M</div>
+                    <div class="header-ar">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
+                </div>
+                <div class="voucher-title">سند صرف {payment_type} - شهر ({month_selected}) | رقم السند: #{v1['م']:03d}</div>
+                <table class="info-table">
+                    <tr><th>اسم الموظف</th><td><strong>{v1['الاسم']}</strong></td><th>الفرع المحدد</th><td><strong>{v1['الفرع']}</strong></td></tr>
+                    <tr><th>الراتب الأساسي</th><td>{v1['الراتب الأساسي']:,.0f} ر.س</td><th>تفاصيل الدفعات المسجلة</th><td>دفعة (1): {v1['الدفعة 1']:,.0f} ر.س | دفعة (2): {v1['الدفعة 2']:,.0f} ر.س</td></tr>
+                    <tr><th>المبلغ المصروف بهذا السند</th><td><div class="amount-box">{amt_str}</div></td><th>المتبقي بالرصيد</th><td style="color:red; font-weight:bold;">{rem_str}</td></tr>
+                    <tr><th>البيان والملاحظات</th><td colspan="3">{note_str}</td></tr>
+                </table>
+                <div class="signatures"><div>توقيع واستلام الموظف: __________________</div><div>اعتماد المحاسب / الإدارة: __________________</div></div>
+            </div>
+            """
+            if i + 1 < len(rows):
+                v2 = rows[i + 1]
+                if payment_type == "الدفعة الأولى فقط":
+                    amt_str2 = f"{v2.get('الدفعة 1', 0):,.0f} ر.س"
+                    rem_str2 = f"{(v2['الراتب الأساسي'] - v2.get('الدفعة 1', 0)):,.0f} ر.س"
+                    note_str2 = f"سداد الدفعة الأولى من راتب شهر ({month_selected})"
+                elif payment_type == "الدفعة الثانية فقط":
+                    amt_str2 = f"{v2.get('الدفعة 2', 0):,.0f} ر.س"
+                    rem_str2 = f"{(v2['الراتب الأساسي'] - (v2.get('الدفعة 1', 0) + v2.get('الدفعة 2', 0))):,.0f} ر.س"
+                    note_str2 = f"سداد الدفعة الثانية والنهائية من راتب شهر ({month_selected})"
+                else:
+                    amt_str2 = f"{v2['الدفعة المدفوعة']:,.0f} ر.س"
+                    rem_str2 = f"{v2['المتبقي']:,.0f} ر.س"
+                    note_str2 = f"سداد إجمالي دفعات راتب شهر ({month_selected})"
+
+                html += '<div class="cut-line"><span>✂️ خط القص المخصص بين السندين ✂️</span></div>'
+                html += f"""
+                <div class="voucher-box">
+                    <div class="header-logo-container">
+                        <div class="header-en">Five-M Company For Industry<br>C. R. : 1011145035</div>
+                        <div class="header-logo">5M</div>
+                        <div class="header-ar">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
+                    </div>
+                    <div class="voucher-title">سند صرف {payment_type} - شهر ({month_selected}) | رقم السند: #{v2['م']:03d}</div>
+                    <table class="info-table">
+                        <tr><th>اسم الموظف</th><td><strong>{v2['الاسم']}</strong></td><th>الفرع المحدد</th><td><strong>{v2['الفرع']}</strong></td></tr>
+                        <tr><th>الراتب الأساسي</th><td>{v2['الراتب الأساسي']:,.0f} ر.س</td><th>تفاصيل الدفعات المسجلة</th><td>دفعة (1): {v2['الدفعة 1']:,.0f} ر.س | دفعة (2): {v2['الدفعة 2']:,.0f} ر.س</td></tr>
+                        <tr><th>المبلغ المصروف بهذا السند</th><td><div class="amount-box">{amt_str2}</div></td><th>المتبقي بالرصيد</th><td style="color:red; font-weight:bold;">{rem_str2}</td></tr>
+                        <tr><th>البيان والملاحظات</th><td colspan="3">{note_str2}</td></tr>
+                    </table>
+                    <div class="signatures"><div>توقيع واستلام الموظف: __________________</div><div>اعتماد المحاسب / الإدارة: __________________</div></div>
+                </div>
+                """
+            html += '</div>'
+        html += "</body></html>"
+        output.write(html.encode('utf-8'))
+        output.seek(0)
+        return output
+
+    # 4. الواجهة الرئيسية
+    if selected_option == 'الرئيسية':
+        all_cash_db = load_cash_data()
+        current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
+        
+        curr_trans_main = current_m_cash.get('transactions', [])
+        tot_in_main = sum(t['amount'] for t in curr_trans_main if 'قبض' in t['type'])
+        tot_out_main = sum(t['amount'] for t in curr_trans_main if 'صرف' in t['type'])
+        net_main_now = current_m_cash.get('opening', 0.0) + tot_in_main - tot_out_main
+
+        curr_trans_acc = current_m_cash.get('acc_transactions', [])
+        tot_in_acc = sum(t['amount'] for t in curr_trans_acc if 'قبض' in t['type'])
+        tot_out_acc = sum(t['amount'] for t in curr_trans_acc if 'صرف' in t['type'])
+        net_acc_now = current_m_cash.get('acc_opening', 0.0) + tot_in_acc - tot_out_acc
+
+        total_company_cash = net_main_now + net_acc_now
+
+        drivers_db = load_drivers_data()
+        tot_given_drivers = sum(d['given_amt'] for d in drivers_db)
+        tot_spent_drivers = sum(d['spent_amt'] for d in drivers_db)
+        open_driver_custody_sum = max(0.0, tot_given_drivers - tot_spent_drivers)
+
+        audit_history = load_audit_data()
+        last_audit = audit_history[-1] if audit_history else None
+
+        st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
+        
+        if st.session_state.user_role == "admin":
+            c_box1, c_box2, c_box3, c_box4 = st.columns(4)
+            with c_box1:
+                st.markdown("#### الخزينة الرئيسية (wahby):")
+                st.metric("رصيد الخزينة الرئيسية", f"{net_main_now:,.2f} ر.س")
+            with c_box2:
+                st.markdown("#### عُهدة المحاسب (omar):")
+                st.metric("رصيد عُهدة omar", f"{net_acc_now:,.2f} ر.س")
+            with c_box3:
+                st.markdown("#### 🚚 عُهد السائقين المترصدة:")
+                st.metric("إجمالي المتبقي باليد", f"{open_driver_custody_sum:,.2f} ر.س")
+            with c_box4:
+                st.markdown("#### 💳 إجمالي نقدية الشركة:")
+                st.metric("مجموع الصناديق", f"{total_company_cash:,.2f} ر.س")
+
+            if last_audit:
+                a_diff = last_audit['diff']
+                diff_tag = "🟢 مطابقة تامة" if a_diff == 0 else (f"🔴 عجز بقيمة ({abs(a_diff):,.2f} ر.س)" if a_diff < 0 else f"🔵 زيادة بقيمة ({a_diff:,.2f} ر.س)")
+                st.info(f"🔍 **آخر جرد معتمد للصندوق ({last_audit['box_name']}):** بتاريخ **{last_audit['date']}** | حالة الجرد: **{diff_tag}** | ملاحظات: {last_audit.get('notes', 'لا يوجد')}")
+
+            st.markdown("### مؤشرات الرواتب والعمالة")
+            st_col1, st_col2, st_col3, st_col4, st_col5, st_col6 = st.columns(6)
+            st_col1.metric("العمالة", f"{tot_emp} موظف")
+            st_col2.metric("الرواتب", f"{tot_req:,.0f} ر.س")
+            st_col3.metric("الدفعة 1", f"{tot_p1_all:,.0f} ر.س")
+            st_col4.metric("الدفعة 2", f"{tot_p2_all:,.0f} ر.س")
+            st_col5.metric("الخصومات", f"{tot_ded_all:,.0f} ر.س")
+            st_col6.metric("المتبقي", f"{tot_rem:,.0f} ر.س")
+
+            st.markdown("### ⚡ إجراءات خاطفة وسريعة (لوحة wahby)")
+            q_col1, q_col2, q_col3, q_col4, q_col5, q_col6, q_col7 = st.columns(7)
+            
+            with q_col1:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
+                if st.button("👤 إضافة موظف", key="q_btn_add_emp", use_container_width=True):
+                    add_employee_dialog('مصنع ميم الخماسية الخرج')
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            with q_col2:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
+                if st.button("🔄 تحويل عُهدة", key="q_btn_trf_cash", use_container_width=True):
+                    quick_cash_voucher_dialog("تحويل عُهدة إلى (omar)", month_selected, "main")
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            with q_col3:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
+                if st.button("🟢 سند قبض", key="q_btn_rec", use_container_width=True):
+                    quick_cash_voucher_dialog("قبض", month_selected, "main")
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            with q_col4:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
+                if st.button("🔴 سند صرف", key="q_btn_pay", use_container_width=True):
+                    quick_cash_voucher_dialog("صرف", month_selected, "main")
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            with q_col5:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
+                if st.button("🚚 السائقين", key="q_btn_driver_page", use_container_width=True):
+                    st.session_state['current_view'] = 'عُهدة السواقين'
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            with q_col6:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
+                if st.button("🔍 الجرد", key="q_btn_audit_page", use_container_width=True):
+                    st.session_state['current_view'] = 'جرد الخزينة'
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            with q_col7:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
+                if st.button("💾 الأرشيف", key="q_btn_backup_page", use_container_width=True):
+                    st.session_state['current_view'] = 'النسخ الاحتياطي'
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+
+        else:
+            c_box1, c_box2 = st.columns(2)
+            with c_box1:
+                st.markdown("#### عُهدتك الحالية (omar):")
+                st.metric("الرصيد المتبقي بعُهدتك", f"{net_acc_now:,.2f} ر.س")
+            with c_box2:
+                st.markdown("#### 🚚 عُهد السائقين المترصدة:")
+                st.metric("إجمالي المتبقي باليد", f"{open_driver_custody_sum:,.2f} ر.س")
+
+            st.markdown("### ⚡ إجراءات خاطفة وسريعة (لوحة omar)")
+            q_col1, q_col2, q_col3, q_col4 = st.columns(4)
+            with q_col1:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
+                if st.button("🟢 سند قبض", use_container_width=True, key="q_btn_rec_acc"):
+                    quick_cash_voucher_dialog("قبض", month_selected, "accountant")
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            with q_col2:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
+                if st.button("🔴 سند صرف", use_container_width=True, key="q_btn_pay_acc"):
+                    quick_cash_voucher_dialog("صرف", month_selected, "accountant")
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            with q_col3:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
+                if st.button("🚚 تصفية السائقين", use_container_width=True, key="q_btn_driver_page_acc"):
+                    st.session_state['current_view'] = 'عُهدة السواقين'
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            with q_col4:
+                st.markdown('<div class="daftra-btn-container">', unsafe_allow_html=True)
+                if st.button("🔍 جرد الخزينة", use_container_width=True, key="q_btn_audit_acc"):
+                    st.session_state['current_view'] = 'جرد الخزينة'
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
+
+    # 5. موديول عُهدة السواقين
+    elif selected_option == 'عُهدة السواقين':
+        st.subheader(f'🚚 موديول إدارة عُهدة السواقين المباشر - ({month_selected})')
+        st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والتسميع التراكمي المباشر بصندوق omar:')
+
+        drivers_db = load_drivers_data()
+        driver_selected = "سمان السواق"
+
+        tot_given_drivers = sum(d['given_amt'] for d in drivers_db)
+        tot_spent_drivers = sum(d['spent_amt'] for d in drivers_db)
+        open_driver_custody_sum = max(0.0, tot_given_drivers - tot_spent_drivers)
+
+        sc1, sc2, sc3 = st.columns(3)
+        sc1.metric("إجمالي العُهد المسلمة لـ سمان السواق", f"{tot_given_drivers:,.2f} ر.س")
+        sc2.metric("إجمالي المصروفات المصفاة بالفواتير", f"{tot_spent_drivers:,.2f} ر.س")
+        sc3.metric("🔴 المتبقي بذمته فعلياً للآن", f"{open_driver_custody_sum:,.2f} ر.س")
 
         st.divider()
-        st.markdown("### 🖨️ التصدير والطباعة:")
-        
-        btn_v1, btn_v2 = st.columns(2)
-        with btn_v1:
-            vat_export_df = pd.DataFrame([
-                {'البند': 'مبيعات الرياض الخاضعة للنسبة الأساسية', 'المبلغ قبل الضريبة': ry_s_net, 'الضريبة (15%)': ry_s_vat, 'الإجمالي شامل الضريبة': ry_s_tot},
-                {'البند': 'مرتجعات مبيعات الرياض', 'المبلغ قبل الضريبة': ry_r_net, 'الضريبة (15%)': ry_r_vat, 'الإجمالي شامل الضريبة': ry_r_tot},
-                {'البند': 'مبيعات جدة الخاضعة للنسبة الأساسية', 'المبلغ قبل الضريبة': jd_s_net, 'الضريبة (15%)': jd_s_vat, 'الإجمالي شامل الضريبة': jd_s_tot},
-                {'البند': 'مرتجعات مبيعات جدة', 'المبلغ قبل الضريبة': jd_r_net, 'الضريبة (15%)': jd_r_vat, 'الإجمالي شامل الضريبة': jd_r_tot},
-                {'البند': 'المشتريات العامة الخاضعة للنسبة الأساسية', 'المبلغ قبل الضريبة': p_s_net, 'الضريبة (15%)': p_s_vat, 'الإجمالي شامل الضريبة': p_s_tot},
-                {'البند': 'مرتجعات المشتريات', 'المبلغ قبل الضريبة': p_r_net, 'الضريبة (15%)': p_r_vat, 'الإجمالي شامل الضريبة': p_r_tot},
-                {'البند': 'صافي الضريبة المستحقة للهيئة (ZATCA)', 'المبلغ قبل الضريبة': (total_sales_net - total_sales_ret_net) - (total_purch_net - total_purch_ret_net), 'الضريبة (15%)': net_vat_payable, 'الإجمالي شامل الضريبة': 0.0}
-            ])
-            csv_vat_bytes = vat_export_df.to_csv(index=False).encode('utf-8-sig')
-            st.download_button(
-                label="📥 تصدير تقرير الإقرار إلى Excel / CSV",
-                data=csv_vat_bytes,
-                file_name=f"إقرار_الضريبة_{vat_quarter}.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
 
-        with btn_v2:
-            vat_print_html = f"""
-            <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-            <style>
-                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; padding: 15px; color:#000; }}
-                .vat-box {{ border: 3px solid #1E3A8A; border-radius: 10px; padding: 15px; background: #fff; }}
-                .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 8px; }}
-                .vat-title {{ text-align: center; font-size: 18px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 8px; margin: 12px 0; border-radius: 6px; }}
-                table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }}
-                th {{ background-color: #1E3A8A; color: white; padding: 8px; border: 1px solid #334155; text-align: center; }}
-                td {{ border: 1px solid #cbd5e1; padding: 8px; text-align: center; }}
-                .sigs {{ margin-top: 35px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }}
-            </style></head><body>
-                <div class="vat-box">
-                    <div class="header-logo">
-                        <div style="font-size:11px; font-weight:bold;">Five-M Company For Industry<br>C. R. : 1011145035</div>
-                        <div style="font-size:40px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
-                        <div style="font-size:11px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
-                    </div>
-                    <div class="vat-title">إقرار ضريبة القيمة المضافة الرسمي (ZATCA) - {vat_quarter}[cite: 1]</div>
-                    {zatca_official_html}
-                    <div class="sigs">
-                        <div>إعداد المحاسب / المدير المالي: __________________</div>
-                        <div>اعتماد المدير العام: __________________</div>
-                    </div>
-                </div>
-            </body></html>
+        d_col1, d_col2 = st.columns([1, 1.8])
+        with d_col1:
+            st.markdown("### 📝 1. تسليم عُهدة جديدة لـ (سمان السواق):")
+            if open_driver_custody_sum > 0:
+                st.warning(f"💡 المتبقي المترصد في جيب السائق حالياً من العُهد السابقة: **{open_driver_custody_sum:,.2f} ر.س**")
+
+            with st.form("add_driver_custody_form"):
+                st.text_input("اسم السائق:", "سمان السواق", disabled=True)
+                given_amt = st.number_input("المبلغ الجديد المسلم كعُهدة (ر.س):", min_value=0.0, value=0.0, step=50.0)
+                purpose_txt = st.text_input("البيان / الغرض من العُهدة:", "مصاريف نقل وبنزين")
+                
+                sub_d = st.form_submit_button("تسليم وتأكيد العُهدة")
+                if sub_d and given_amt > 0:
+                    drivers_db.append({
+                        'id': len(drivers_db) + 1,
+                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'driver': driver_selected,
+                        'given_amt': given_amt,
+                        'purpose': purpose_txt,
+                        'status': 'مفتوحة',
+                        'spent_amt': 0.0,
+                        'returned_amt': 0.0,
+                        'diff_amt': given_amt
+                    })
+                    save_drivers_data(drivers_db)
+
+                    all_cash = load_cash_data()
+                    if month_selected not in all_cash:
+                        all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                    
+                    m_cash = all_cash[month_selected]
+                    acc_trans = m_cash.get('acc_transactions', [])
+                    acc_trans.append({
+                        'id': len(acc_trans) + 1,
+                        'code': f"DRV-OUT-{(len(acc_trans) + 1):03d}",
+                        'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                        'type': 'سند صرف',
+                        'party': f"عُهدة سمان السواق",
+                        'amount': given_amt,
+                        'method': 'نقداً بالصندوق',
+                        'notes': purpose_txt
+                    })
+                    m_cash['acc_transactions'] = acc_trans
+                    all_cash[month_selected] = m_cash
+                    save_cash_data(all_cash)
+
+                    st.success(f"تم تسليم {given_amt:,.2f} ر.س للسائق وتوثيقها سحابياً بصندوق omar!")
+                    st.rerun()
+
+        with d_col2:
+            st.markdown("### 🏁 2. تصفية عُهدة (سمان السواق) بالعودة:")
+            open_custodies = [d for d in drivers_db if d['status'] == 'مفتوحة']
+            
+            if open_custodies:
+                selected_custody_id = st.selectbox("اختر العُهدة المراد تصفيتها للعودة:", [f"#{d['id']} - {d['driver']} ({d['given_amt']} ر.س) - {d['date']}" for d in open_custodies])
+                target_id = int(selected_custody_id.split('#')[1].split(' ')[0])
+                target_item = [d for d in open_custodies if d['id'] == target_id][0]
+
+                st.info(f"المبلغ المسلم بعهدته: **{target_item['given_amt']:,.2f} ر.س** | البيان: {target_item['purpose']}")
+                
+                spent_input_key = f"spent_inp_{target_id}"
+                spent_val = st.number_input("أدخل إجمالي المصروفات والفواتير بالفعل (ر.س):", min_value=0.0, value=0.0, step=10.0, key=spent_input_key)
+                settle_notes = st.text_input("تفاصيل المصروفات / أرقام الفواتير:", key=f"notes_inp_{target_id}")
+                
+                diff_val = target_item['given_amt'] - spent_val
+                st.divider()
+                if diff_val > 0:
+                    st.success(f"🟢 **متبقي بجراب السائق لليوم القادم: {diff_val:,.2f} ر.س** (تترحل تلقائياً بذمته دون إعادة إدخالها للصندوق)")
+                elif diff_val < 0:
+                    st.error(f"🔴 **السائق صرف زيادة من جيبه يستحق ردها: ({abs(diff_val):,.2f} ر.س)**")
+                else:
+                    st.info("🟢 **المطابقة تامة! المصروفات تتطابق مع العُهدة.**")
+
+                if st.button("🏁 اعتماد تصفية العُهدة وتسوية الخزينة", key=f"btn_sub_settle_{target_id}", use_container_width=True):
+                    target_item['status'] = 'تمت التصفية'
+                    target_item['spent_amt'] = spent_val
+                    target_item['diff_amt'] = diff_val
+                    target_item['settle_date'] = datetime.now().strftime('%Y-%m-%d %H:%M')
+                    target_item['settle_notes'] = settle_notes
+                    
+                    save_drivers_data(drivers_db)
+
+                    if diff_val < 0:
+                        all_cash = load_cash_data()
+                        if month_selected not in all_cash:
+                            all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                        
+                        m_cash = all_cash[month_selected]
+                        acc_trans = m_cash.get('acc_transactions', [])
+                        
+                        acc_trans.append({
+                            'id': len(acc_trans) + 1,
+                            'code': f"DRV-REF-{(len(acc_trans) + 1):03d}",
+                            'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                            'type': 'سند صرف',
+                            'party': f"عُهدة سمان السواق - سداد فرق مصروفات زيادة",
+                            'amount': abs(diff_val),
+                            'method': 'نقداً بالصندوق',
+                            'notes': settle_notes
+                        })
+
+                        m_cash['acc_transactions'] = acc_trans
+                        all_cash[month_selected] = m_cash
+                        save_cash_data(all_cash)
+
+                    st.success("تمت التصفية والتسميع المباشر بنجاح!")
+                    st.rerun()
+            else:
+                st.info("لا توجد عُهد مفتوحة حالياً لـ سمان السواق بانتظار التصفية.")
+
+        st.divider()
+        st.markdown("### 📑 سجل كشف حساب وتصفية عُهد (سمان السواق):")
+        if drivers_db:
+            for d_idx, d_item in enumerate(reversed(drivers_db)):
+                real_d_idx = drivers_db.index(d_item)
+                
+                col_d1, col_d2, col_d3, col_d4, col_d5, col_d6 = st.columns([0.6, 1.8, 1.5, 1.5, 0.9, 0.9])
+                col_d1.write(f"#{d_item['id']}")
+                col_d2.write(f"🚚 **{d_item['driver']}**\n📅 {d_item['date']}")
+                col_d3.write(f"المسلم: **{d_item['given_amt']:,.2f} ر.س**\nالمصروف: **{d_item.get('spent_amt', 0.0):,.2f} ر.س**")
+                
+                diff_val = d_item.get('diff_amt', 0.0)
+                diff_str = "🟢 تصفية كاملة" if d_item['status'] == 'تمت التصفية' and diff_val == 0 else (f"🔴 متبقي معه ({diff_val:,.2f} ر.س)" if diff_val > 0 else f"🔵 زيادة له ({abs(diff_val):,.2f} ر.س)")
+                col_d4.write(f"الحالة: **{diff_str}**\n{diff_str}")
+                
+                if col_d5.button("✏️ تعديل", key=f"edit_drv_btn_{real_d_idx}"):
+                    edit_driver_custody_modal(real_d_idx)
+
+                if col_d6.button("🗑️ حذف", key=f"del_drv_btn_{real_d_idx}"):
+                    drivers_db.pop(real_d_idx)
+                    save_drivers_data(drivers_db)
+                    st.success("تم حذف حركة عُهدة السائق!")
+                    st.rerun()
+                st.divider()
+        else:
+            st.info("لا يوجد سجل عُهد سابق لـ سمان السواق.")
+
+    # 6. موديول جرد الخزينة المحدث
+    elif selected_option == 'جرد الخزينة':
+        st.subheader(f'🔍 موديول جرد الخزينة ومطابقة النقدية الفعلي - ({month_selected})')
+        st.write('قم بمطابقة المبالغ النقدية الموجودة بيدك داخل الصندوق مع الرصيد الدفتري المسجل بالنظام واحتساب العجز أو الزيادة فوراً:')
+        
+        all_cash_db = load_cash_data()
+        current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
+        
+        if st.session_state.user_role == "admin":
+            target_audit_box = st.radio("اختر الخزينة المراد جردها ومطابقتها الآن:", ["🏢 الخزينة الرئيسية (wahby)", "👤 عُهدة المحاسب (omar)"], horizontal=True)
+        else:
+            target_audit_box = "👤 عُهدة المحاسب (omar)"
+            st.info("أنت تقوم الآن بـ **جرد ومطابقة الخزينة المخصصة لعُهدتك (omar)**.")
+
+        active_box_key = 'transactions' if "wahby" in target_audit_box else 'acc_transactions'
+        active_opening_key = 'opening' if "wahby" in target_audit_box else 'acc_opening'
+
+        opening_bal = current_m_cash.get(active_opening_key, 0.0)
+        curr_trans = current_m_cash.get(active_box_key, [])
+        tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
+        tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
+        system_book_balance = opening_bal + tot_cash_in - tot_cash_out
+
+        st.divider()
+
+        col_aud1, col_aud2 = st.columns([1.2, 1])
+        with col_aud1:
+            st.markdown("### 💵 1. حاسبة مبالغ الفئات بالخزينة (بالريال):")
+            st.write("أدخل **إجمالي المبلغ الموجود بيدك** لكل فئة نقدية بالريال مباشرة (مثلاً: إجمالي الـ 500 = 5000):")
+            
+            c_f1, c_f2 = st.columns(2)
+            with c_f1:
+                v_500 = st.number_input("إجمالي فئة 500 ريال (ر.س):", min_value=0.0, value=0.0, step=500.0)
+                v_200 = st.number_input("إجمالي فئة 200 ريال (ر.س):", min_value=0.0, value=0.0, step=200.0)
+                v_100 = st.number_input("إجمالي فئة 100 ريال (ر.س):", min_value=0.0, value=0.0, step=100.0)
+                v_50 = st.number_input("إجمالي فئة 50 ريال (ر.س):", min_value=0.0, value=0.0, step=50.0)
+            with c_f2:
+                v_20 = st.number_input("إجمالي فئة 20 ريال (ر.س):", min_value=0.0, value=0.0, step=20.0)
+                v_10 = st.number_input("إجمالي فئة 10 ريال (ر.س):", min_value=0.0, value=0.0, step=10.0)
+                v_5 = st.number_input("إجمالي فئة 5 ريال (ر.س):", min_value=0.0, value=0.0, step=5.0)
+                v_bank = st.number_input("الخزينة بالبنك (ر.س):", min_value=0.0, value=0.0)
+
+            actual_counted_cash = v_500 + v_200 + v_100 + v_50 + v_20 + v_10 + v_5 + v_bank
+
+            st.write("")
+            manual_override = st.checkbox("أو كتابة المجموع الكلي الفعلي مباشرة دون تفصيل الفئات")
+            if manual_override:
+                actual_counted_cash = st.number_input("إجمالي النقدية الفعلية باليد كلياً (ر.س):", min_value=0.0, value=float(actual_counted_cash))
+
+        with col_aud2:
+            st.markdown("### 📊 2. نتائج المطابقة والعجز/الزيادة:")
+            diff_amount = actual_counted_cash - system_book_balance
+
+            st.metric("📖 الرصيد الدفتري المسجل بالنظام", f"{system_book_balance:,.2f} ر.س")
+            st.metric("💵 إجمالي النقدية الفعلي باليد", f"{actual_counted_cash:,.2f} ر.س")
+
+            st.divider()
+            if diff_amount == 0:
+                st.success("🟢 **المطابقة تامة!** النقدية الفعلية بالخزنة تتطابق 100% مع الرصيد الدفتري.")
+            elif diff_amount < 0:
+                st.error(f"🔴 **يوجد عجز بالخزنة بقيمة: ({abs(diff_amount):,.2f} ر.س)**")
+            else:
+                st.warning(f"🔵 **توجد زيادة بالخزنة بقيمة: ({diff_amount:,.2f} ر.س)**")
+
+            audit_notes = st.text_input("ملاحظات الجرد / أسباب الفرق إن وجد:")
+            if st.button("💾 اعتماد وحفظ جلسة الجرد بسجل السجلات", use_container_width=True):
+                audit_records = load_audit_data()
+                new_entry = {
+                    'id': len(audit_records) + 1,
+                    'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                    'month': month_selected,
+                    'box_name': target_audit_box,
+                    'book_bal': system_book_balance,
+                    'actual_cash': actual_counted_cash,
+                    'diff': diff_amount,
+                    'notes': audit_notes if audit_notes else 'مطابقة معتمدة'
+                }
+                audit_records.append(new_entry)
+                save_audit_data(audit_records)
+                st.success("تم اعتماد وتوثيق الجرد بالسجلات بنجاح!")
+                st.rerun()
+
+        st.divider()
+        st.markdown("### 📑 سجل تسويات وجرد الخزينة التاريخي:")
+        audit_history = load_audit_data()
+        
+        if st.session_state.user_role == "accountant":
+            filtered_audit_history = [a for a in audit_history if "omar" in a.get('box_name', '')]
+        else:
+            filtered_audit_history = audit_history.copy()
+
+        if filtered_audit_history:
+            for a_idx, a_item in enumerate(reversed(filtered_audit_history)):
+                real_a_idx = audit_history.index(a_item)
+                col_rec1, col_rec2, col_rec3, col_rec4, col_rec5 = st.columns([1, 2, 2, 2, 1])
+                col_rec1.write(f"#{a_item['id']}")
+                col_rec2.write(f"📅 **{a_item['date']}**\n{a_item['box_name']}")
+                
+                diff_val = a_item['diff']
+                diff_str = "🟢 مطابقة" if diff_val == 0 else (f"🔴 عجز ({abs(diff_val):,.2f} ر.س)" if diff_val < 0 else f"🔵 زيادة ({diff_val:,.2f} ر.س)")
+                col_rec3.write(f"الفعلي: {a_item['actual_cash']:,.2f} ر.س\nالدفتري: {a_item['book_bal']:,.2f} ر.س")
+                col_rec4.write(f"الحالة: **{diff_str}**\nالملاحظات: {a_item.get('notes', 'لا يوجد')}")
+                
+                if col_rec5.button("🗑️ حذف", key=f"del_audit_btn_{real_a_idx}"):
+                    audit_history.pop(real_a_idx)
+                    save_audit_data(audit_history)
+                    st.success("تم حذف سجل الجرد بنجاح!")
+                    st.rerun()
+                st.divider()
+        else:
+            st.info("لا توجد جلسات جرد سابقة محفوظة لهذا الصندوق.")
+
+    # 7. موديول إدخال الدفعات
+    elif selected_option == 'إدخال الدفعات' and st.session_state.user_role == "admin":
+        st.subheader(f'📊 جدول إدخال وتعديل الدفعات - ({month_selected})')
+        
+        curr_m_idx = st.session_state.months_list.index(month_selected)
+        prev_month_label = st.session_state.months_list[curr_m_idx - 1] if curr_m_idx > 0 else 'أغسطس 2026'
+
+        t1, t2, t3, t4 = st.tabs(['مصنع الخرج', 'مستودع الخرج', 'مستودع الرياض', 'رواتب متنوعة'])
+        branches = [('مصنع ميم الخماسية الخرج', t1), ('مستودع ميم الخماسية الخرج', t2), ('مستودع ميم الخماسية الرياض', t3), ('رواتب متنوعة', t4)]
+        
+        all_cash_db = load_cash_data()
+        current_month_cash = all_cash_db.get(month_selected, {'transactions': [], 'acc_transactions': []})
+        existing_vouchers = current_month_cash.get('transactions', []) + current_month_cash.get('acc_transactions', [])
+
+        for b_name, tab_obj in branches:
+            with tab_obj:
+                df_b_curr = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
+
+                already_settled_vouchers = [
+                    v for v in existing_vouchers 
+                    if "سداد رواتب ودفعات" in v.get('party', '') and b_name in v.get('party', '')
+                ]
+                is_already_settled = len(already_settled_vouchers) > 0
+
+                col_auto1, col_auto2 = st.columns([1.3, 1.7])
+                with col_auto1:
+                    if st.button(f'توزيع المتبقي كـ "دفعة 2" تلقائياً ({b_name})', key=f"auto_btn_{b_name}"):
+                        for idx, row in st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].iterrows():
+                            req_s = row['الراتب الأساسي']
+                            p1 = row.get('الدفعة 1', 0)
+                            ded = row.get('الخصومات', 0)
+                            rem_needed = max(0, req_s - (p1 + ded))
+                            st.session_state.payroll_df.loc[idx, 'الدفعة 2'] = rem_needed
+                            st.session_state.payroll_df.loc[idx, 'الدفعة المدفوعة'] = p1 + rem_needed
+                            st.session_state.payroll_df.loc[idx, 'المتبقي'] = 0.0
+                        save_payroll_for_month(st.session_state.payroll_df, month_selected)
+                        st.success("تم التوزيع وتصفير المتبقي!")
+                        st.rerun()
+
+                with col_auto2:
+                    if is_already_settled:
+                        last_v = already_settled_vouchers[-1]
+                        st.success(f"✅ **تم اعتماد وتخصيم دفعات فرع ({b_name}) كـ سند صرف بالصندوق بنجاح (سند رقم: #{last_v.get('code', last_v['id'])})!**")
+                        st.button(f"🔒 تم الاعتماد بالصندوق لـ {b_name}", key=f"dis_trf_btn_{b_name}", disabled=True, use_container_width=True)
+                    else:
+                        source_options = [f"رواتب شهر ({month_selected}) الحالي", f"رواتب شهر ({prev_month_label}) السابق"]
+
+                        src_choice = st.selectbox(
+                            "اختر مصدر الرواتب المراد خصمها بالصندوق:",
+                            source_options,
+                            key=f"src_choice_select_{b_name}_{month_selected}"
+                        )
+
+                        pay_choice = st.selectbox(
+                            "اختر الدفعة المراد خصمها بالصندوق:",
+                            ["إجمالي الدفعات معاً", "الدفعة الأولى فقط", "الدفعة الثانية فقط"],
+                            key=f"pay_choice_select_{b_name}_{month_selected}"
+                        )
+
+                        if "السابق" in src_choice:
+                            target_df_calc = get_payroll_for_month(prev_month_label)
+                            label_month_used = prev_month_label
+                        else:
+                            target_df_calc = st.session_state.payroll_df
+                            label_month_used = month_selected
+
+                        target_df_branch = target_df_calc[target_df_calc['الفرع'] == b_name]
+
+                        if pay_choice == "الدفعة الأولى فقط":
+                            amt_to_deduct = target_df_branch['الدفعة 1'].sum()
+                        elif pay_choice == "الدفعة الثانية فقط":
+                            amt_to_deduct = target_df_branch['الدفعة 2'].sum()
+                        else:
+                            amt_to_deduct = target_df_branch['الدفعة المدفوعة'].sum()
+
+                        st.markdown(f"#### 💵 **إجمالي المبلغ المجهز للخصم بالصندوق:** `{amt_to_deduct:,.2f} ر.س`")
+
+                        if amt_to_deduct > 0:
+                            if st.button(f'🚀 تأكيد خصم المبلغ ({amt_to_deduct:,.0f} ر.س) وإنشاء سند صرف بصندوق {month_selected}', key=f"confirm_trf_sal_btn_{b_name}", use_container_width=True):
+                                all_cash = load_cash_data()
+                                if month_selected not in all_cash:
+                                    all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                                
+                                m_cash = all_cash[month_selected]
+                                target_trans_key = 'transactions' if st.session_state.user_role == "admin" else 'acc_transactions'
+                                c_trans = m_cash.get(target_trans_key, [])
+                                
+                                v_code = f"PAY-SAL-{(len(c_trans) + 1):03d}"
+                                c_trans.append({
+                                    'id': len(c_trans) + 1,
+                                    'code': v_code,
+                                    'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                                    'type': 'سند صرف',
+                                    'party': f"سداد رواتب ودفعات ({pay_choice}) - شهر ({label_month_used}) - فرع ({b_name})",
+                                    'amount': amt_to_deduct,
+                                    'method': 'نقداً بالصندوق',
+                                    'notes': f"سند صرف آلي معمد لـ ({pay_choice}) بفرع {b_name}"
+                                })
+                                m_cash[target_trans_key] = c_trans
+                                all_cash[month_selected] = m_cash
+                                save_cash_data(all_cash)
+                                st.success(f"تم اعتماد وتخصيم {amt_to_deduct:,.2f} ر.س كـ سند صرف (#{v_code}) بـ فرع ({b_name}) بنجاح!")
+                                st.rerun()
+
+                cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'المتبقي', 'الملاحظات']
+                edited_b = st.data_editor(
+                    df_b_curr[cols_rtl],
+                    column_config={
+                        "م": st.column_config.NumberColumn("مسلسل", disabled=True),
+                        "الاسم": st.column_config.TextColumn("اسم الموظف"),
+                        "الوظيفة": st.column_config.TextColumn("الوظيفة"),
+                        "الراتب الأساسي": st.column_config.NumberColumn("الراتب المستحق", min_value=0, format="%d ر.س"),
+                        "الدفعة 1": st.column_config.NumberColumn("الدفعة 1", min_value=0, format="%d ر.س"),
+                        "الدفعة 2": st.column_config.NumberColumn("الدفعة 2", min_value=0, format="%d ر.س"),
+                        "الخصومات": st.column_config.NumberColumn("الخصومات", min_value=0, format="%d ر.س"),
+                        "المتبقي": st.column_config.NumberColumn("المتبقي", disabled=True, format="%d ر.س"),
+                        "الملاحظات": st.column_config.TextColumn("الملاحظات")
+                    },
+                    use_container_width=True,
+                    hide_index=True,
+                    key=f"ed_{b_name}_{month_selected}"
+                )
+                
+                if st.button(f"حفظ التعديلات ({b_name})", key=f"btn_save_ed_{b_name}"):
+                    for idx, row in edited_b.iterrows():
+                        m_id = row['م']
+                        target_idx = st.session_state.payroll_df[st.session_state.payroll_df['م'] == m_id].index[0]
+                        p1 = row['الدفعة 1']
+                        p2 = row['الدفعة 2']
+                        ded = row['الخصومات']
+                        sal = row['الراتب الأساسي']
+                        tot_p = p1 + p2
+                        st.session_state.payroll_df.loc[target_idx, 'الاسم'] = row['الاسم']
+                        st.session_state.payroll_df.loc[target_idx, 'الوظيفة'] = row['الوظيفة']
+                        st.session_state.payroll_df.loc[target_idx, 'الراتب الأساسي'] = sal
+                        st.session_state.payroll_df.loc[target_idx, 'الخصومات'] = ded
+                        st.session_state.payroll_df.loc[target_idx, 'الدفعة 1'] = p1
+                        st.session_state.payroll_df.loc[target_idx, 'الدفعة 2'] = p2
+                        st.session_state.payroll_df.loc[target_idx, 'الدفعة المدفوعة'] = tot_p
+                        st.session_state.payroll_df.loc[target_idx, 'المتبقي'] = sal - (tot_p + ded)
+                        st.session_state.payroll_df.loc[target_idx, 'الملاحظات'] = row['الملاحظات']
+                    
+                    save_payroll_for_month(st.session_state.payroll_df, month_selected)
+                    st.success("تم الحفظ بنجاح!")
+                    st.rerun()
+
+                b_tot_req = edited_b['الراتب الأساسي'].sum()
+                b_tot_p1 = edited_b['الدفعة 1'].sum()
+                b_tot_p2 = edited_b['الدفعة 2'].sum()
+                b_tot_ded = edited_b['الخصومات'].sum()
+                b_tot_rem = b_tot_req - (b_tot_p1 + b_tot_p2 + b_tot_ded)
+
+                st.divider()
+                st.markdown(f"#### الملخص المالي لفرع ({b_name}):")
+                s_col1, s_col2, s_col3, s_col4, s_col5 = st.columns(5)
+                s_col1.metric("إجمالي الرواتب", f"{b_tot_req:,.0f} ر.س")
+                s_col2.metric("إجمالي الدفعة 1", f"{b_tot_p1:,.0f} ر.س")
+                s_col3.metric("إجمالي الدفعة 2", f"{b_tot_p2:,.0f} ر.س")
+                s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
+                s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
+
+    # 8. موديول حركة الصندوق
+    elif selected_option == 'حركة الصندوق':
+        st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
+        
+        all_cash_db = load_cash_data()
+        if month_selected not in all_cash_db:
+            all_cash_db[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+            
+        current_m_cash = all_cash_db[month_selected]
+        
+        if st.session_state.user_role == "admin":
+            box_selected = st.radio("اختر الخزينة للمراجعة والتسجيل:", ["🏢 الخزينة الرئيسية (wahby)", "👤 عُهدة المحاسب (omar)"], horizontal=True)
+            active_box_key = 'transactions' if "wahby" in box_selected else 'acc_transactions'
+            active_opening_key = 'opening' if "wahby" in box_selected else 'acc_opening'
+            active_target_box = "main" if "wahby" in box_selected else "accountant"
+        else:
+            active_box_key = 'acc_transactions'
+            active_opening_key = 'acc_opening'
+            active_target_box = "accountant"
+            st.info("أنت تعمل على شاشة **عُهدتك المالية (omar)**.")
+
+        opening_bal = current_m_cash.get(active_opening_key, 0.0)
+
+        st.write("")
+        col_top_act1, col_top_act2 = st.columns([1, 1.2])
+        with col_top_act1:
+            if st.button("✏️ تعديل وتثبيت الرصيد الافتتاحي للصندوق", key="btn_open_dialog_bal"):
+                opening_balance_dialog(month_selected, active_target_box)
+
+        curr_trans = current_m_cash.get(active_box_key, [])
+        tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
+        tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
+        net_cash_now = opening_bal + tot_cash_in - tot_cash_out
+
+        c_m1, c_m2, c_m3, c_m4 = st.columns(4)
+        c_m1.metric("رصيد أول الشهر", f"{opening_bal:,.2f} ر.س")
+        c_m2.metric("🟢 المقبوضات", f"{tot_cash_in:,.2f} ر.س")
+        c_m3.metric("🔴 المصروفات", f"{tot_cash_out:,.2f} ر.س")
+        c_m4.metric("💵 المتبقي بالصندوق", f"{net_cash_now:,.2f} ر.س")
+
+        st.divider()
+
+        st.markdown("### 🖨️ طباعة وتصدير كشف حساب الصندوق المقابل (T-Account):")
+        
+        t_col_p1, t_col_p2, t_col_p3, t_col_p4 = st.columns([1.2, 1.3, 1.2, 1.2])
+        with t_col_p1:
+            period_type_sel = st.selectbox("نطاق كشف الحساب:", ["الشهر كاملاً", "فترة مخصصة (تحديد الأيام)"], key="sel_period_t_acc")
+        
+        period_label_txt = f"شهر {month_selected} كاملاً"
+        filtered_print_trans = curr_trans.copy()
+
+        if period_type_sel == "فترة مخصصة (تحديد الأيام)":
+            with t_col_p2:
+                d_start = st.date_input("من تاريخ:", datetime.now().date(), key="d_start_t_acc")
+                d_end = st.date_input("إلى تاريخ:", datetime.now().date(), key="d_end_t_acc")
+                period_label_txt = f"من {d_start} إلى {d_end}"
+                
+                filtered_print_trans = []
+                for t in curr_trans:
+                    try:
+                        t_dt = datetime.strptime(t['date'].split(' ')[0], '%Y-%m-%d').date()
+                        if d_start <= t_dt <= d_end:
+                            filtered_print_trans.append(t)
+                    except:
+                        filtered_print_trans.append(t)
+
+        with t_col_p3:
+            st.write("")
+            st.write("")
+            if st.button("🖨️ معاينة كشف الحساب المقابل (A4)", key="btn_open_t_acc_print_modal", use_container_width=True):
+                if filtered_print_trans:
+                    target_box_txt = "الخزينة الرئيسية (wahby)" if active_target_box == "main" else "عُهدة المحاسب (omar)"
+                    print_t_account_dialog(filtered_print_trans, month_selected, period_label_txt, target_box_txt)
+                else:
+                    st.warning("لا توجد حركات تسوية بالصندوق مسجلة بالفترة المحددة.")
+
+        with t_col_p4:
+            st.write("")
+            st.write("")
+            if filtered_print_trans:
+                df_export_cash = pd.DataFrame(filtered_print_trans)
+                csv_cash_bytes = df_export_cash.to_csv(index=False).encode('utf-8-sig')
+                st.download_button(
+                    label="📥 تصدير سجل الصندوق إلى Excel / CSV",
+                    data=csv_cash_bytes,
+                    file_name=f"سجل_حركة_الصندوق_{month_selected}.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key="btn_export_cash_csv"
+                )
+
+        st.divider()
+
+        col_c_in1, col_c_in2 = st.columns([1, 1.8])
+        with col_c_in1:
+            st.markdown("### 📝 تسجيل حركة بالصندوق:")
+            type_select_options = ["سند قبض", "سند صرف", "🔄 تحويل عُهدة إلى (omar)"] if st.session_state.user_role == "admin" else ["سند قبض", "سند صرف", "🔄 تحويل عُهدة إلى (wahby)"]
+            
+            with st.form("add_cash_transaction_form", clear_on_submit=True):
+                trans_type = st.selectbox("نوع الحركة:", type_select_options)
+                trans_party = st.text_input("اسم الجهة / البيان:", placeholder="مثلاً: العميل / شراء مواد خام")
+                trans_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
+                trans_pay_method = st.selectbox("طريقة السداد:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
+                trans_notes = st.text_input("ملاحظات / الفاتورة:")
+                
+                sub_cash = st.form_submit_button("💾 حفظ الحركة")
+                if sub_cash:
+                    if trans_party and trans_amt > 0:
+                        if "تحويل عُهدة إلى (omar)" in trans_type and st.session_state.user_role == "admin":
+                            v_code = f"TRF-{(len(curr_trans) + 1):03d}"
+                            curr_trans.append({
+                                'id': len(curr_trans) + 1,
+                                'code': v_code,
+                                'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                                'type': 'سند صرف',
+                                'party': f"تحويل عُهدة إلى المحاسب (omar) - {trans_party}",
+                                'amount': trans_amt,
+                                'method': trans_pay_method,
+                                'notes': trans_notes
+                            })
+                            
+                            acc_trans = current_m_cash.get('acc_transactions', [])
+                            acc_trans.append({
+                                'id': len(acc_trans) + 1,
+                                'code': f"REC-TRF-{(len(acc_trans) + 1):03d}",
+                                'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                                'type': 'سند قبض',
+                                'party': f"استلام عُهدة محولة من الخزينة الرئيسية (wahby)",
+                                'amount': trans_amt,
+                                'method': trans_pay_method,
+                                'notes': trans_notes
+                            })
+                            current_m_cash['acc_transactions'] = acc_trans
+
+                        elif "تحويل عُهدة إلى (wahby)" in trans_type and st.session_state.user_role != "admin":
+                            v_code = f"TRF-ACC-{(len(curr_trans) + 1):03d}"
+                            curr_trans.append({
+                                'id': len(curr_trans) + 1,
+                                'code': v_code,
+                                'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                                'type': 'سند صرف',
+                                'party': f"تحويل نقدية واسترداد إلى الخزينة الرئيسية (wahby) - {trans_party}",
+                                'amount': trans_amt,
+                                'method': trans_pay_method,
+                                'notes': trans_notes
+                            })
+                            
+                            main_trans = current_m_cash.get('transactions', [])
+                            main_trans.append({
+                                'id': len(main_trans) + 1,
+                                'code': f"REC-TRF-{(len(main_trans) + 1):03d}",
+                                'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                                'type': 'سند قبض',
+                                'party': f"استلام نقدية محولة من عُهدة المحاسب (omar)",
+                                'amount': trans_amt,
+                                'method': trans_pay_method,
+                                'notes': trans_notes
+                            })
+                            current_m_cash['transactions'] = main_trans
+
+                        else:
+                            rec_cnt = sum(1 for t in curr_trans if "قبض" in t['type'])
+                            pay_cnt = sum(1 for t in curr_trans if "صرف" in t['type'])
+                            v_code = f"REC-{(rec_cnt + 1):03d}" if "قبض" in trans_type else f"PAY-{(pay_cnt + 1):03d}"
+                            
+                            curr_trans.append({
+                                'id': len(curr_trans) + 1,
+                                'code': v_code,
+                                'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                                'type': trans_type,
+                                'party': trans_party,
+                                'amount': trans_amt,
+                                'method': trans_pay_method,
+                                'notes': trans_notes
+                            })
+
+                        all_cash_db[month_selected][active_box_key] = curr_trans
+                        save_cash_data(all_cash_db)
+                        st.success(f"تم التسجيل بنجاح برقم #{v_code}!")
+                        st.rerun()
+
+        with col_c_in2:
+            st.markdown("### 📊 دفتر يومية الصندوق (نظام الصفحات اليومية):")
+            if curr_trans:
+                cf1, cf2 = st.columns([2, 1])
+                with cf1:
+                    cash_search = st.text_input("🔍 استعلام بالبيان:", key="search_cash_input")
+                with cf2:
+                    cash_filter_type = st.selectbox("تصفية بالحركة:", ["جميع الحركات", "سند قبض", "سند صرف"], key="filter_cash_type")
+
+                reversed_trans = curr_trans[::-1]
+
+                filtered_cash = reversed_trans.copy()
+                if cash_search:
+                    filtered_cash = [t for t in filtered_cash if cash_search.lower() in t['party'].lower()]
+                if cash_filter_type != "جميع الحركات":
+                    filtered_cash = [t for t in filtered_cash if t['type'] == cash_filter_type]
+
+                if filtered_cash:
+                    dates_set = []
+                    for t in filtered_cash:
+                        d_str = t['date'].split(' ')[0]
+                        if d_str not in dates_set:
+                            dates_set.append(d_str)
+                    
+                    dates_set.reverse()
+
+                    selected_day_page = st.selectbox(
+                        "📅 اختر يومية التاريخ المطلوب استعراضها:", 
+                        dates_set, 
+                        key="select_cash_day_page"
+                    )
+
+                    day_trans = [t for t in filtered_cash if t['date'].startswith(selected_day_page)][::-1]
+
+                    d_in = sum(t['amount'] for t in day_trans if 'قبض' in t['type'])
+                    d_out = sum(t['amount'] for t in day_trans if 'صرف' in t['type'])
+                    d_net = d_in - d_out
+
+                    st.info(f"📆 **حركة يوم ({selected_day_page}):** مقبوضات اليوم: `{d_in:,.2f} ر.س` | مصروفات اليوم: `{d_out:,.2f} ر.س` | صافي الحركة اليومية: `{d_net:,.2f} ر.س`")
+
+                    for t_idx, t_item in enumerate(day_trans):
+                        real_idx = curr_trans.index(t_item)
+                        
+                        is_rec = "قبض" in t_item['type']
+                        amt_cls = "amt-pos" if is_rec else "amt-neg"
+                        t_sign = "+" if is_rec else "-"
+                        border_c = "#10B981" if is_rec else "#EF4444"
+
+                        st.markdown(f"""
+                            <div class="cash-card-item" style="border-right: 5px solid {border_c};">
+                                <div>
+                                    <span style="font-weight:bold; font-size:14px;">#{t_item.get('code', t_item['id'])} - {t_item['party']}</span><br>
+                                    <span style="font-size:11px; color:#94A3B8;">📅 {t_item['date']} | 💳 {t_item['method']} | 📝 {t_item.get('notes','')}</span>
+                                </div>
+                                <div class="{amt_cls}">
+                                    {t_sign} {t_item['amount']:,.2f} ر.س
+                                </div>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                        b_p, b_e, b_d = st.columns(3)
+                        if b_p.button("🖨️ طباعة", key=f"btn_p_c_{real_idx}"):
+                            print_cash_voucher_dialog(t_item, month_selected)
+
+                        if b_e.button("✏️ تعديل", key=f"btn_e_c_{real_idx}"):
+                            edit_cash_voucher_dialog(real_idx, month_selected, active_target_box)
+
+                        if b_d.button("🗑️ حذف", key=f"btn_d_c_{real_idx}"):
+                            curr_trans.pop(real_idx)
+                            all_cash_db[month_selected][active_box_key] = curr_trans
+                            save_cash_data(all_cash_db)
+                            st.success("تم الحذف!")
+                            st.rerun()
+                else:
+                    st.warning("لا توجد نتائج تطابق الاستعلام.")
+
+            else:
+                st.info("لا توجد حركات تسوية بالصندوق مسجلة لهذا الشهر.")
+
+    elif selected_option == 'دليل الموظفين' and st.session_state.user_role == "admin":
+        st.subheader('👤 دليل الموظفين والملفات الإدارية')
+        
+        search_kw = st.text_input("🔍 استعلام باسم الموظف أو الوظيفة:", placeholder="اكتب جزءاً من الاسم...")
+        if search_kw:
+            search_df = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'].str.contains(search_kw, case=False, na=False) | st.session_state.payroll_df['الوظيفة'].str.contains(search_kw, case=False, na=False)]
+            st.write(f"نتائج البحث عن (**{search_kw}**):")
+            for e_idx, e_row in search_df.iterrows():
+                c_card1, c_card2, c_card3, c_card4 = st.columns([2, 1.5, 1.5, 1])
+                c_card1.write(f"👤 **{e_row['الاسم']}** ({e_row['الوظيفة']}) - {e_row['الفرع']}")
+                c_card2.write(f"💵 الراتب: **{e_row['الراتب الأساسي']:,.0f} ر.س**")
+                c_card3.write(f"📅 بداية العمل: {e_row.get('تاريخ بداية العمل', '2024-01-01')}")
+                if c_card4.button("تعديل", key=f"btn_s_edit_{e_row['م']}"):
+                    edit_employee_dialog(e_idx, month_selected)
+                st.divider()
+        else:
+            cnt_factory = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مصنع ميم الخماسية الخرج'])
+            cnt_wh_kh = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مستودع ميم الخماسية الخرج'])
+            cnt_wh_ry = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مستودع ميم الخماسية الرياض'])
+            cnt_misc = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'رواتب متنوعة'])
+            
+            tab_search_list = [
+                (f'مصنع الخرج ({cnt_factory})', 'مصنع ميم الخماسية الخرج'),
+                (f'مستودع الخرج ({cnt_wh_kh})', 'مستودع ميم الخماسية الخرج'),
+                (f'مستودع الرياض ({cnt_wh_ry})', 'مستودع ميم الخماسية الرياض'),
+                (f'رواتب متنوعة ({cnt_misc})', 'رواتب متنوعة')
+            ]
+            
+            search_tabs = st.tabs([t[0] for t in tab_search_list])
+            
+            for idx_st, (s_title, b_name) in enumerate(tab_search_list):
+                with search_tabs[idx_st]:
+                    col_h1, col_h2 = st.columns([3, 1])
+                    with col_h1:
+                        st.write(f"دليل موظفي **{b_name}**:")
+                    with col_h2:
+                        if st.button(f"إضافة موظف لـ {b_name}", key=f"btn_modal_add_{b_name}"):
+                            add_employee_dialog(b_name)
+
+                    branch_df_search = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name]
+                    
+                    if not branch_df_search.empty:
+                        for e_idx, e_row in branch_df_search.iterrows():
+                            c_card1, c_card2, c_card3, c_card4 = st.columns([2, 1.5, 1.5, 1])
+                            c_card1.write(f"👤 **{e_row['الاسم']}** ({e_row['الوظيفة']})")
+                            c_card2.write(f"💵 الراتب: **{e_row['الراتب الأساسي']:,.0f} ر.س**")
+                            c_card3.write(f"📅 بداية العمل: {e_row.get('تاريخ بداية العمل', '2024-01-01')}")
+                            
+                            if c_card4.button("تعديل", key=f"btn_edit_m_{e_row['م']}"):
+                                edit_employee_dialog(e_idx, month_selected)
+                            st.divider()
+                    else:
+                        st.info(f"لا يوجد موظفين حالياً في {b_name}.")
+
+    elif selected_option == 'مسير الرواتب' and st.session_state.user_role == "admin":
+        st.subheader(f'📋 كشف مسير الرواتب الشهري الموحد - ({month_selected})')
+        filter_sheet = st.selectbox('اختر الفرع للكشف:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
+        df_sheet = st.session_state.payroll_df if 'جميع الفروع' in filter_sheet else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == filter_sheet]
+        
+        csv_payroll_bytes = df_sheet.to_csv(index=False).encode('utf-8-sig')
+        st.download_button(
+            label=f"📊 تصدير كشف المسير إلى Excel / CSV ({filter_sheet})",
+            data=csv_payroll_bytes,
+            file_name=f"كشف_مسير_رواتب_{filter_sheet}_{month_selected}.csv",
+            mime="text/csv",
+            use_container_width=True,
+            key="btn_export_payroll_excel"
+        )
+        st.write("")
+
+        sheet_html = f"""
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+        <meta charset="utf-8">
+        <title>كشف مسير رواتب - شركة ميم الخماسية للتصنيع</title>
+        <style>
+            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 10px; background: #fff; color: #111; }}
+            .header {{ text-align: center; color: #1E3A8A; border-bottom: 2px solid #1E3A8A; padding-bottom: 10px; margin-bottom: 15px; }}
+            .header h2 {{ margin: 0; font-size: 24px; }}
+            .header h3 {{ margin: 5px 0 0 0; font-size: 18px; color: #475569; }}
+            table {{ width: 100%; border-collapse: collapse; margin-top: 10px; }}
+            th, td {{ border: 1px solid #334155; padding: 6px 8px; text-align: center; font-size: 13px; }}
+            th {{ background-color: #1E3A8A; color: white; font-weight: bold; }}
+            tr:nth-child(even) {{ background-color: #f8fafc; }}
+            .totals-box {{ margin-top: 15px; padding: 10px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 5px; font-weight: bold; display: flex; justify-content: space-around; font-size: 14px; }}
+            .signatures {{ margin-top: 30px; display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; padding: 0 30px; }}
+        </style>
+        </head>
+        <body>
+            <div class="header">
+                <h2>🏢 شركة ميم الخماسية للتصنيع</h2>
+                <h3>كشف مسير الرواتب - {filter_sheet} ({month_selected})</h3>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>م</th>
+                        <th>اسم الموظف</th>
+                        <th>الوظيفة</th>
+                        <th>الفرع</th>
+                        <th>الراتب المستحق</th>
+                        <th>الدفعة 1</th>
+                        <th>الدفعة 2</th>
+                        <th>الخصومات</th>
+                        <th>إجمالي المصروف</th>
+                        <th>المتبقي</th>
+                        <th>التوقيع / الاستلام</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """
+        for idx, r in df_sheet.iterrows():
+            sheet_html += f"""
+                <tr>
+                    <td>{r['م']}</td>
+                    <td><strong>{r['الاسم']}</strong></td>
+                    <td>{r['الوظيفة']}</td>
+                    <td>{r['الفرع']}</td>
+                    <td>{r['الراتب الأساسي']:,.0f} ر.س</td>
+                    <td>{r.get('الدفعة 1', 0):,.0f} ر.س</td>
+                    <td>{r.get('الدفعة 2', 0):,.0f} ر.س</td>
+                    <td style="color:#b91c1c;">{r.get('الخصومات', 0):,.0f} ر.س</td>
+                    <td style="color:#047857; font-weight:bold;">{r['الدفعة المدفوعة']:,.0f} ر.س</td>
+                    <td style="color:#b91c1c; font-weight:bold;">{r['المتبقي']:,.0f} ر.س</td>
+                    <td style="width: 120px;"></td>
+                </tr>
             """
-            st.download_button(
-                label="🖨️ تنزيل نموذج الإقرار الضريبي المباشر للطباعة A4 (HTML / PDF)",
-                data=vat_print_html.encode('utf-8'),
-                file_name=f"تقرير_إقرار_ضريبي_{vat_quarter}.html",
-                mime="text/html",
-                use_container_width=True
-            )
+        sheet_html += f"""
+                </tbody>
+            </table>
+            <div class="totals-box">
+                <span>إجمالي الرواتب: {df_sheet['الراتب الأساسي'].sum():,.0f} ر.س</span>
+                <span>إجمالي الخصومات: {df_sheet.get('الخصومات', pd.Series([0])).sum():,.0f} ر.س</span>
+                <span>إجمالي المصروف: {df_sheet['الدفعة المدفوعة'].sum():,.0f} ر.س</span>
+                <span>إجمالي المتبقي: {df_sheet['المتبقي'].sum():,.0f} ر.س</span>
+            </div>
+            <div class="signatures">
+                <div>إعداد المحاسب: __________________</div>
+                <div>مراجعة الموارد البشرية: __________________</div>
+                <div>اعتماد المدير العام: __________________</div>
+            </div>
+        </body>
+        </html>
+        """
+        st.components.v1.html(sheet_html, height=400, scrolling=True)
+        st.download_button(
+            label=f"📄 فتح وتحميل ملف كشف مسير {filter_sheet} (HTML / PDF) 🖨️",
+            data=sheet_html.encode('utf-8'),
+            file_name=f"مسير_رواتب_{filter_sheet}_{month_selected}.html",
+            mime="text/html",
+            use_container_width=True
+        )
+
+    elif selected_option == 'طباعة السندات' and st.session_state.user_role == "admin":
+        st.subheader(f'🖨️ طباعة سندات القبض والصرف الرسمية A4 - ({month_selected})')
+        col_p1, col_p2 = st.columns(2)
+        with col_p1:
+            selected_b = st.selectbox('اختر الفرع:', ['جميع الفروع', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'], key="sb_v_b")
+        with col_p2:
+            pay_type_select = st.selectbox('اختر نوع الدفعة:', ['جميع الدفعات (السند الشامل)', 'الدفعة الأولى فقط', 'الدفعة الثانية فقط'], key="sb_v_type")
+            
+        df_print = st.session_state.payroll_df if selected_b == 'جميع الفروع' else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == selected_b]
+        
+        pdf_bytes = generate_pretty_html_pdf(df_print, selected_b, pay_type_select)
+        st.components.v1.html(pdf_bytes.getvalue().decode('utf-8'), height=400, scrolling=True)
+        st.download_button(
+            label=f"📄 تنزيل ملف سندات ({pay_type_select}) - {selected_b} للطباعة 🖨️",
+            data=pdf_bytes,
+            file_name=f"سندات_{pay_type_select}_{selected_b}_{month_selected}.html",
+            mime="text/html",
+            use_container_width=True
+        )
+
+    elif selected_option == 'حاسبة الخدمة' and st.session_state.user_role == "admin":
+        st.subheader('🇸🇦 حاسبة مستحقات نهاية الخدمة وبدل الإجازات (نظام العمل السعودي)')
+        saudi_reports = []
+        for _, r in st.session_state.payroll_df.iterrows():
+            yrs, grat, leave_allow = calculate_saudi_gratuity_and_leave(r['الراتب الأساسي'], r.get('تاريخ بداية العمل', '2024-01-01'))
+            saudi_reports.append({
+                'مسلسل': r['م'],
+                'اسم الموظف': r['الاسم'],
+                'الفرع': r['الفرع'],
+                'تاريخ بداية العمل': r.get('تاريخ بداية العمل', '2024-01-01'),
+                'الخدمة (سنة)': yrs,
+                'مكافأة نهاية الخدمة': f"{grat:,.2f} ر.س",
+                'بدل الإجازة السنوية': f"{leave_allow:,.2f} ر.س",
+                'إجمالي المستحقات': f"{(grat + leave_allow):,.2f} ر.س"
+            })
+            
+        df_saudi = pd.DataFrame(saudi_reports)
+        st.dataframe(df_saudi, use_container_width=True, hide_index=True)
+
+    elif selected_option == 'التنبيهات' and st.session_state.user_role == "admin":
+        st.subheader('🔔 مركز تنبيهات انتهاء الإقامات وعقود العمل')
+        today = datetime.now().date()
+        alerts = []
+        for _, r in st.session_state.payroll_df.iterrows():
+            try:
+                iq_d = datetime.strptime(str(r.get('تاريخ انتهاء الإقامة')), '%Y-%m-%d').date()
+                ct_d = datetime.strptime(str(r.get('تاريخ انتهاء العقد')), '%Y-%m-%d').date()
+                if iq_d < today:
+                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': 'إقامة', 'تاريخ الانتهاء': iq_d, 'الحالة': '🔴 منتهية'})
+                elif (iq_d - today).days <= 30:
+                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': 'إقامة', 'تاريخ الانتهاء': iq_d, 'الحالة': '🟡 تنتهي قريباً'})
+                if ct_d < today:
+                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': 'عقد عمل', 'تاريخ الانتهاء': ct_d, 'الحالة': '🔴 منتهي'})
+                elif (ct_d - today).days <= 30:
+                    alerts.append({'الموظف': r['الاسم'], 'الفرع': r['الفرع'], 'نوع الوثيقة': 'عقد عمل', 'تاريخ الانتهاء': ct_d, 'الحالة': '🟡 ينتهي قريباً'})
+            except: pass
+        if alerts: st.dataframe(pd.DataFrame(alerts), use_container_width=True, hide_index=True)
+        else: st.success('جميع الإقامات والعقود سارية ولا يوجد وثائق منتهية حالياً!')
+
+    elif selected_option == 'الإغلاق السنوي' and st.session_state.user_role == "admin":
+        st.subheader('🏁 شاشة الإغلاق المالي السنوي وفتح سنة جديدة')
+        st.markdown("### ملخص الرواتب والدفعات الكلية بالسجلات:")
+        st.dataframe(st.session_state.payroll_df[['م', 'الاسم', 'الوظيفة', 'الفرع', 'الراتب الأساسي', 'الخصومات', 'الدفعة المدفوعة', 'المتبقي']], use_container_width=True, hide_index=True)
+        
+        st.divider()
+        st.markdown("### فتح سنة جديدة:")
+        col_y1, col_y2 = st.columns(2)
+        with col_y1:
+            next_year_name = st.text_input("السنة المالية الجديدة:", "2027")
+        with col_y2:
+            st.write("")
+            st.write("")
+            if st.button(f"إغلاق السنة المالية الحالية وفتح سنة ({next_year_name})"):
+                st.session_state.months_list = [f'يناير {next_year_name}', f'فبراير {next_year_name}', f'مارس {next_year_name}', f'أبريل {next_year_name}']
+                st.success(f"تم إغلاق السنة الحالية وافتتاح سنة ({next_year_name}) بنجاح!")
+                st.rerun()
