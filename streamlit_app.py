@@ -36,9 +36,10 @@ if '🌙' in st.session_state['theme_mode']:
     header_bg = "#0B132B"
     dialog_bg = "#1C2541"
     dialog_text = "#FFFFFF"
-    
     btn_main_bg = "linear-gradient(135deg, #1C2541 0%, #0B132B 100%)"
     btn_main_text = "#FFFFFF"
+    file_uploader_bg = "#1C2541"
+    file_uploader_text = "#FFFFFF"
     
     stars_css = """
         body, .stApp, [data-testid="stHeader"] {
@@ -65,9 +66,10 @@ else:
     header_bg = "#F8FAFC"
     dialog_bg = "#FFFFFF"
     dialog_text = "#0F172A"
-    
     btn_main_bg = "linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 100%)"
     btn_main_text = "#0B132B"
+    file_uploader_bg = "#F1F5F9"
+    file_uploader_text = "#0F172A"
     stars_css = ""
 
 pwa_manifest_json = json.dumps({
@@ -129,6 +131,26 @@ st.markdown(f"""
             color: {text_color} !important;
             font-family: 'Cairo', sans-serif !important;
             word-wrap: break-word !important;
+        }}
+
+        /* إصلاح مخصص وناصع لمربعات رفع الملفات st.file_uploader للوضعين النهاري والليلي */
+        [data-testid="stFileUploader"] section {{
+            background-color: {file_uploader_bg} !important;
+            border: 2px dashed #D97706 !important;
+            border-radius: 10px !important;
+            padding: 10px !important;
+        }}
+
+        [data-testid="stFileUploader"] section * {{
+            color: {file_uploader_text} !important;
+            font-weight: 800 !important;
+        }}
+
+        [data-testid="stFileUploader"] button {{
+            background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
+            color: #FFFFFF !important;
+            border-radius: 6px !important;
+            border: none !important;
         }}
 
         @media screen and (min-width: 769px) {{
@@ -279,237 +301,46 @@ st.markdown(f"""
             border-color: #F59E0B !important;
         }}
 
-        [data-testid="stDialog"] > div:first-child, [data-testid="stModal"] > div:first-child, div[role="dialog"] {{
-            background-color: {dialog_bg} !important;
-            color: {dialog_text} !important;
-            border: 2px solid #D97706 !important;
-            border-radius: 16px !important;
-        }}
-
-        [data-testid="stDialog"] *, [data-testid="stModal"] *, div[role="dialog"] * {{
-            color: {dialog_text} !important;
-        }}
-
-        [data-testid="stDialog"] h3, [data-testid="stModal"] h3, div[role="dialog"] h3 {{
-            color: #F59E0B !important;
-            font-weight: 900 !important;
-        }}
-
-        [data-testid="stDateInput"] div[data-baseweb="input"], [data-testid="stDateInput"] input {{
-            background-color: #FFFFFF !important;
-            color: #000000 !important;
-            border: 1px solid #CBD5E1 !important;
-            border-radius: 6px !important;
-            font-weight: 900 !important;
-            font-size: 14px !important;
-            -webkit-text-fill-color: #000000 !important;
-        }}
-
-        div[data-baseweb="calendar"], div[data-baseweb="calendar"] *, [data-baseweb="popover"] div[data-baseweb="calendar"] * {{
-            background-color: #FFFFFF !important;
-            color: #0B132B !important;
-            font-weight: 900 !important;
-            -webkit-text-fill-color: #0B132B !important;
-        }}
-
-        div[data-baseweb="calendar"] button {{
-            color: #0B132B !important;
-            -webkit-text-fill-color: #0B132B !important;
-        }}
-
-        div[data-baseweb="calendar"] [aria-selected="true"] {{
-            background-color: #D97706 !important;
-            color: #FFFFFF !important;
-            -webkit-text-fill-color: #FFFFFF !important;
-        }}
-
-        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {{
-            background-color: #FFFFFF !important;
-            color: #000000 !important;
-            border: 1px solid #CBD5E1 !important;
-            border-radius: 6px !important;
-            font-weight: 800 !important;
-            font-size: 13px !important;
-            padding: 4px 8px !important;
-            -webkit-text-fill-color: #000000 !important;
-        }}
-
-        ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"], [data-baseweb="popover"] > div, div[data-baseweb="menu"] {{
-            background-color: #1C2541 !important;
-            color: #FFFFFF !important;
-            border: 1px solid #D97706 !important;
-            border-radius: 8px !important;
-        }}
-
-        li[role="option"], li[role="option"] *, div[role="option"], div[role="option"] * {{
-            color: #FFFFFF !important;
-            background-color: #1C2541 !important;
-            font-weight: 800 !important;
-            font-size: 13px !important;
-        }}
-
-        li[role="option"]:hover, li[role="option"]:hover *, div[role="option"]:hover, div[role="option"]:hover * {{
-            background-color: #D97706 !important;
-            color: #FFFFFF !important;
-        }}
-
-        [data-testid="stMetricValue"] div {{
-            font-size: 22px !important;
-            font-weight: 900 !important;
-            text-align: center !important;
-            color: #F59E0B !important;
-            white-space: nowrap !important;
-        }}
-
-        [data-testid="stMetricLabel"] label, [data-testid="stMetricLabel"] div {{
-            font-size: 14px !important;
-            font-weight: 800 !important;
-            text-align: center !important;
-            white-space: nowrap !important;
-        }}
-
-        .stMetric {{
-            background-color: {bg_card} !important;
-            border-radius: 10px !important;
-            padding: 8px 10px !important;
-            border: 1px solid {border_color} !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-            margin-bottom: 4px !important;
-            text-align: center !important;
-        }}
-
-        .cash-card-item {{
-            background-color: {bg_card};
-            border: 1px solid {border_color};
-            border-radius: 8px;
-            padding: 6px 10px !important;
-            margin-bottom: 2px !important;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }}
-
-        .amt-pos {{
-            color: #10B981 !important;
-            font-weight: 900 !important;
-            font-size: 17px !important;
-        }}
-
-        .amt-neg {{
-            color: #EF4444 !important;
-            font-weight: 900 !important;
-            font-size: 17px !important;
-        }}
-
-        .welcome-card-lux {{
-            background: linear-gradient(135deg, #0B132B 0%, #1E3A8A 100%);
-            border-radius: 20px;
-            padding: 20px 15px;
-            text-align: center !important;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
-            margin-top: 5px;
-            border: 2px solid #D97706;
-        }}
-
-        .title-company-royal {{
-            font-size: 30px !important;
-            font-weight: 900 !important;
-            color: #F59E0B !important;
-            text-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
-            margin-top: 8px;
-            margin-bottom: 8px;
-            text-align: center !important;
-        }}
-
-        .company-header-inner {{
-            background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%);
-            border: 2px solid #D97706;
-            border-radius: 12px;
-            padding: 6px 12px;
-            text-align: center !important;
-            margin-top: 0px;
-            margin-bottom: 8px;
-        }}
-
-        .company-header-inner-title {{
-            font-size: 20px !important;
-            font-weight: 900 !important;
-            color: #F59E0B !important;
-            margin: 0 !important;
-            text-align: center !important;
-        }}
-
-        .company-header-inner-sub {{
-            font-size: 12px !important;
-            color: #94A3B8 !important;
-            margin: 0 !important;
-        }}
-
-        .logo-lux {{
-            font-size: 50px;
-            font-weight: 900;
-            color: #EF4444 !important;
-            font-family: Arial, sans-serif;
-            line-height: 1;
-            margin-bottom: 5px;
-            text-align: center !important;
-        }}
-
-        .date-badge-lux {{
-            display: inline-block;
-            background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
-            color: #FFFFFF !important;
-            padding: 2px 14px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 800;
-            margin-bottom: 4px;
-        }}
-
-        .cloud-status-badge {{
-            display: inline-block;
-            background: rgba(16, 185, 129, 0.15);
-            border: 1px solid #10B981;
-            color: #10B981 !important;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 800;
-            margin-top: 4px;
-        }}
-
-        /* تنسيق خاص بجدول الإقرار الضريبي لـ ZATCA */
-        .vat-table {{
+        /* تصميم جدول الإقرار الضريبي الرسمي ZATCA */
+        .zatca-table {{
             width: 100%;
             border-collapse: collapse;
             margin-top: 15px;
             font-size: 13px;
+            background-color: {bg_card};
         }}
-        .vat-table th {{
+        .zatca-table th {{
             background-color: #1E3A8A;
             color: #FFFFFF;
-            padding: 8px;
+            padding: 10px;
             border: 1px solid #D97706;
             text-align: center;
             font-weight: bold;
         }}
-        .vat-table td {{
+        .zatca-table td {{
             border: 1px solid #334155;
-            padding: 8px;
+            padding: 8px 12px;
             text-align: center;
         }}
-        .vat-section-header {{
+        .zatca-section-header {{
             background-color: #1C2541;
             color: #F59E0B;
             font-weight: bold;
             text-align: right !important;
-            padding-right: 12px !important;
+            padding-right: 15px !important;
+            font-size: 14px;
         }}
-        .vat-net-row {{
+        .zatca-total-row {{
+            background-color: #0F172A;
+            color: #F59E0B;
+            font-weight: bold;
+            font-size: 14px;
+        }}
+        .zatca-final-row {{
             background-color: #047857;
             color: #FFFFFF;
             font-weight: bold;
-            font-size: 15px;
+            font-size: 16px;
         }}
     </style>
 """, unsafe_allow_html=True)
@@ -728,7 +559,7 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# دالة ذكية معالجة لقراءة ملفات إكسيل المبيعات والمشتريات
+# دالة معالجة قراءة ملفات إكسيل المبيعات والمشتريات بدقة
 def process_vat_excel_file(uploaded_file):
     try:
         df_excel = pd.read_excel(uploaded_file)
@@ -1858,9 +1689,13 @@ else:
     # 7. موديول ضريبة القيمة المضافة (ZATCA VAT Return Generator)
     elif selected_option == 'تقرير القيمة المضافة' and st.session_state.user_role == "admin":
         st.subheader('🏛️ موديول إقرار ضريبة القيمة المضافة الربع سنوي (ZATCA)')
-        st.write('قم برفع شيتات الإكسيل للفروع والمشتريات لاستخراج تقرير الإقرار الضريبي الرسمي الموحد المعتمد مع هيئة الزكاة والضريبة والجمارك:')
+        st.write('قم برفع شيتات الإكسيل للفروع والمشتريات لاستخراج وتوليد تقرير الإقرار الضريبي الرسمي الموحد المعمد[cite: 1]:')
 
-        vat_quarter = st.selectbox("اختر الربع المالي للإقرار:", ["الربع الأول (يناير - مارس)", "الربع الثاني (أبريل - يونيو)", "الربع الثالث (يوليو - سبتمبر)", "الربع الرابع (أكتوبر - ديسمبر)"], index=2)
+        v_top1, v_top2 = st.columns(2)
+        with v_top1:
+            vat_quarter = st.selectbox("اختر الربع المالي للإقرار:", ["الربع الأول (يناير - مارس)", "الربع الثاني (أبريل - يونيو)", "الربع الثالث (يوليو - سبتمبر)", "الربع الرابع (أكتوبر - ديسمبر)"], index=1)
+        with v_top2:
+            prev_carried_vat = st.number_input("ضريبة القيمة المضافة المترحلة من الفترة/الفترات السابقة (ر.س):", min_value=0.0, value=0.0, step=1000.0)
 
         st.divider()
         st.markdown("### 📥 1. رفع ملفات الفروع والمشتريات (Excel/CSV):")
@@ -1881,6 +1716,9 @@ else:
             file_purch = st.file_uploader("شيت المشتريات العامة:", type=['xlsx', 'xls', 'csv'], key="vat_purch_file")
             file_purch_ret = st.file_uploader("شيت مرتجعات المشتريات:", type=['xlsx', 'xls', 'csv'], key="vat_purch_ret_file")
 
+        st.write("")
+        trigger_vat_calc = st.button("🚀 احتساب وتوليد تقرير الإقرار الضريبي الموحد", use_container_width=True)
+
         # معالجة وحساب أرقام الملفات المرفوعة
         ry_s_net, ry_s_vat, ry_s_tot = process_vat_excel_file(file_sales_ry) if file_sales_ry else (0.0, 0.0, 0.0)
         ry_r_net, ry_r_vat, ry_r_tot = process_vat_excel_file(file_ret_ry) if file_ret_ry else (0.0, 0.0, 0.0)
@@ -1891,7 +1729,7 @@ else:
         p_s_net, p_s_vat, p_s_tot = process_vat_excel_file(file_purch) if file_purch else (0.0, 0.0, 0.0)
         p_r_net, p_r_vat, p_r_tot = process_vat_excel_file(file_purch_ret) if file_purch_ret else (0.0, 0.0, 0.0)
 
-        # تجميع إجماليات المبيعات والمرتجعات والمشتريات
+        # تجميع المبيعات والمرتجعات والمشتريات
         total_sales_net = ry_s_net + jd_s_net
         total_sales_vat = ry_s_vat + jd_s_vat
 
@@ -1904,89 +1742,139 @@ else:
         total_purch_ret_net = p_r_net
         total_purch_ret_vat = p_r_vat
 
-        # صافيات المخرجات والمدخلات والضريبة المستحقة
         net_output_vat = total_sales_vat - total_sales_ret_vat
         net_input_vat = total_purch_vat - total_purch_ret_vat
-        net_vat_payable = net_output_vat - net_input_vat
+        net_vat_payable = (net_output_vat - net_input_vat) - prev_carried_vat
 
         st.divider()
-        st.markdown(f"### 📋 2. نموذج إقرار ضريبة القيمة المضافة المعمد (ZATCA) - {vat_quarter}:")
+        st.markdown(f"### 📋 2. نموذج الإقرار الضريبي المعمد المطابق لهيئة الزكاة والضريبة والجمارك (ZATCA) - {vat_quarter}[cite: 1]:")
 
         m_v1, m_v2, m_v3 = st.columns(3)
-        m_v1.metric("إجمالي ضريبة المبيعات (المخرجات)", f"{total_sales_vat:,.2f} ر.س")
-        m_v2.metric("إجمالي ضريبة المشتريات (المدخلات)", f"{total_purch_vat:,.2f} ر.س")
+        m_v1.metric("إجمالي ضريبة المبيعات (المخرجات)", f"{net_output_vat:,.2f} ر.س")
+        m_v2.metric("إجمالي ضريبة المشتريات (المدخلات)", f"{net_input_vat:,.2f} ر.س")
         
         if net_vat_payable >= 0:
-            m_v3.metric("🔴 صافي الضريبة الواجب سدادها للهيئة", f"{net_vat_payable:,.2f} ر.س")
+            m_v3.metric("🔴 صافي الضريبة المستحقة للسداد", f"{net_vat_payable:,.2f} ر.س")
         else:
             m_v3.metric("🟢 صافي الضريبة المستحقة للاسترداد", f"{abs(net_vat_payable):,.2f} ر.س")
 
-        # رسم جدول الإقرار الضريبي الرسمي المطابق لهيئة الزكاة والدخل
-        vat_summary_html = f"""
-        <table class="vat-table">
+        # رسم جدول الإقرار الضريبي طبق الأصل من التقرير الرسمي لهيئة الزكاة والدخل
+        zatca_official_html = f"""
+        <table class="zatca-table">
             <thead>
                 <tr>
-                    <th>البند / السطر</th>
-                    <th>المبلغ الخاضع للضريبة (ر.س)</th>
-                    <th>مبلغ ضريبة القيمة المضافة (15%)</th>
+                    <th style="width: 50%;">البند / الوصف الرسمي[cite: 1]</th>
+                    <th style="width: 25%;">المبلغ (بين ريال)[cite: 1]</th>
+                    <th style="width: 25%;">مبلغ ضريبة القيمة المضافة (ريال)[cite: 1]</th>
                 </tr>
             </thead>
             <tbody>
-                <tr><td colspan="3" class="vat-section-header">أولاً: المبيعات (المخرجات)</td></tr>
+                <tr><td colspan="3" class="zatca-section-header">ضريبة القيمة المضافة على المبيعات (المخرجات)[cite: 1]</td></tr>
                 <tr>
-                    <td style="text-align:right;">1. المبيعات الخاضعة للنسبة الأساسية (15%) - (الرياض وجدة)</td>
+                    <td style="text-align:right;">1. المبيعات الخاضعة للنسبة الأساسية (15%)[cite: 1]</td>
                     <td>{total_sales_net:,.2f}</td>
                     <td style="color:#10B981; font-weight:bold;">{total_sales_vat:,.2f}</td>
                 </tr>
                 <tr>
-                    <td style="text-align:right;">2. التعديلات والرتجعات على المبيعات الخاضعة للنسبة الأساسية</td>
+                    <td style="text-align:right;">- تعديلات ومرتجعات المبيعات الخاضعة للنسبة الأساسية[cite: 1]</td>
                     <td>({total_sales_ret_net:,.2f})</td>
                     <td style="color:#EF4444; font-weight:bold;">({total_sales_ret_vat:,.2f})</td>
                 </tr>
-                <tr style="background-color:#1C2541; font-weight:bold;">
-                    <td style="text-align:right;">إجمالي المبيعات وصافي ضريبة المخرجات</td>
+                <tr>
+                    <td style="text-align:right;">2. المبيعات التي تتحمل الدولة ضريبتها[cite: 1]</td>
+                    <td>0.00</td>
+                    <td>0.00</td>
+                </tr>
+                <tr>
+                    <td style="text-align:right;">3. المبيعات المحلية الخاضعة للنسبة الصفرية[cite: 1]</td>
+                    <td>0.00</td>
+                    <td>0.00</td>
+                </tr>
+                <tr>
+                    <td style="text-align:right;">4. الصادرات[cite: 1]</td>
+                    <td>0.00</td>
+                    <td>0.00</td>
+                </tr>
+                <tr>
+                    <td style="text-align:right;">5. المبيعات المعفاة من الضريبة[cite: 1]</td>
+                    <td>0.00</td>
+                    <td>0.00</td>
+                </tr>
+                <tr class="zatca-total-row">
+                    <td style="text-align:right;">6. إجمالي المبيعات وصافي ضريبة المخرجات[cite: 1]</td>
                     <td>{(total_sales_net - total_sales_ret_net):,.2f}</td>
                     <td style="color:#F59E0B; font-size:15px;">{net_output_vat:,.2f}</td>
                 </tr>
-                <tr><td colspan="3" class="vat-section-header">ثانياً: المشتريات (المدخلات)</td></tr>
+                <tr><td colspan="3" class="zatca-section-header">ضريبة القيمة المضافة على المشتريات (المدخلات)[cite: 1]</td></tr>
                 <tr>
-                    <td style="text-align:right;">3. المشتريات الخاضعة للنسبة الأساسية (15%)</td>
+                    <td style="text-align:right;">7. المشتريات الخاضعة للنسبة الأساسية (15%)[cite: 1]</td>
                     <td>{total_purch_net:,.2f}</td>
                     <td style="color:#10B981; font-weight:bold;">{total_purch_vat:,.2f}</td>
                 </tr>
                 <tr>
-                    <td style="text-align:right;">4. التعديلات والمرتجعات على المشتريات الخاضعة للنسبة الأساسية</td>
+                    <td style="text-align:right;">- تعديلات ومرتجعات المشتريات الخاضعة للنسبة الأساسية[cite: 1]</td>
                     <td>({total_purch_ret_net:,.2f})</td>
                     <td style="color:#EF4444; font-weight:bold;">({total_purch_ret_vat:,.2f})</td>
                 </tr>
-                <tr style="background-color:#1C2541; font-weight:bold;">
-                    <td style="text-align:right;">إجمالي المشتريات وصافي ضريبة المدخلات</td>
+                <tr>
+                    <td style="text-align:right;">8. الاستيرادات الخاضعة لضريبة القيمة المضافة بالنسبة الأساسية[cite: 1]</td>
+                    <td>0.00</td>
+                    <td>0.00</td>
+                </tr>
+                <tr>
+                    <td style="text-align:right;">9. التوريدات الخاضعة لضريبة القيمة المضافة التي تطبق عليها الاحتساب العكسي[cite: 1]</td>
+                    <td>0.00</td>
+                    <td>0.00</td>
+                </tr>
+                <tr>
+                    <td style="text-align:right;">10. المشتريات الخاضعة للنسبة الصفرية[cite: 1]</td>
+                    <td>0.00</td>
+                    <td>0.00</td>
+                </tr>
+                <tr>
+                    <td style="text-align:right;">11. مشتريات معفاة من الضريبة[cite: 1]</td>
+                    <td>0.00</td>
+                    <td>0.00</td>
+                </tr>
+                <tr class="zatca-total-row">
+                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات[cite: 1]</td>
                     <td>{(total_purch_net - total_purch_ret_net):,.2f}</td>
                     <td style="color:#F59E0B; font-size:15px;">{net_input_vat:,.2f}</td>
                 </tr>
-                <tr class="vat-net-row">
-                    <td style="text-align:right;">صافي الضريبة المستحقة للسداد / الاسترداد للربع المالي</td>
+                <tr class="zatca-total-row">
+                    <td style="text-align:right;">13. إجمالي ضريبة القيمة المضافة المستحقة للفترة الحالية[cite: 1]</td>
+                    <td colspan="2" style="font-size:15px;">{(net_output_vat - net_input_vat):,.2f} ريال سعودي</td>
+                </tr>
+                <tr>
+                    <td style="text-align:right;">14. تصحيحات من الفترات السابقة[cite: 1]</td>
+                    <td colspan="2">0.00</td>
+                </tr>
+                <tr>
+                    <td style="text-align:right;">15. ضريبة القيمة المضافة التي تم ترحيلها من الفترة / الفترات السابقة[cite: 1]</td>
+                    <td colspan="2">({prev_carried_vat:,.2f})</td>
+                </tr>
+                <tr class="zatca-final-row">
+                    <td style="text-align:right;">16. صافي الضريبة المستحق (أو المستعادة)[cite: 1]</td>
                     <td colspan="2" style="font-size:18px;">{net_vat_payable:,.2f} ريال سعودي</td>
                 </tr>
             </tbody>
         </table>
         """
-        st.markdown(vat_summary_html, unsafe_allow_html=True)
+        st.markdown(zatca_official_html, unsafe_allow_html=True)
 
         st.divider()
         st.markdown("### 🖨️ التصدير والطباعة:")
         
         btn_v1, btn_v2 = st.columns(2)
         with btn_v1:
-            # تصدير ملخص الإقرار لـ Excel/CSV
             vat_export_df = pd.DataFrame([
-                {'البند': 'مبيعات الرياض', 'المبلغ قبل الضريبة': ry_s_net, 'الضريبة': ry_s_vat, 'الإجمالي': ry_s_tot},
-                {'البند': 'مرتجعات الرياض', 'المبلغ قبل الضريبة': ry_r_net, 'الضريبة': ry_r_vat, 'الإجمالي': ry_r_tot},
-                {'البند': 'مبيعات جدة', 'المبلغ قبل الضريبة': jd_s_net, 'الضريبة': jd_s_vat, 'الإجمالي': jd_s_tot},
-                {'البند': 'مرتجعات جدة', 'المبلغ قبل الضريبة': jd_r_net, 'الضريبة': jd_r_vat, 'الإجمالي': jd_r_tot},
-                {'البند': 'المشتريات العامة', 'المبلغ قبل الضريبة': p_s_net, 'الضريبة': p_s_vat, 'الإجمالي': p_s_tot},
-                {'البند': 'مرتجعات المشتريات', 'المبلغ قبل الضريبة': p_r_net, 'الضريبة': p_r_vat, 'الإجمالي': p_r_tot},
-                {'البند': 'صافي الضريبة المستحقة (ZATCA)', 'المبلغ قبل الضريبة': (total_sales_net - total_sales_ret_net) - (total_purch_net - total_purch_ret_net), 'الضريبة': net_vat_payable, 'الإجمالي': 0.0}
+                {'البند': 'مبيعات الرياض الخاضعة للنسبة الأساسية', 'المبلغ قبل الضريبة': ry_s_net, 'الضريبة (15%)': ry_s_vat, 'الإجمالي شامل الضريبة': ry_s_tot},
+                {'البند': 'مرتجعات مبيعات الرياض', 'المبلغ قبل الضريبة': ry_r_net, 'الضريبة (15%)': ry_r_vat, 'الإجمالي شامل الضريبة': ry_r_tot},
+                {'البند': 'مبيعات جدة الخاضعة للنسبة الأساسية', 'المبلغ قبل الضريبة': jd_s_net, 'الضريبة (15%)': jd_s_vat, 'الإجمالي شامل الضريبة': jd_s_tot},
+                {'البند': 'مرتجعات مبيعات جدة', 'المبلغ قبل الضريبة': jd_r_net, 'الضريبة (15%)': jd_r_vat, 'الإجمالي شامل الضريبة': jd_r_tot},
+                {'البند': 'المشتريات العامة الخاضعة للنسبة الأساسية', 'المبلغ قبل الضريبة': p_s_net, 'الضريبة (15%)': p_s_vat, 'الإجمالي شامل الضريبة': p_s_tot},
+                {'البند': 'مرتجعات المشتريات', 'المبلغ قبل الضريبة': p_r_net, 'الضريبة (15%)': p_r_vat, 'الإجمالي شامل الضريبة': p_r_tot},
+                {'البند': 'صافي الضريبة المستحقة للهيئة (ZATCA)', 'المبلغ قبل الضريبة': (total_sales_net - total_sales_ret_net) - (total_purch_net - total_purch_ret_net), 'الضريبة (15%)': net_vat_payable, 'الإجمالي شامل الضريبة': 0.0}
             ])
             csv_vat_bytes = vat_export_df.to_csv(index=False).encode('utf-8-sig')
             st.download_button(
@@ -1998,7 +1886,6 @@ else:
             )
 
         with btn_v2:
-            # طباعة A4 رسمية لملف الإقرار الضريبي
             vat_print_html = f"""
             <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
             <style>
@@ -2017,10 +1904,10 @@ else:
                         <div style="font-size:40px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
                         <div style="font-size:11px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
                     </div>
-                    <div class="vat-title">إقرار ضريبة القيمة المضافة الرسمي (ZATCA) - {vat_quarter}</div>
-                    {vat_summary_html}
+                    <div class="vat-title">إقرار ضريبة القيمة المضافة الرسمي (ZATCA) - {vat_quarter}[cite: 1]</div>
+                    {zatca_official_html}
                     <div class="sigs">
-                        <div>إعداد المدير المالي: __________________</div>
+                        <div>إعداد المحاسب / المدير المالي: __________________</div>
                         <div>اعتماد المدير العام: __________________</div>
                     </div>
                 </div>
@@ -2385,7 +2272,9 @@ else:
                 with cf2:
                     cash_filter_type = st.selectbox("تصفية بالحركة:", ["جميع الحركات", "سند قبض", "سند صرف"], key="filter_cash_type")
 
-                filtered_cash = curr_trans.copy()
+                reversed_trans = curr_trans[::-1]
+
+                filtered_cash = reversed_trans.copy()
                 if cash_search:
                     filtered_cash = [t for t in filtered_cash if cash_search.lower() in t['party'].lower()]
                 if cash_filter_type != "جميع الحركات":
