@@ -1981,7 +1981,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق
+    # 8. موديول حركة الصندوق - المحدث بالنظام اليومي الموحد
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -2023,6 +2023,7 @@ else:
 
         st.divider()
 
+        # قسم استخراج وطباعة وتصدير كشف حساب الصندوق المقابل
         st.markdown("### 🖨️ طباعة وتصدير كشف حساب الصندوق المقابل (T-Account):")
         
         t_col_p1, t_col_p2, t_col_p3, t_col_p4 = st.columns([1.2, 1.3, 1.2, 1.2])
@@ -2163,7 +2164,7 @@ else:
                         st.rerun()
 
         with col_c_in2:
-            st.markdown("### 📊 دفتر يومية الصندوق:")
+            st.markdown("### 📊 دفتر يومية الصندوق (نظام الصفحات اليومية):")
             if curr_trans:
                 cf1, cf2 = st.columns([2, 1])
                 with cf1:
@@ -2171,56 +2172,75 @@ else:
                 with cf2:
                     cash_filter_type = st.selectbox("تصفية بالحركة:", ["جميع الحركات", "سند قبض", "سند صرف"], key="filter_cash_type")
 
-                reversed_trans = curr_trans[::-1]
-
-                filtered_cash = reversed_trans.copy()
+                # فلترة الحركات بالبيان ونوع الحركة
+                filtered_cash = curr_trans.copy()
                 if cash_search:
                     filtered_cash = [t for t in filtered_cash if cash_search.lower() in t['party'].lower()]
                 if cash_filter_type != "جميع الحركات":
                     filtered_cash = [t for t in filtered_cash if t['type'] == cash_filter_type]
 
-                items_per_page = 15
-                total_items = len(filtered_cash)
-                total_pages = (total_items + items_per_page - 1) // items_per_page if total_items > 0 else 1
-                
-                page_num = st.number_input(f"الصفحة (من أصل {total_pages}):", min_value=1, max_value=total_pages, value=1, step=1, key="cash_pg_num")
-                start_idx = (page_num - 1) * items_per_page
-                end_idx = start_idx + items_per_page
-                page_trans = filtered_cash[start_idx:end_idx]
-
-                for t_idx, t_item in enumerate(page_trans):
-                    real_idx = curr_trans.index(t_item)
+                if filtered_cash:
+                    # استخراج وتجميع الأيام المسجلة بالسندات بترتيب أحدث يوم أولاً
+                    dates_set = []
+                    for t in filtered_cash:
+                        d_str = t['date'].split(' ')[0]
+                        if d_str not in dates_set:
+                            dates_set.append(d_str)
                     
-                    is_rec = "قبض" in t_item['type']
-                    amt_cls = "amt-pos" if is_rec else "amt-neg"
-                    t_sign = "+" if is_rec else "-"
-                    border_c = "#10B981" if is_rec else "#EF4444"
+                    dates_set.reverse()  # أحدث تاريخ في البداية
 
-                    st.markdown(f"""
-                        <div class="cash-card-item" style="border-right: 5px solid {border_c};">
-                            <div>
-                                <span style="font-weight:bold; font-size:14px;">#{t_item.get('code', t_item['id'])} - {t_item['party']}</span><br>
-                                <span style="font-size:11px; color:#94A3B8;">📅 {t_item['date']} | 💳 {t_item['method']} | 📝 {t_item.get('notes','')}</span>
+                    # اختيار اليوم المطلوب عرضه كصفحة مستقلة
+                    selected_day_page = st.selectbox(
+                        "📅 اختر يومية التاريخ المطلوب استعراضها:", 
+                        dates_set, 
+                        key="select_cash_day_page"
+                    )
+
+                    # تصفية السندات الخاصة باليوم المختار فقط مع إظهار الأحدث بالأعلى
+                    day_trans = [t for t in filtered_cash if t['date'].startswith(selected_day_page)][::-1]
+
+                    # حساب إحصائيات يومية التاريخ المختار
+                    d_in = sum(t['amount'] for t in day_trans if 'قبض' in t['type'])
+                    d_out = sum(t['amount'] for t in day_trans if 'صرف' in t['type'])
+                    d_net = d_in - d_out
+
+                    st.info(f"📆 **حركة يوم ({selected_day_page}):** مقبوضات اليوم: `{d_in:,.2f} ر.س` | مصروفات اليوم: `{d_out:,.2f} ر.س` | صافي الحركة اليومية: `{d_net:,.2f} ر.س`")
+
+                    for t_idx, t_item in enumerate(day_trans):
+                        real_idx = curr_trans.index(t_item)
+                        
+                        is_rec = "قبض" in t_item['type']
+                        amt_cls = "amt-pos" if is_rec else "amt-neg"
+                        t_sign = "+" if is_rec else "-"
+                        border_c = "#10B981" if is_rec else "#EF4444"
+
+                        st.markdown(f"""
+                            <div class="cash-card-item" style="border-right: 5px solid {border_c};">
+                                <div>
+                                    <span style="font-weight:bold; font-size:14px;">#{t_item.get('code', t_item['id'])} - {t_item['party']}</span><br>
+                                    <span style="font-size:11px; color:#94A3B8;">📅 {t_item['date']} | 💳 {t_item['method']} | 📝 {t_item.get('notes','')}</span>
+                                </div>
+                                <div class="{amt_cls}">
+                                    {t_sign} {t_item['amount']:,.2f} ر.س
+                                </div>
                             </div>
-                            <div class="{amt_cls}">
-                                {t_sign} {t_item['amount']:,.2f} ر.س
-                            </div>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    b_p, b_e, b_d = st.columns(3)
-                    if b_p.button("🖨️ طباعة", key=f"btn_p_c_{real_idx}"):
-                        print_cash_voucher_dialog(t_item, month_selected)
+                        """, unsafe_allow_html=True)
+                        
+                        b_p, b_e, b_d = st.columns(3)
+                        if b_p.button("🖨️ طباعة", key=f"btn_p_c_{real_idx}"):
+                            print_cash_voucher_dialog(t_item, month_selected)
 
-                    if b_e.button("✏️ تعديل", key=f"btn_e_c_{real_idx}"):
-                        edit_cash_voucher_dialog(real_idx, month_selected, active_target_box)
+                        if b_e.button("✏️ تعديل", key=f"btn_e_c_{real_idx}"):
+                            edit_cash_voucher_dialog(real_idx, month_selected, active_target_box)
 
-                    if b_d.button("🗑️ حذف", key=f"btn_d_c_{real_idx}"):
-                        curr_trans.pop(real_idx)
-                        all_cash_db[month_selected][active_box_key] = curr_trans
-                        save_cash_data(all_cash_db)
-                        st.success("تم الحذف!")
-                        st.rerun()
+                        if b_d.button("🗑️ حذف", key=f"btn_d_c_{real_idx}"):
+                            curr_trans.pop(real_idx)
+                            all_cash_db[month_selected][active_box_key] = curr_trans
+                            save_cash_data(all_cash_db)
+                            st.success("تم الحذف!")
+                            st.rerun()
+                else:
+                    st.warning("لا توجد نتائج تطابق الاستعلام.")
 
             else:
                 st.info("لا توجد حركات تسوية بالصندوق مسجلة لهذا الشهر.")
