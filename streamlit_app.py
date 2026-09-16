@@ -477,6 +477,40 @@ st.markdown(f"""
             font-weight: 800;
             margin-top: 4px;
         }}
+
+        /* تنسيق خاص بجدول الإقرار الضريبي لـ ZATCA */
+        .vat-table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 13px;
+        }}
+        .vat-table th {{
+            background-color: #1E3A8A;
+            color: #FFFFFF;
+            padding: 8px;
+            border: 1px solid #D97706;
+            text-align: center;
+            font-weight: bold;
+        }}
+        .vat-table td {{
+            border: 1px solid #334155;
+            padding: 8px;
+            text-align: center;
+        }}
+        .vat-section-header {{
+            background-color: #1C2541;
+            color: #F59E0B;
+            font-weight: bold;
+            text-align: right !important;
+            padding-right: 12px !important;
+        }}
+        .vat-net-row {{
+            background-color: #047857;
+            color: #FFFFFF;
+            font-weight: bold;
+            font-size: 15px;
+        }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -614,7 +648,6 @@ def save_monthly_payroll_store(store_data):
 def get_payroll_for_month(month_name):
     store = load_monthly_payroll_store()
     
-    # دمج وتحديث الموظفين الـ 17 سحابياً بالقيم المحدثة للرواتب الإجمالية
     new_emp_dict = {m['م']: m for m in august_payroll_data if m['م'] >= 56}
     
     if month_name in store and len(store[month_name]) > 0:
@@ -693,6 +726,35 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
         
         return round(years, 2), round(gratuity, 2), round(leave_allowance, 2)
     except:
+        return 0.0, 0.0, 0.0
+
+# دالة ذكية معالجة لقراءة ملفات إكسيل المبيعات والمشتريات
+def process_vat_excel_file(uploaded_file):
+    try:
+        df_excel = pd.read_excel(uploaded_file)
+        cols = [str(c).strip().lower() for c in df_excel.columns]
+        df_excel.columns = cols
+
+        net_amt, vat_amt, total_amt = 0.0, 0.0, 0.0
+
+        for col in df_excel.columns:
+            if any(k in col for k in ['صافي', 'المبلغ قبل', 'المبلغ', 'المبيعات', 'المشتريات', 'net', 'amount']) and not any(k in col for k in ['ضريب', 'إجمالي', 'total', 'vat']):
+                try: net_amt = float(pd.to_numeric(df_excel[col], errors='coerce').sum())
+                except: pass
+            elif any(k in col for k in ['ضريب', 'الضريبة', 'vat', 'tax']):
+                try: vat_amt = float(pd.to_numeric(df_excel[col], errors='coerce').sum())
+                except: pass
+            elif any(k in col for k in ['إجمالي', 'الجملة', 'total', 'gross']):
+                try: total_amt = float(pd.to_numeric(df_excel[col], errors='coerce').sum())
+                except: pass
+
+        if vat_amt == 0.0 and net_amt > 0.0:
+            vat_amt = net_amt * 0.15
+        if total_amt == 0.0 and net_amt > 0.0:
+            total_amt = net_amt + vat_amt
+
+        return round(net_amt, 2), round(vat_amt, 2), round(total_amt, 2)
+    except Exception:
         return 0.0, 0.0, 0.0
 
 @st.dialog("تعديل الرصيد الافتتاحي للصندوق")
@@ -1221,7 +1283,13 @@ else:
                 st.session_state['current_view'] = 'طباعة السندات'
                 st.rerun()
 
-            # 4. قسم الموارد البشرية HR
+            # 4. موديول ضريبة القيمة المضافة (ZATCA)
+            st.markdown('<div class="sidebar-section-title">🏛️ الزكاة والضريبة (ZATCA)</div>', unsafe_allow_html=True)
+            if st.button("🏛️ تقرير القيمة المضافة", use_container_width=True):
+                st.session_state['current_view'] = 'تقرير القيمة المضافة'
+                st.rerun()
+
+            # 5. قسم الموارد البشرية HR
             st.markdown('<div class="sidebar-section-title">👤 الموارد البشرية (HR)</div>', unsafe_allow_html=True)
             if st.button("دليل الموظفين", use_container_width=True):
                 st.session_state['current_view'] = 'دليل الموظفين'
@@ -1233,7 +1301,7 @@ else:
                 st.session_state['current_view'] = 'التنبيهات'
                 st.rerun()
 
-            # 5. قسم النظام والأرشيف
+            # 6. قسم النظام والأرشيف
             st.markdown('<div class="sidebar-section-title">⚙️ أدوات النظام والأرشيف</div>', unsafe_allow_html=True)
             if st.button("النسخ الاحتياطي", use_container_width=True):
                 st.session_state['current_view'] = 'النسخ الاحتياطي'
@@ -1787,40 +1855,186 @@ else:
         else:
             st.info("لا توجد جلسات جرد سابقة محفوظة لهذا الصندوق.")
 
-    elif selected_option == 'النسخ الاحتياطي' and st.session_state.user_role == "admin":
-        st.subheader(f'💾 مركز إدارة النسخ الاحتياطي والأرشيف المالي - ({month_selected})')
-        st.write('💡 يتيح لك هذا المركز حفظ نسخة كاملة من بيانات النظام المالية والإدارية على جهازك أو استعادتها فوراً:')
-        
-        bc1, bc2 = st.columns(2)
-        with bc1:
-            st.markdown("### 📥 1. تصدير وتنزيل نسخة احتياطية (JSON):")
-            st.info("تنزيل ملف شامل لكافة بيانات الرواتب، السجلات، والسندات المسجلة بالنظام حتى تاريخ اليوم:")
-            if 'payroll_df' in st.session_state:
-                json_str_full = st.session_state.payroll_df.to_json(orient='records', force_ascii=False, indent=4)
-                st.download_button(
-                    label="💾 اضغط هنا لتنزيل النسخة الاحتياطية فوراً (JSON)",
-                    data=json_str_full.encode('utf-8'),
-                    file_name=f"payroll_backup_{month_selected}.json",
-                    mime="application/json",
-                    use_container_width=True,
-                    key="full_backup_download_btn_page"
-                )
-                
-        with bc2:
-            st.markdown("### 📤 2. استيراد ورفع نسخة احتياطية سابقة:")
-            st.warning("رفع ملف JSON سابق سيستبدل بيانات الموظفين والرواتب بالملف المرفوع فوراً:")
-            uploaded_backup_page = st.file_uploader("اختر ملف النسخة الاحتياطية (JSON) من جهازك:", type=['json'], key="full_backup_upload_page_btn")
-            if uploaded_backup_page:
-                try:
-                    imported_df_page = pd.DataFrame(json.load(uploaded_backup_page))
-                    st.session_state.payroll_df = imported_df_page
-                    save_payroll_for_month(imported_df_page, month_selected)
-                    st.success("تم استيراد وحفظ النسخة الاحتياطية بنجاح بنسبة 100%!")
-                    st.rerun()
-                except Exception:
-                    st.error("خطأ في قراءة ملف النسخة المرفوع.")
+    # 7. موديول ضريبة القيمة المضافة (ZATCA VAT Return Generator)
+    elif selected_option == 'تقرير القيمة المضافة' and st.session_state.user_role == "admin":
+        st.subheader('🏛️ موديول إقرار ضريبة القيمة المضافة الربع سنوي (ZATCA)')
+        st.write('قم برفع شيتات الإكسيل للفروع والمشتريات لاستخراج تقرير الإقرار الضريبي الرسمي الموحد المعتمد مع هيئة الزكاة والضريبة والجمارك:')
 
-    # 7. موديول إدخال الدفعات
+        vat_quarter = st.selectbox("اختر الربع المالي للإقرار:", ["الربع الأول (يناير - مارس)", "الربع الثاني (أبريل - يونيو)", "الربع الثالث (يوليو - سبتمبر)", "الربع الرابع (أكتوبر - ديسمبر)"], index=2)
+
+        st.divider()
+        st.markdown("### 📥 1. رفع ملفات الفروع والمشتريات (Excel/CSV):")
+
+        v_col1, v_col2, v_col3 = st.columns(3)
+        with v_col1:
+            st.markdown("#### 🏢 مبيعات ومرتجعات الرياض:")
+            file_sales_ry = st.file_uploader("شيت مبيعات فرع الرياض:", type=['xlsx', 'xls', 'csv'], key="vat_ry_sales_file")
+            file_ret_ry = st.file_uploader("شيت مرتجعات فرع الرياض:", type=['xlsx', 'xls', 'csv'], key="vat_ry_ret_file")
+
+        with v_col2:
+            st.markdown("#### 🌊 مبيعات ومرتجعات جدة:")
+            file_sales_jd = st.file_uploader("شيت مبيعات فرع جدة:", type=['xlsx', 'xls', 'csv'], key="vat_jd_sales_file")
+            file_ret_jd = st.file_uploader("شيت مرتجعات فرع جدة:", type=['xlsx', 'xls', 'csv'], key="vat_jd_ret_file")
+
+        with v_col3:
+            st.markdown("#### 📦 المشتريات والمدخلات:")
+            file_purch = st.file_uploader("شيت المشتريات العامة:", type=['xlsx', 'xls', 'csv'], key="vat_purch_file")
+            file_purch_ret = st.file_uploader("شيت مرتجعات المشتريات:", type=['xlsx', 'xls', 'csv'], key="vat_purch_ret_file")
+
+        # معالجة وحساب أرقام الملفات المرفوعة
+        ry_s_net, ry_s_vat, ry_s_tot = process_vat_excel_file(file_sales_ry) if file_sales_ry else (0.0, 0.0, 0.0)
+        ry_r_net, ry_r_vat, ry_r_tot = process_vat_excel_file(file_ret_ry) if file_ret_ry else (0.0, 0.0, 0.0)
+
+        jd_s_net, jd_s_vat, jd_s_tot = process_vat_excel_file(file_sales_jd) if file_sales_jd else (0.0, 0.0, 0.0)
+        jd_r_net, jd_r_vat, jd_r_tot = process_vat_excel_file(file_ret_jd) if file_ret_jd else (0.0, 0.0, 0.0)
+
+        p_s_net, p_s_vat, p_s_tot = process_vat_excel_file(file_purch) if file_purch else (0.0, 0.0, 0.0)
+        p_r_net, p_r_vat, p_r_tot = process_vat_excel_file(file_purch_ret) if file_purch_ret else (0.0, 0.0, 0.0)
+
+        # تجميع إجماليات المبيعات والمرتجعات والمشتريات
+        total_sales_net = ry_s_net + jd_s_net
+        total_sales_vat = ry_s_vat + jd_s_vat
+
+        total_sales_ret_net = ry_r_net + jd_r_net
+        total_sales_ret_vat = ry_r_vat + jd_r_vat
+
+        total_purch_net = p_s_net
+        total_purch_vat = p_s_vat
+
+        total_purch_ret_net = p_r_net
+        total_purch_ret_vat = p_r_vat
+
+        # صافيات المخرجات والمدخلات والضريبة المستحقة
+        net_output_vat = total_sales_vat - total_sales_ret_vat
+        net_input_vat = total_purch_vat - total_purch_ret_vat
+        net_vat_payable = net_output_vat - net_input_vat
+
+        st.divider()
+        st.markdown(f"### 📋 2. نموذج إقرار ضريبة القيمة المضافة المعمد (ZATCA) - {vat_quarter}:")
+
+        m_v1, m_v2, m_v3 = st.columns(3)
+        m_v1.metric("إجمالي ضريبة المبيعات (المخرجات)", f"{total_sales_vat:,.2f} ر.س")
+        m_v2.metric("إجمالي ضريبة المشتريات (المدخلات)", f"{total_purch_vat:,.2f} ر.س")
+        
+        if net_vat_payable >= 0:
+            m_v3.metric("🔴 صافي الضريبة الواجب سدادها للهيئة", f"{net_vat_payable:,.2f} ر.س")
+        else:
+            m_v3.metric("🟢 صافي الضريبة المستحقة للاسترداد", f"{abs(net_vat_payable):,.2f} ر.س")
+
+        # رسم جدول الإقرار الضريبي الرسمي المطابق لهيئة الزكاة والدخل
+        vat_summary_html = f"""
+        <table class="vat-table">
+            <thead>
+                <tr>
+                    <th>البند / السطر</th>
+                    <th>المبلغ الخاضع للضريبة (ر.س)</th>
+                    <th>مبلغ ضريبة القيمة المضافة (15%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="3" class="vat-section-header">أولاً: المبيعات (المخرجات)</td></tr>
+                <tr>
+                    <td style="text-align:right;">1. المبيعات الخاضعة للنسبة الأساسية (15%) - (الرياض وجدة)</td>
+                    <td>{total_sales_net:,.2f}</td>
+                    <td style="color:#10B981; font-weight:bold;">{total_sales_vat:,.2f}</td>
+                </tr>
+                <tr>
+                    <td style="text-align:right;">2. التعديلات والرتجعات على المبيعات الخاضعة للنسبة الأساسية</td>
+                    <td>({total_sales_ret_net:,.2f})</td>
+                    <td style="color:#EF4444; font-weight:bold;">({total_sales_ret_vat:,.2f})</td>
+                </tr>
+                <tr style="background-color:#1C2541; font-weight:bold;">
+                    <td style="text-align:right;">إجمالي المبيعات وصافي ضريبة المخرجات</td>
+                    <td>{(total_sales_net - total_sales_ret_net):,.2f}</td>
+                    <td style="color:#F59E0B; font-size:15px;">{net_output_vat:,.2f}</td>
+                </tr>
+                <tr><td colspan="3" class="vat-section-header">ثانياً: المشتريات (المدخلات)</td></tr>
+                <tr>
+                    <td style="text-align:right;">3. المشتريات الخاضعة للنسبة الأساسية (15%)</td>
+                    <td>{total_purch_net:,.2f}</td>
+                    <td style="color:#10B981; font-weight:bold;">{total_purch_vat:,.2f}</td>
+                </tr>
+                <tr>
+                    <td style="text-align:right;">4. التعديلات والمرتجعات على المشتريات الخاضعة للنسبة الأساسية</td>
+                    <td>({total_purch_ret_net:,.2f})</td>
+                    <td style="color:#EF4444; font-weight:bold;">({total_purch_ret_vat:,.2f})</td>
+                </tr>
+                <tr style="background-color:#1C2541; font-weight:bold;">
+                    <td style="text-align:right;">إجمالي المشتريات وصافي ضريبة المدخلات</td>
+                    <td>{(total_purch_net - total_purch_ret_net):,.2f}</td>
+                    <td style="color:#F59E0B; font-size:15px;">{net_input_vat:,.2f}</td>
+                </tr>
+                <tr class="vat-net-row">
+                    <td style="text-align:right;">صافي الضريبة المستحقة للسداد / الاسترداد للربع المالي</td>
+                    <td colspan="2" style="font-size:18px;">{net_vat_payable:,.2f} ريال سعودي</td>
+                </tr>
+            </tbody>
+        </table>
+        """
+        st.markdown(vat_summary_html, unsafe_allow_html=True)
+
+        st.divider()
+        st.markdown("### 🖨️ التصدير والطباعة:")
+        
+        btn_v1, btn_v2 = st.columns(2)
+        with btn_v1:
+            # تصدير ملخص الإقرار لـ Excel/CSV
+            vat_export_df = pd.DataFrame([
+                {'البند': 'مبيعات الرياض', 'المبلغ قبل الضريبة': ry_s_net, 'الضريبة': ry_s_vat, 'الإجمالي': ry_s_tot},
+                {'البند': 'مرتجعات الرياض', 'المبلغ قبل الضريبة': ry_r_net, 'الضريبة': ry_r_vat, 'الإجمالي': ry_r_tot},
+                {'البند': 'مبيعات جدة', 'المبلغ قبل الضريبة': jd_s_net, 'الضريبة': jd_s_vat, 'الإجمالي': jd_s_tot},
+                {'البند': 'مرتجعات جدة', 'المبلغ قبل الضريبة': jd_r_net, 'الضريبة': jd_r_vat, 'الإجمالي': jd_r_tot},
+                {'البند': 'المشتريات العامة', 'المبلغ قبل الضريبة': p_s_net, 'الضريبة': p_s_vat, 'الإجمالي': p_s_tot},
+                {'البند': 'مرتجعات المشتريات', 'المبلغ قبل الضريبة': p_r_net, 'الضريبة': p_r_vat, 'الإجمالي': p_r_tot},
+                {'البند': 'صافي الضريبة المستحقة (ZATCA)', 'المبلغ قبل الضريبة': (total_sales_net - total_sales_ret_net) - (total_purch_net - total_purch_ret_net), 'الضريبة': net_vat_payable, 'الإجمالي': 0.0}
+            ])
+            csv_vat_bytes = vat_export_df.to_csv(index=False).encode('utf-8-sig')
+            st.download_button(
+                label="📥 تصدير تقرير الإقرار إلى Excel / CSV",
+                data=csv_vat_bytes,
+                file_name=f"إقرار_الضريبة_{vat_quarter}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+
+        with btn_v2:
+            # طباعة A4 رسمية لملف الإقرار الضريبي
+            vat_print_html = f"""
+            <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+            <style>
+                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; padding: 15px; color:#000; }}
+                .vat-box {{ border: 3px solid #1E3A8A; border-radius: 10px; padding: 15px; background: #fff; }}
+                .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 8px; }}
+                .vat-title {{ text-align: center; font-size: 18px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 8px; margin: 12px 0; border-radius: 6px; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }}
+                th {{ background-color: #1E3A8A; color: white; padding: 8px; border: 1px solid #334155; text-align: center; }}
+                td {{ border: 1px solid #cbd5e1; padding: 8px; text-align: center; }}
+                .sigs {{ margin-top: 35px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }}
+            </style></head><body>
+                <div class="vat-box">
+                    <div class="header-logo">
+                        <div style="font-size:11px; font-weight:bold;">Five-M Company For Industry<br>C. R. : 1011145035</div>
+                        <div style="font-size:40px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
+                        <div style="font-size:11px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
+                    </div>
+                    <div class="vat-title">إقرار ضريبة القيمة المضافة الرسمي (ZATCA) - {vat_quarter}</div>
+                    {vat_summary_html}
+                    <div class="sigs">
+                        <div>إعداد المدير المالي: __________________</div>
+                        <div>اعتماد المدير العام: __________________</div>
+                    </div>
+                </div>
+            </body></html>
+            """
+            st.download_button(
+                label="🖨️ تنزيل نموذج الإقرار الضريبي المباشر للطباعة A4 (HTML / PDF)",
+                data=vat_print_html.encode('utf-8'),
+                file_name=f"تقرير_إقرار_ضريبي_{vat_quarter}.html",
+                mime="text/html",
+                use_container_width=True
+            )
+
+    # 8. موديول إدخال الدفعات
     elif selected_option == 'إدخال الدفعات' and st.session_state.user_role == "admin":
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات - ({month_selected})')
         
@@ -1981,7 +2195,7 @@ else:
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    # 8. موديول حركة الصندوق - المحدث بالنظام اليومي الموحد
+    # 9. موديول حركة الصندوق
     elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
@@ -2023,7 +2237,6 @@ else:
 
         st.divider()
 
-        # قسم استخراج وطباعة وتصدير كشف حساب الصندوق المقابل
         st.markdown("### 🖨️ طباعة وتصدير كشف حساب الصندوق المقابل (T-Account):")
         
         t_col_p1, t_col_p2, t_col_p3, t_col_p4 = st.columns([1.2, 1.3, 1.2, 1.2])
@@ -2172,7 +2385,6 @@ else:
                 with cf2:
                     cash_filter_type = st.selectbox("تصفية بالحركة:", ["جميع الحركات", "سند قبض", "سند صرف"], key="filter_cash_type")
 
-                # فلترة الحركات بالبيان ونوع الحركة
                 filtered_cash = curr_trans.copy()
                 if cash_search:
                     filtered_cash = [t for t in filtered_cash if cash_search.lower() in t['party'].lower()]
@@ -2180,26 +2392,22 @@ else:
                     filtered_cash = [t for t in filtered_cash if t['type'] == cash_filter_type]
 
                 if filtered_cash:
-                    # استخراج وتجميع الأيام المسجلة بالسندات بترتيب أحدث يوم أولاً
                     dates_set = []
                     for t in filtered_cash:
                         d_str = t['date'].split(' ')[0]
                         if d_str not in dates_set:
                             dates_set.append(d_str)
                     
-                    dates_set.reverse()  # أحدث تاريخ في البداية
+                    dates_set.reverse()
 
-                    # اختيار اليوم المطلوب عرضه كصفحة مستقلة
                     selected_day_page = st.selectbox(
                         "📅 اختر يومية التاريخ المطلوب استعراضها:", 
                         dates_set, 
                         key="select_cash_day_page"
                     )
 
-                    # تصفية السندات الخاصة باليوم المختار فقط مع إظهار الأحدث بالأعلى
                     day_trans = [t for t in filtered_cash if t['date'].startswith(selected_day_page)][::-1]
 
-                    # حساب إحصائيات يومية التاريخ المختار
                     d_in = sum(t['amount'] for t in day_trans if 'قبض' in t['type'])
                     d_out = sum(t['amount'] for t in day_trans if 'صرف' in t['type'])
                     d_net = d_in - d_out
