@@ -133,6 +133,32 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
+        /* إعادة رسم وتحديد كروت الـ Metric بالصفحة الرئيسية لمنع تختفي إطاراتها المربعة */
+        [data-testid="stMetricValue"] div {{
+            font-size: 22px !important;
+            font-weight: 900 !important;
+            text-align: center !important;
+            color: #F59E0B !important;
+            white-space: nowrap !important;
+        }}
+
+        [data-testid="stMetricLabel"] label, [data-testid="stMetricLabel"] div {{
+            font-size: 14px !important;
+            font-weight: 800 !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+        }}
+
+        .stMetric {{
+            background-color: {bg_card} !important;
+            border-radius: 12px !important;
+            padding: 10px 12px !important;
+            border: 2px solid {border_color} !important;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+            margin-bottom: 6px !important;
+            text-align: center !important;
+        }}
+
         /* إصلاح مخصص وناصع لمربعات رفع الملفات st.file_uploader للوضعين النهاري والليلي */
         [data-testid="stFileUploader"] section {{
             background-color: {file_uploader_bg} !important;
@@ -299,6 +325,180 @@ st.markdown(f"""
             background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
             color: #FFFFFF !important;
             border-color: #F59E0B !important;
+        }}
+
+        [data-testid="stDialog"] > div:first-child, [data-testid="stModal"] > div:first-child, div[role="dialog"] {{
+            background-color: {dialog_bg} !important;
+            color: {dialog_text} !important;
+            border: 2px solid #D97706 !important;
+            border-radius: 16px !important;
+        }}
+
+        [data-testid="stDialog"] *, [data-testid="stModal"] *, div[role="dialog"] * {{
+            color: {dialog_text} !important;
+        }}
+
+        [data-testid="stDialog"] h3, [data-testid="stModal"] h3, div[role="dialog"] h3 {{
+            color: #F59E0B !important;
+            font-weight: 900 !important;
+        }}
+
+        [data-testid="stDateInput"] div[data-baseweb="input"], [data-testid="stDateInput"] input {{
+            background-color: #FFFFFF !important;
+            color: #000000 !important;
+            border: 1px solid #CBD5E1 !important;
+            border-radius: 6px !important;
+            font-weight: 900 !important;
+            font-size: 14px !important;
+            -webkit-text-fill-color: #000000 !important;
+        }}
+
+        div[data-baseweb="calendar"], div[data-baseweb="calendar"] *, [data-baseweb="popover"] div[data-baseweb="calendar"] * {{
+            background-color: #FFFFFF !important;
+            color: #0B132B !important;
+            font-weight: 900 !important;
+            -webkit-text-fill-color: #0B132B !important;
+        }}
+
+        div[data-baseweb="calendar"] button {{
+            color: #0B132B !important;
+            -webkit-text-fill-color: #0B132B !important;
+        }}
+
+        div[data-baseweb="calendar"] [aria-selected="true"] {{
+            background-color: #D97706 !important;
+            color: #FFFFFF !important;
+            -webkit-text-fill-color: #FFFFFF !important;
+        }}
+
+        .stTextInput input, .stNumberInput input, .stSelectbox div[data-baseweb="select"] {{
+            background-color: #FFFFFF !important;
+            color: #000000 !important;
+            border: 1px solid #CBD5E1 !important;
+            border-radius: 6px !important;
+            font-weight: 800 !important;
+            font-size: 13px !important;
+            padding: 4px 8px !important;
+            -webkit-text-fill-color: #000000 !important;
+        }}
+
+        ul[data-baseweb="menu"], div[role="listbox"], [data-baseweb="popover"], [data-baseweb="popover"] > div, div[data-baseweb="menu"] {{
+            background-color: #1C2541 !important;
+            color: #FFFFFF !important;
+            border: 1px solid #D97706 !important;
+            border-radius: 8px !important;
+        }}
+
+        li[role="option"], li[role="option"] *, div[role="option"], div[role="option"] * {{
+            color: #FFFFFF !important;
+            background-color: #1C2541 !important;
+            font-weight: 800 !important;
+            font-size: 13px !important;
+        }}
+
+        li[role="option"]:hover, li[role="option"]:hover *, div[role="option"]:hover, div[role="option"]:hover * {{
+            background-color: #D97706 !important;
+            color: #FFFFFF !important;
+        }}
+
+        .cash-card-item {{
+            background-color: {bg_card};
+            border: 1px solid {border_color};
+            border-radius: 8px;
+            padding: 6px 10px !important;
+            margin-bottom: 2px !important;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }}
+
+        .amt-pos {{
+            color: #10B981 !important;
+            font-weight: 900 !important;
+            font-size: 17px !important;
+        }}
+
+        .amt-neg {{
+            color: #EF4444 !important;
+            font-weight: 900 !important;
+            font-size: 17px !important;
+        }}
+
+        .welcome-card-lux {{
+            background: linear-gradient(135deg, #0B132B 0%, #1E3A8A 100%);
+            border-radius: 20px;
+            padding: 20px 15px;
+            text-align: center !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            margin-top: 5px;
+            border: 2px solid #D97706;
+        }}
+
+        .title-company-royal {{
+            font-size: 30px !important;
+            font-weight: 900 !important;
+            color: #F59E0B !important;
+            text-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+            margin-top: 8px;
+            margin-bottom: 8px;
+            text-align: center !important;
+        }}
+
+        .company-header-inner {{
+            background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%);
+            border: 2px solid #D97706;
+            border-radius: 12px;
+            padding: 6px 12px;
+            text-align: center !important;
+            margin-top: 0px;
+            margin-bottom: 8px;
+        }}
+
+        .company-header-inner-title {{
+            font-size: 20px !important;
+            font-weight: 900 !important;
+            color: #F59E0B !important;
+            margin: 0 !important;
+            text-align: center !important;
+        }}
+
+        .company-header-inner-sub {{
+            font-size: 12px !important;
+            color: #94A3B8 !important;
+            margin: 0 !important;
+        }}
+
+        .logo-lux {{
+            font-size: 50px;
+            font-weight: 900;
+            color: #EF4444 !important;
+            font-family: Arial, sans-serif;
+            line-height: 1;
+            margin-bottom: 5px;
+            text-align: center !important;
+        }}
+
+        .date-badge-lux {{
+            display: inline-block;
+            background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
+            color: #FFFFFF !important;
+            padding: 2px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }}
+
+        .cloud-status-badge {{
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid #10B981;
+            color: #10B981 !important;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 800;
+            margin-top: 4px;
         }}
 
         /* تصميم جدول الإقرار الضريبي الرسمي ZATCA */
@@ -559,8 +759,10 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# دالة معالجة قراءة ملفات إكسيل المبيعات والمشتريات بدقة
+# دالة معالجة قراءة ملفات إكسيل المبيعات والمشتريات - مرنة ومطورة للتعرف على الخانات الفارغة
 def process_vat_excel_file(uploaded_file):
+    if uploaded_file is None:
+        return 0.0, 0.0, 0.0
     try:
         df_excel = pd.read_excel(uploaded_file)
         cols = [str(c).strip().lower() for c in df_excel.columns]
@@ -569,18 +771,25 @@ def process_vat_excel_file(uploaded_file):
         net_amt, vat_amt, total_amt = 0.0, 0.0, 0.0
 
         for col in df_excel.columns:
-            if any(k in col for k in ['صافي', 'المبلغ قبل', 'المبلغ', 'المبيعات', 'المشتريات', 'net', 'amount']) and not any(k in col for k in ['ضريب', 'إجمالي', 'total', 'vat']):
+            col_str = str(col).lower()
+            if any(k in col_str for k in ['صافي', 'المبلغ قبل', 'المبلغ الخاضع', 'خاضع', 'الأساسي', 'net', 'amount', 'before vat']) and not any(k in col_str for k in ['ضريب', 'إجمالي', 'total', 'vat', 'after']):
                 try: net_amt = float(pd.to_numeric(df_excel[col], errors='coerce').sum())
                 except: pass
-            elif any(k in col for k in ['ضريب', 'الضريبة', 'vat', 'tax']):
+            elif any(k in col_str for k in ['ضريب', 'الضريبة', 'vat', 'tax', '15%']):
                 try: vat_amt = float(pd.to_numeric(df_excel[col], errors='coerce').sum())
                 except: pass
-            elif any(k in col for k in ['إجمالي', 'الجملة', 'total', 'gross']):
+            elif any(k in col_str for k in ['إجمالي', 'الجملة', 'total', 'gross', 'شامل']):
                 try: total_amt = float(pd.to_numeric(df_excel[col], errors='coerce').sum())
                 except: pass
 
+        # إذا لم يُعثر على خانة الصافي وكان الإجمالي معلوماً
+        if net_amt == 0.0 and total_amt > 0.0:
+            net_amt = total_amt / 1.15
+            vat_amt = total_amt - net_amt
+
         if vat_amt == 0.0 and net_amt > 0.0:
             vat_amt = net_amt * 0.15
+
         if total_amt == 0.0 and net_amt > 0.0:
             total_amt = net_amt + vat_amt
 
@@ -1714,20 +1923,20 @@ else:
         with v_col3:
             st.markdown("#### 📦 المشتريات والمدخلات:")
             file_purch = st.file_uploader("شيت المشتريات العامة:", type=['xlsx', 'xls', 'csv'], key="vat_purch_file")
-            file_purch_ret = st.file_uploader("شيت مرتجعات المشتريات:", type=['xlsx', 'xls', 'csv'], key="vat_purch_ret_file")
+            file_purch_ret = st.file_uploader("شيت مرتجعات المشتريات (اختياري):", type=['xlsx', 'xls', 'csv'], key="vat_purch_ret_file")
 
         st.write("")
         trigger_vat_calc = st.button("🚀 احتساب وتوليد تقرير الإقرار الضريبي الموحد", use_container_width=True)
 
-        # معالجة وحساب أرقام الملفات المرفوعة
-        ry_s_net, ry_s_vat, ry_s_tot = process_vat_excel_file(file_sales_ry) if file_sales_ry else (0.0, 0.0, 0.0)
-        ry_r_net, ry_r_vat, ry_r_tot = process_vat_excel_file(file_ret_ry) if file_ret_ry else (0.0, 0.0, 0.0)
+        # معالجة وحساب أرقام الملفات المرفوعة مرونة تامة للترك الفارغ
+        ry_s_net, ry_s_vat, ry_s_tot = process_vat_excel_file(file_sales_ry)
+        ry_r_net, ry_r_vat, ry_r_tot = process_vat_excel_file(file_ret_ry)
 
-        jd_s_net, jd_s_vat, jd_s_tot = process_vat_excel_file(file_sales_jd) if file_sales_jd else (0.0, 0.0, 0.0)
-        jd_r_net, jd_r_vat, jd_r_tot = process_vat_excel_file(file_ret_jd) if file_ret_jd else (0.0, 0.0, 0.0)
+        jd_s_net, jd_s_vat, jd_s_tot = process_vat_excel_file(file_sales_jd)
+        jd_r_net, jd_r_vat, jd_r_tot = process_vat_excel_file(file_ret_jd)
 
-        p_s_net, p_s_vat, p_s_tot = process_vat_excel_file(file_purch) if file_purch else (0.0, 0.0, 0.0)
-        p_r_net, p_r_vat, p_r_tot = process_vat_excel_file(file_purch_ret) if file_purch_ret else (0.0, 0.0, 0.0)
+        p_s_net, p_s_vat, p_s_tot = process_vat_excel_file(file_purch)
+        p_r_net, p_r_vat, p_r_tot = process_vat_excel_file(file_purch_ret)
 
         # تجميع المبيعات والمرتجعات والمشتريات
         total_sales_net = ry_s_net + jd_s_net
