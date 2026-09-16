@@ -133,7 +133,7 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* إعادة رسم وتحديد كروت الـ Metric بالصفحة الرئيسية لمنع تختفي إطاراتها المربعة */
+        /* إعادة إظهار وتثبيت كروت Metric الرئيسية بإطاراتها الذهبية */
         [data-testid="stMetricValue"] div {{
             font-size: 22px !important;
             font-weight: 900 !important;
@@ -159,7 +159,6 @@ st.markdown(f"""
             text-align: center !important;
         }}
 
-        /* إصلاح مخصص وناصع لمربعات رفع الملفات st.file_uploader للوضعين النهاري والليلي */
         [data-testid="stFileUploader"] section {{
             background-color: {file_uploader_bg} !important;
             border: 2px dashed #D97706 !important;
@@ -759,41 +758,86 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# دالة معالجة قراءة ملفات إكسيل المبيعات والمشتريات - مرنة ومطورة للتعرف على الخانات الفارغة
+# دالة ذكية وشاملة لمعالجة قراءة أي شيت إكسيل مبيعات/مشتريات مهما كان موقع رأس الجدول (Header Index)
 def process_vat_excel_file(uploaded_file):
     if uploaded_file is None:
         return 0.0, 0.0, 0.0
     try:
-        df_excel = pd.read_excel(uploaded_file)
-        cols = [str(c).strip().lower() for c in df_excel.columns]
-        df_excel.columns = cols
+        # قراءة البيانات الخام بدون هيدر
+        try:
+            df_raw = pd.read_excel(uploaded_file, header=None)
+        except Exception:
+            uploaded_file.seek(0)
+            df_raw = pd.read_csv(uploaded_file, header=None)
 
-        net_amt, vat_amt, total_amt = 0.0, 0.0, 0.0
+        # دالة فك ترميز النصوص العربية المعكوسة تلقائياً
+        def fix_text_cell(val):
+            if isinstance(val, str):
+                try:
+                    return val.encode('iso-8859-1').decode('cp1256')
+                except:
+                    return val
+            return val
 
-        for col in df_excel.columns:
-            col_str = str(col).lower()
-            if any(k in col_str for k in ['صافي', 'المبلغ قبل', 'المبلغ الخاضع', 'خاضع', 'الأساسي', 'net', 'amount', 'before vat']) and not any(k in col_str for k in ['ضريب', 'إجمالي', 'total', 'vat', 'after']):
-                try: net_amt = float(pd.to_numeric(df_excel[col], errors='coerce').sum())
-                except: pass
-            elif any(k in col_str for k in ['ضريب', 'الضريبة', 'vat', 'tax', '15%']):
-                try: vat_amt = float(pd.to_numeric(df_excel[col], errors='coerce').sum())
-                except: pass
-            elif any(k in col_str for k in ['إجمالي', 'الجملة', 'total', 'gross', 'شامل']):
-                try: total_amt = float(pd.to_numeric(df_excel[col], errors='coerce').sum())
-                except: pass
+        df_decoded = df_raw.applymap(fix_text_cell)
 
-        # إذا لم يُعثر على خانة الصافي وكان الإجمالي معلوماً
-        if net_amt == 0.0 and total_amt > 0.0:
-            net_amt = total_amt / 1.15
-            vat_amt = total_amt - net_amt
+        # البحث الذكي عن سطر رأس الجدول بوجود كلمتين مفتاحيتين على الأقل بالسطر
+        header_idx = None
+        target_kws = ['الصافي', 'الصافى', 'الضريبة', 'الأجمالي', 'الأجمالى', 'الإجمالي', 'العميل', 'المورد', 'رقم السند', 'تاريخ السند', 'المبلغ الخاضع']
+        
+        for idx, row in df_decoded.iterrows():
+            row_str_combined = " ".join([str(v) for v in row.values if pd.notnull(v)])
+            matched_cnt = sum(1 for kw in target_kws if kw in row_str_combined)
+            if matched_cnt >= 2:
+                header_idx = idx
+                break
 
+        if header_idx is not None:
+            headers = [str(v).strip() for v in df_decoded.iloc[header_idx].values]
+            # التأكد من عدم تكرار أسماء الأعمدة
+            unique_headers = []
+            counts = {}
+            for h in headers:
+                if h in counts:
+                    counts[h] += 1
+                    unique_headers.append(f"{h}_{counts[h]}")
+                else:
+                    counts[h] = 0
+                    unique_headers.append(h)
+
+            df_data = df_decoded.iloc[header_idx + 1:].reset_index(drop=True)
+            df_data.columns = unique_headers
+        else:
+            df_data = df_decoded.copy()
+
+        # استبعاد أسطر الإجماليات وملخصات أخر الجدول لمنع تكرار الحساب دبل
+        is_summary_row = df_data.apply(lambda r: any('الأجمال' in str(v) or 'إجمال' in str(v) or 'total' in str(v).lower() for v in r.values if pd.notnull(v)), axis=1)
+        df_valid = df_data[~is_summary_row].copy()
+
+        net_amt, vat_amt, gross_amt = 0.0, 0.0, 0.0
+
+        for col in df_valid.columns:
+            col_clean = str(col).strip().lower()
+            vals = pd.to_numeric(df_valid[col], errors='coerce').fillna(0.0)
+            col_sum = float(vals.sum())
+            
+            # التعرف على عمود الصافي (قبل الضريبة)
+            if ('الصاف' in col_clean or 'صاف' in col_clean or 'المبلغ قبل' in col_clean or 'net' in col_clean) and not ('بعد' in col_clean or 'شامل' in col_clean):
+                net_amt = col_sum
+            # التعرف على عمود الضريبة
+            elif 'ضريب' in col_clean or 'vat' in col_clean or 'tax' in col_clean:
+                vat_amt = col_sum
+            # التعرف على عمود الإجمالي (شامل الضريبة)
+            elif ('أجمال' in col_clean or 'إجمال' in col_clean or 'gross' in col_clean or 'total' in col_clean) and not ('بعد' in col_clean):
+                gross_amt = col_sum
+
+        if gross_amt == 0.0 and net_amt > 0.0:
+            gross_amt = net_amt + vat_amt
         if vat_amt == 0.0 and net_amt > 0.0:
             vat_amt = net_amt * 0.15
 
-        if total_amt == 0.0 and net_amt > 0.0:
-            total_amt = net_amt + vat_amt
+        return round(net_amt, 2), round(vat_amt, 2), round(gross_amt, 2)
 
-        return round(net_amt, 2), round(vat_amt, 2), round(total_amt, 2)
     except Exception:
         return 0.0, 0.0, 0.0
 
@@ -1928,7 +1972,7 @@ else:
         st.write("")
         trigger_vat_calc = st.button("🚀 احتساب وتوليد تقرير الإقرار الضريبي الموحد", use_container_width=True)
 
-        # معالجة وحساب أرقام الملفات المرفوعة مرونة تامة للترك الفارغ
+        # معالجة وحساب أرقام الملفات المرفوعة مرونة تامة للترك الفارغ والتعرف الذكي على الهيدر
         ry_s_net, ry_s_vat, ry_s_tot = process_vat_excel_file(file_sales_ry)
         ry_r_net, ry_r_vat, ry_r_tot = process_vat_excel_file(file_ret_ry)
 
