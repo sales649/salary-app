@@ -674,7 +674,7 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# 🛠️ دالة معالجة واستخراج المبالغ والضريبة المعتمدة قاطعاً لبرنامج الوعلان
+# 🛠️ دالة معالجة واستخراج المبالغ والضريبة المعتمدة والمحصنة لـ ERP الوعلان
 def process_vat_file(uploaded_file):
     if uploaded_file is None:
         return 0.0, 0.0, 0.0
@@ -742,26 +742,8 @@ def process_vat_file(uploaded_file):
 
         return round(net_sum, 2), round(vat_sum, 2), round(gross_sum, 2)
 
-    except Exception:
+    except Exception as e:
         return 0.0, 0.0, 0.0
-
-@st.dialog("تعديل الرصيد الافتتاحي للصندوق")
-def opening_balance_dialog(month_name, target_box):
-    all_cash_db = load_cash_data()
-    m_cash = all_cash_db.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
-    active_opening_key = 'opening' if target_box == 'main' else 'acc_opening'
-    opening_bal = m_cash.get(active_opening_key, 0.0)
-
-    st.write(f"تثبيت وتعديل الرصيد الافتتاحي لـ **{'الخزينة الرئيسية' if target_box == 'main' else 'عُهدة omar'}** لشهر ({month_name}):")
-    with st.form("set_opening_balance_dialog_form"):
-        new_opening_val = st.number_input("الرصيد الافتتاحي (ر.س):", min_value=0.0, value=float(opening_bal))
-        sub_op = st.form_submit_button("💾 تثبيت الرصيد الافتتاحي")
-        if sub_op:
-            m_cash[active_opening_key] = new_opening_val
-            all_cash_db[month_name] = m_cash
-            save_cash_data(all_cash_db)
-            st.success("تم التثبيت السحابي!")
-            st.rerun()
 
 # الشاشة الافتتاحية وواجهة المستخدم الموحدة
 if not st.session_state.get('app_started', False):
