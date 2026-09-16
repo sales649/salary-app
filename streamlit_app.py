@@ -134,7 +134,6 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
-        /* كروت الـ Metric بالصفحة الرئيسية */
         [data-testid="stMetricValue"] div {{
             font-size: 22px !important;
             font-weight: 900 !important;
@@ -684,94 +683,68 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# دالة تحويل الأرقام العربية الشرقية (الهندية) إلى أرقام إنجليزية
-def convert_arabic_digits_to_english(str_val):
-    if not isinstance(str_val, str):
-        return str(str_val)
-    arabic_digits = "٠١٢٣٤٥٦٧٨٩"
-    english_digits = "0123456789"
-    translation_table = str.maketrans(arabic_digits, english_digits)
-    return str_val.translate(translation_table)
-
-# دالة معالجة قراءة أي ملف مبيعات/مشتريات معتمدة ومتوافقة سحابياً
+# دالة معالجة شيتات ERP الوعلان المعتمدة والمحصنة قاطعاً
 def process_vat_file(uploaded_file):
     if uploaded_file is None:
         return 0.0, 0.0, 0.0
     try:
-        try:
-            df_raw = pd.read_excel(uploaded_file, header=None)
-        except Exception:
-            uploaded_file.seek(0)
-            df_raw = pd.read_csv(uploaded_file, header=None)
-
-        def fix_text_cell(val):
-            if isinstance(val, str):
-                try:
-                    return val.encode('iso-8859-1').decode('cp1256')
-                except:
-                    return val
-            return val
-
-        df_decoded = df_raw.applymap(fix_text_cell)
-
-        # البحث بوجود كلمتين مفتاحيتين بالسطر
-        header_idx = None
-        target_kws = ['الصافي', 'الصافى', 'الضريبة', 'الأجمالي', 'الأجمالى', 'الإجمالي', 'العميل', 'المورد', 'رقم السند', 'تاريخ السند']
+        df_raw = pd.read_excel(uploaded_file, header=None)
         
-        for idx, row in df_decoded.iterrows():
-            row_str_combined = " ".join([str(v) for v in row.values if pd.notnull(v)])
-            matched_cnt = sum(1 for kw in target_kws if kw in row_str_combined)
-            if matched_cnt >= 2:
-                header_idx = idx; break
-
-        if header_idx is not None:
-            headers = [str(v).strip() for v in df_decoded.iloc[header_idx].values]
-            unique_headers = []
-            counts = {}
-            for h in headers:
-                if h in counts:
-                    counts[h] += 1
-                    unique_headers.append(f"{h}_{counts[h]}")
-                else:
-                    counts[h] = 0
-                    unique_headers.append(h)
-
-            df_data = df_decoded.iloc[header_idx + 1:].reset_index(drop=True)
-            df_data.columns = unique_headers
-        else:
-            df_data = df_decoded.copy()
-
-        is_summary_row = df_data.apply(lambda r: any('الأجمال' in str(v) or 'إجمال' in str(v) or 'total' in str(v).lower() for v in r.values if pd.notnull(v)), axis=1)
-        df_valid = df_data[~is_summary_row].copy()
-
-        net_amt, vat_amt, gross_amt = 0.0, 0.0, 0.0
-
-        for col in df_valid.columns:
-            col_clean = str(col).strip().lower()
-            vals = pd.to_numeric(df_valid[col], errors='coerce').fillna(0.0)
-            col_sum = float(vals.sum())
+        # 1. البحث الدقيق عن سطر رأس الجدول ببرنامج الوعلان
+        header_idx = None
+        target_kws = ['الصافي', 'الصافى', 'الضريبة', 'ضريبة', 'الإجمالي', 'الأجمالى', 'صافى بعد ضريبة', 'اسم المورد', 'اسم العميل', 'العميل', 'رقم الفاتورة', 'رقم السند']
+        
+        for idx, row in df_raw.iterrows():
+            row_str = " ".join([str(v) for v in row.values if pd.notnull(v)])
+            matches = [kw for kw in target_kws if kw in row_str]
+            if len(matches) >= 2:
+                header_idx = idx
+                break
+                
+        if header_idx is None:
+            header_idx = 0
             
-            if ('الصاف' in col_clean or 'صاف' in col_clean or 'المبلغ قبل' in col_clean or 'net' in col_clean) and not ('بعد' in col_clean or 'شامل' in col_clean):
-                net_amt = col_sum
-            elif 'ضريب' in col_clean or 'vat' in col_clean or 'tax' in col_clean:
-                vat_amt = col_sum
-            elif ('أجمال' in col_clean or 'إجمال' in col_clean or 'gross' in col_clean or 'total' in col_clean) and not ('بعد' in col_clean):
-                gross_amt = col_sum
+        headers = [str(v).strip() for v in df_raw.iloc[header_idx].values]
+        df_data = df_raw.iloc[header_idx + 1:].reset_index(drop=True)
+        df_data.columns = headers
+        
+        # 2. تحديد أعمدة المستند والعميل للفلترة الدقيقة
+        doc_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['رقم الفاتورة', 'رقم السند'])), None)
+        name_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['اسم المورد', 'اسم العميل', 'العميل'])), None)
 
-        # الاعتماد على الموقعية الرقمية المباشرة للأعمدة في حال التعثر بسب الترميز المعكوس
-        if net_amt == 0.0:
-            try:
-                col_net_fallback = pd.to_numeric(df_valid.iloc[:, 4], errors='coerce').fillna(0.0).sum()
-                col_vat_fallback = pd.to_numeric(df_valid.iloc[:, 3], errors='coerce').fillna(0.0).sum()
-                if col_net_fallback > 0:
-                    net_amt = float(col_net_fallback)
-                    vat_amt = float(col_vat_fallback)
-            except Exception: pass
+        def is_valid_transaction(row):
+            if row.dropna().empty: return False
+            row_text = " ".join([str(v) for v in row.values if pd.notnull(v)]).strip()
+            if any(k in row_text for k in ['الأجمالى', 'الأجمالي', 'إجمالي السندات', 'إجمالي التقارير', 'Page -1', 'Page ']):
+                return False
+            if doc_col and pd.notnull(row[doc_col]):
+                if pd.isna(pd.to_numeric(row[doc_col], errors='coerce')): return False
+            elif name_col and pd.isna(row[name_col]):
+                return False
+            return True
 
-        if gross_amt == 0.0 and net_amt > 0.0: gross_amt = net_amt + vat_amt
-        if vat_amt == 0.0 and net_amt > 0.0: vat_amt = net_amt * 0.15
+        df_valid = df_data[df_data.apply(is_valid_transaction, axis=1)].copy()
 
-        return round(net_amt, 2), round(vat_amt, 2), round(gross_amt, 2)
+        # 3. استخراج مبالغ الصافي والضريبة والإجمالي
+        net_col, vat_col, gross_col = None, None, None
+        for col in df_valid.columns:
+            c_clean = str(col).strip()
+            if c_clean in ['الصافي', 'الصافى']:
+                net_col = col
+            elif c_clean in ['الضريبة', 'ضريبة']:
+                vat_col = col
+            elif c_clean in ['صافى بعد ضريبة', 'الإجمالي', 'الأجمالى']:
+                if gross_col is None or c_clean == 'صافى بعد ضريبة':
+                    gross_col = col
+
+        net_sum = float(pd.to_numeric(df_valid[net_col], errors='coerce').fillna(0.0).sum()) if net_col else 0.0
+        vat_sum = float(pd.to_numeric(df_valid[vat_col], errors='coerce').fillna(0.0).sum()) if vat_col else 0.0
+        gross_sum = float(pd.to_numeric(df_valid[gross_col], errors='coerce').fillna(0.0).sum()) if gross_col else 0.0
+
+        if gross_sum == 0.0 and net_sum > 0.0: gross_sum = net_sum + vat_sum
+        if vat_sum == 0.0 and net_sum > 0.0: vat_sum = net_sum * 0.15
+
+        return round(net_sum, 2), round(vat_sum, 2), round(gross_sum, 2)
 
     except Exception:
         return 0.0, 0.0, 0.0
@@ -1874,10 +1847,10 @@ else:
         else:
             st.info("لا توجد جلسات جرد سابقة محفوظة لهذا الصندوق.")
 
-    # 7. موديول ضريبة القيمة المضافة (ZATCA VAT Return Generator)
+    # 7. موديول ضريبة القيمة المضافة (ZATCA VAT Return Generator) - المعمد لـ ERP الوعلان
     elif selected_option == 'تقرير القيمة المضافة' and st.session_state.user_role == "admin":
         st.subheader('🏛️ موديول إقرار ضريبة القيمة المضافة الربع سنوي (ZATCA)')
-        st.write('قم برفع شيتات الإكسيل للفروع والمشتريات لاستخراج وتوليد تقرير الإقرار الضريبي الرسمي الموحد المعمد:')
+        st.write('قم برفع شيتات الإكسيل للفروع والمشتريات لاستخراج وتوليد تقرير الإقرار الضريبي الرسمي الموحد المعمد[cite: 1]:')
 
         v_top1, v_top2 = st.columns(2)
         with v_top1:
@@ -1946,7 +1919,7 @@ else:
         net_vat_payable = (net_output_vat - net_input_vat) - prev_carried_vat
 
         st.divider()
-        st.markdown(f"### 📋 2. نموذج الإقرار الضريبي المعمد المطابق لهيئة الزكاة والضريبة والجمارك (ZATCA) - {vat_quarter}:")
+        st.markdown(f"### 📋 2. نموذج الإقرار الضريبي المعمد المطابق لهيئة الزكاة والضريبة والجمارك (ZATCA) - {vat_quarter}[cite: 1]:")
 
         m_v1, m_v2, m_v3 = st.columns(3)
         m_v1.metric("إجمالي ضريبة المبيعات (المخرجات)", f"{net_output_vat:,.2f} ر.س")
@@ -1961,98 +1934,98 @@ else:
         <table class="zatca-table">
             <thead>
                 <tr>
-                    <th style="width: 50%;">البند / الوصف الرسمي</th>
-                    <th style="width: 25%;">المبلغ (بين ريال)</th>
-                    <th style="width: 25%;">مبلغ ضريبة القيمة المضافة (ريال)</th>
+                    <th style="width: 50%;">البند / الوصف الرسمي[cite: 1]</th>
+                    <th style="width: 25%;">المبلغ (بين ريال)[cite: 1]</th>
+                    <th style="width: 25%;">مبلغ ضريبة القيمة المضافة (ريال)[cite: 1]</th>
                 </tr>
             </thead>
             <tbody>
-                <tr><td colspan="3" class="zatca-section-header">ضريبة القيمة المضافة على المبيعات (المخرجات)</td></tr>
+                <tr><td colspan="3" class="zatca-section-header">ضريبة القيمة المضافة على المبيعات (المخرجات)[cite: 1]</td></tr>
                 <tr>
-                    <td style="text-align:right;">1. المبيعات الخاضعة للنسبة الأساسية (15%)</td>
+                    <td style="text-align:right;">1. المبيعات الخاضعة للنسبة الأساسية (15%)[cite: 1]</td>
                     <td>{total_sales_net:,.2f}</td>
                     <td style="color:#10B981; font-weight:bold;">{total_sales_vat:,.2f}</td>
                 </tr>
                 <tr>
-                    <td style="text-align:right;">- تعديلات ومرتجعات المبيعات الخاضعة للنسبة الأساسية</td>
+                    <td style="text-align:right;">- تعديلات ومرتجعات المبيعات الخاضعة للنسبة الأساسية[cite: 1]</td>
                     <td>({total_sales_ret_net:,.2f})</td>
                     <td style="color:#EF4444; font-weight:bold;">({total_sales_ret_vat:,.2f})</td>
                 </tr>
                 <tr>
-                    <td style="text-align:right;">2. المبيعات التي تتحمل الدولة ضريبتها</td>
+                    <td style="text-align:right;">2. المبيعات التي تتحمل الدولة ضريبتها[cite: 1]</td>
                     <td>0.00</td>
                     <td>0.00</td>
                 </tr>
                 <tr>
-                    <td style="text-align:right;">3. المبيعات المحلية الخاضعة للنسبة الصفرية</td>
+                    <td style="text-align:right;">3. المبيعات المحلية الخاضعة للنسبة الصفرية[cite: 1]</td>
                     <td>0.00</td>
                     <td>0.00</td>
                 </tr>
                 <tr>
-                    <td style="text-align:right;">4. الصادرات</td>
+                    <td style="text-align:right;">4. الصادرات[cite: 1]</td>
                     <td>0.00</td>
                     <td>0.00</td>
                 </tr>
                 <tr>
-                    <td style="text-align:right;">5. المبيعات المعفاة من الضريبة</td>
+                    <td style="text-align:right;">5. المبيعات المعفاة من الضريبة[cite: 1]</td>
                     <td>0.00</td>
                     <td>0.00</td>
                 </tr>
                 <tr class="zatca-total-row">
-                    <td style="text-align:right;">6. إجمالي المبيعات وصافي ضريبة المخرجات</td>
+                    <td style="text-align:right;">6. إجمالي المبيعات وصافي ضريبة المخرجات[cite: 1]</td>
                     <td>{(total_sales_net - total_sales_ret_net):,.2f}</td>
                     <td style="color:#F59E0B; font-size:15px;">{net_output_vat:,.2f}</td>
                 </tr>
-                <tr><td colspan="3" class="zatca-section-header">ضريبة القيمة المضافة على المشتريات (المدخلات)</td></tr>
+                <tr><td colspan="3" class="zatca-section-header">ضريبة القيمة المضافة على المشتريات (المدخلات)[cite: 1]</td></tr>
                 <tr>
-                    <td style="text-align:right;">7. المشتريات الخاضعة للنسبة الأساسية (15%)</td>
+                    <td style="text-align:right;">7. المشتريات الخاضعة للنسبة الأساسية (15%)[cite: 1]</td>
                     <td>{total_purch_net:,.2f}</td>
                     <td style="color:#10B981; font-weight:bold;">{total_purch_vat:,.2f}</td>
                 </tr>
                 <tr>
-                    <td style="text-align:right;">- تعديلات ومرتجعات المشتريات الخاضعة للنسبة الأساسية</td>
+                    <td style="text-align:right;">- تعديلات ومرتجعات المشتريات الخاضعة للنسبة الأساسية[cite: 1]</td>
                     <td>({total_purch_ret_net:,.2f})</td>
                     <td style="color:#EF4444; font-weight:bold;">({total_purch_ret_vat:,.2f})</td>
                 </tr>
                 <tr>
-                    <td style="text-align:right;">8. الاستيرادات الخاضعة لضريبة القيمة المضافة بالنسبة الأساسية</td>
+                    <td style="text-align:right;">8. الاستيرادات الخاضعة لضريبة القيمة المضافة بالنسبة الأساسية[cite: 1]</td>
                     <td>0.00</td>
                     <td>0.00</td>
                 </tr>
                 <tr>
-                    <td style="text-align:right;">9. التوريدات الخاضعة لضريبة القيمة المضافة التي تطبق عليها الاحتساب العكسي</td>
+                    <td style="text-align:right;">9. التوريدات الخاضعة لضريبة القيمة المضافة التي تطبق عليها الاحتساب العكسي[cite: 1]</td>
                     <td>0.00</td>
                     <td>0.00</td>
                 </tr>
                 <tr>
-                    <td style="text-align:right;">10. المشتريات الخاضعة للنسبة الصفرية</td>
+                    <td style="text-align:right;">10. المشتريات الخاضعة للنسبة الصفرية[cite: 1]</td>
                     <td>0.00</td>
                     <td>0.00</td>
                 </tr>
                 <tr>
-                    <td style="text-align:right;">11. مشتريات معفاة من الضريبة</td>
+                    <td style="text-align:right;">11. مشتريات معفاة من الضريبة[cite: 1]</td>
                     <td>0.00</td>
                     <td>0.00</td>
                 </tr>
                 <tr class="zatca-total-row">
-                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات</td>
+                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات[cite: 1]</td>
                     <td>{(total_purch_net - total_purch_ret_net):,.2f}</td>
                     <td style="color:#F59E0B; font-size:15px;">{net_input_vat:,.2f}</td>
                 </tr>
                 <tr class="zatca-total-row">
-                    <td style="text-align:right;">13. إجمالي ضريبة القيمة المضافة المستحقة للفترة الحالية</td>
+                    <td style="text-align:right;">13. إجمالي ضريبة القيمة المضافة المستحقة للفترة الحالية[cite: 1]</td>
                     <td colspan="2" style="font-size:15px;">{(net_output_vat - net_input_vat):,.2f} ريال سعودي</td>
                 </tr>
                 <tr>
-                    <td style="text-align:right;">14. تصحيحات من الفترات السابقة</td>
+                    <td style="text-align:right;">14. تصحيحات من الفترات السابقة[cite: 1]</td>
                     <td colspan="2">0.00</td>
                 </tr>
                 <tr>
-                    <td style="text-align:right;">15. ضريبة القيمة المضافة التي تم ترحيلها من الفترة / الفترات السابقة</td>
+                    <td style="text-align:right;">15. ضريبة القيمة المضافة التي تم ترحيلها من الفترة / الفترات السابقة[cite: 1]</td>
                     <td colspan="2">({prev_carried_vat:,.2f})</td>
                 </tr>
                 <tr class="zatca-final-row">
-                    <td style="text-align:right;">16. صافي الضريبة المستحق (أو المستعادة)</td>
+                    <td style="text-align:right;">16. صافي الضريبة المستحق (أو المستعادة)[cite: 1]</td>
                     <td colspan="2" style="font-size:18px;">{net_vat_payable:,.2f} ريال سعودي</td>
                 </tr>
             </tbody>
@@ -2102,7 +2075,7 @@ else:
                         <div style="font-size:40px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
                         <div style="font-size:11px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
                     </div>
-                    <div class="vat-title">إقرار ضريبة القيمة المضافة الرسمي (ZATCA) - {vat_quarter}</div>
+                    <div class="vat-title">إقرار ضريبة القيمة المضافة الرسمي (ZATCA) - {vat_quarter}[cite: 1]</div>
                     {zatca_official_html}
                     <div class="sigs">
                         <div>إعداد المحاسب / المدير المالي: __________________</div>
