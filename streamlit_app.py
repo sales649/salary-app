@@ -134,6 +134,7 @@ st.markdown(f"""
             word-wrap: break-word !important;
         }}
 
+        /* كروت الـ Metric بالصفحة الرئيسية */
         [data-testid="stMetricValue"] div {{
             font-size: 22px !important;
             font-weight: 900 !important;
@@ -758,7 +759,7 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# دالة ذكية وشاملة معتمدة لقراءة ملفات إكسيل و CSV المبيعات والمشتريات
+# دالة ذكية معتمدة لقراءة ملفات إكسيل و CSV المبيعات والمشتريات
 def process_vat_file(uploaded_file):
     if uploaded_file is None:
         return 0.0, 0.0, 0.0
@@ -779,8 +780,9 @@ def process_vat_file(uploaded_file):
 
         df_decoded = df_raw.applymap(fix_text_cell)
 
+        # البحث بوجود كلمتين مفتاحيتين على الأقل بالسند
         header_idx = None
-        target_kws = ['الصافي', 'الصافى', 'الضريبة', 'الأجمالي', 'الأجمالى', 'الإجمالي', 'العميل', 'المورد', 'رقم السند', 'تاريخ السند', 'المبلغ الخاضع']
+        target_kws = ['الصافي', 'الصافى', 'الضريبة', 'الأجمالي', 'الأجمالى', 'الإجمالي', 'العميل', 'المورد', 'رقم السند', 'تاريخ السند']
         
         for idx, row in df_decoded.iterrows():
             row_str_combined = " ".join([str(v) for v in row.values if pd.notnull(v)])
@@ -822,9 +824,15 @@ def process_vat_file(uploaded_file):
             elif ('أجمال' in col_clean or 'إجمال' in col_clean or 'gross' in col_clean or 'total' in col_clean) and not ('بعد' in col_clean):
                 gross_amt = col_sum
 
+        # الاعتماد على الموقعية الرقمية المباشرة للأعمدة رقم 2 و 3 و 4 في حال التعثر بسب الترميز
         if net_amt == 0.0:
-            numeric_sums = [pd.to_numeric(df_valid[c], errors='coerce').fillna(0.0).sum() for c in df_valid.columns if pd.to_numeric(df_valid[c], errors='coerce').fillna(0.0).sum() > 100]
-            if numeric_sums: net_amt = max(numeric_sums)
+            try:
+                col_net_fallback = pd.to_numeric(df_valid.iloc[:, 4], errors='coerce').fillna(0.0).sum()
+                col_vat_fallback = pd.to_numeric(df_valid.iloc[:, 3], errors='coerce').fillna(0.0).sum()
+                if col_net_fallback > 0:
+                    net_amt = float(col_net_fallback)
+                    vat_amt = float(col_vat_fallback)
+            except Exception: pass
 
         if gross_amt == 0.0 and net_amt > 0.0: gross_amt = net_amt + vat_amt
         if vat_amt == 0.0 and net_amt > 0.0: vat_amt = net_amt * 0.15
@@ -1935,7 +1943,7 @@ else:
     # 7. موديول ضريبة القيمة المضافة (ZATCA VAT Return Generator)
     elif selected_option == 'تقرير القيمة المضافة' and st.session_state.user_role == "admin":
         st.subheader('🏛️ موديول إقرار ضريبة القيمة المضافة الربع سنوي (ZATCA)')
-        st.write('قم برفع شيتات الإكسيل أو الملفات للفروع والمشتريات لاستخراج وتوليد تقرير الإقرار الضريبي الرسمي الموحد المعمد:')
+        st.write('قم برفع شيتات الإكسيل للفروع والمشتريات لاستخراج وتوليد تقرير الإقرار الضريبي الرسمي الموحد المعمد:')
 
         v_top1, v_top2 = st.columns(2)
         with v_top1:
@@ -1962,9 +1970,7 @@ else:
             file_purch = st.file_uploader("شيت المشتريات العامة:", type=['xlsx', 'xls', 'csv'], key="vat_purch_file")
             file_purch_ret = st.file_uploader("شيت مرتجعات المشتريات (اختياري):", type=['xlsx', 'xls', 'csv'], key="vat_purch_ret_file")
 
-        st.write("")
-        trigger_vat_calc = st.button("🚀 احتساب وتوليد تقرير الإقرار الضريبي الموحد", use_container_width=True)
-
+        # معالجة فورية وتلقائية للملفات بمجرد رفع أي ملف
         ry_s_net, ry_s_vat, ry_s_tot = process_vat_file(file_sales_ry)
         ry_r_net, ry_r_vat, ry_r_tot = process_vat_file(file_ret_ry)
 
