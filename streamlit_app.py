@@ -4,6 +4,7 @@ import io
 import json
 import os
 import re
+import base64
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 
@@ -13,9 +14,9 @@ st.set_page_config(page_title='5M', layout='wide', page_icon='🏢', initial_sid
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
 
-# إدراج الصورة الأصلية للختم والتوقيع المسحوبة مباشر من مرفقاتك
-STAMP_IMG_URL = "https://i.ibb.co/L5hSpxk/stamp5m.jpg"
-SIGN_IMG_URL = "https://i.ibb.co/3s6q43P/sign5m.png"
+# روابط سريعة ومباشرة للصور الأصلية
+STAMP_IMG_URL = "https://i.postimg.cc/mD3fGKgB/WhatsApp-Image-2024-09-03-at-14-42-copy.jpg"
+SIGN_IMG_URL = "https://i.postimg.cc/85z1zQ8P/111111.png"
 
 # إعدادات الربط السحابي بـ Supabase
 SUPABASE_URL = "https://ohoqprtvmhyjomaavwct.supabase.co"
@@ -680,8 +681,8 @@ def print_cash_voucher_dialog(v_item, month_name):
         .amt-box {{ font-size: 20px; font-weight: 900; color: {color_accent}; text-align: center; background: #ecfdf5; border: 2px solid {color_accent}; padding: 6px; border-radius: 6px; }}
         .sigs {{ margin-top: 35px; display: flex; justify-content: space-between; align-items: flex-end; font-weight: bold; font-size: 13px; }}
         .sig-col {{ text-align: center; width: 30%; }}
-        .stamp-img {{ width: 110px; height: 110px; object-fit: contain; }}
-        .sign-img {{ width: 120px; height: 50px; object-fit: contain; margin-top: 5px; }}
+        .stamp-img {{ width: 120px; height: 120px; object-fit: contain; border-radius: 50%; }}
+        .sign-img {{ width: 130px; height: 55px; object-fit: contain; margin-top: 5px; }}
     </style></head><body>
         <div class="v-box">
             <div class="header-logo">
@@ -1920,7 +1921,7 @@ else:
                     <td>0.00</td>
                 </tr>
                 <tr class="zatca-total-row">
-                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات</td>
+                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات (شاملة البند 7 و 9 و 10)</td>
                     <td>{(total_purch_net + total_purch_zero + calc_rcm_net - total_purch_ret_net):,.2f}</td>
                     <td style="color:#F59E0B; font-size:15px;">{net_input_vat:,.2f}</td>
                 </tr>
@@ -2576,7 +2577,7 @@ else:
             </div>
             <div class="signatures">
                 <div>إعداد المحاسب المسؤول: <br><img src="{SIGN_IMG_URL}" style="width:90px;"></div>
-                <div>اعتماد وتصديق الشركة: <br><img src="{STAMP_IMG_URL}" style="width:80px;"></div>
+                <div>اعتماد وتصديق الشركة: <br><img src="{STAMP_IMG_URL}" style="width:80px; border-radius: 50%;"></div>
                 <div>اعتماد المدير العام: __________________</div>
             </div>
         </body>
