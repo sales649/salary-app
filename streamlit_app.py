@@ -13,9 +13,9 @@ st.set_page_config(page_title='5M', layout='wide', page_icon='🏢', initial_sid
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
 
-# ترميز الصور المباشر (Base64) للختم والتوقيع لضمان ظهورها الدائم بالطباعة
-STAMP_IMG_B64 = "https://i.ibb.co/L5hSpxk/stamp5m.jpg"
-SIGN_IMG_B64 = "https://i.ibb.co/3s6q43P/sign5m.png"
+# إعدادات الصور المدمجة بداخل الكود مباشرة (SVG/Data-URI) لضمان عدم تلف الروابط
+STAMP_IMG_B64 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><circle cx='60' cy='60' r='55' fill='none' stroke='%23DC2626' stroke-width='4'/><circle cx='60' cy='60' r='46' fill='none' stroke='%23DC2626' stroke-width='2'/><text x='60' y='32' text-anchor='middle' fill='%23DC2626' font-size='9' font-weight='bold' font-family='Arial'>شركة ميم الخماسية للتصنيع</text><text x='60' y='68' text-anchor='middle' fill='%23DC2626' font-size='28' font-weight='900' font-family='Arial'>5M</text><text x='60' y='86' text-anchor='middle' fill='%23DC2626' font-size='8' font-weight='bold' font-family='Arial'>سجل تجاري : 1011145035</text><text x='60' y='98' text-anchor='middle' fill='%23DC2626' font-size='7' font-weight='bold' font-family='Arial'>C.R. 1011145035</text></svg>"
+SIGN_IMG_B64 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='60' viewBox='0 0 140 60'><path d='M 10 30 Q 30 5, 50 30 T 90 30 T 130 15 M 15 35 Q 40 50, 70 20 T 120 35' fill='none' stroke='%231D4ED8' stroke-width='3' stroke-linecap='round'/><text x='70' y='52' text-anchor='middle' fill='%231D4ED8' font-size='10' font-weight='bold' font-family='Cairo, Arial'>توقيع المحاسب المعمد</text></svg>"
 
 # إعدادات الربط السحابي بـ Supabase
 SUPABASE_URL = "https://ohoqprtvmhyjomaavwct.supabase.co"
@@ -751,7 +751,7 @@ def print_cash_voucher_dialog(v_item, month_name):
         th {{ background-color: #1E3A8A; color: white; padding: 8px; border: 1px solid #334155; text-align: right; }}
         td {{ border: 1px solid #cbd5e1; padding: 8px; text-align: right; }}
         .amt-box {{ font-size: 20px; font-weight: 900; color: {color_accent}; text-align: center; background: #ecfdf5; border: 2px solid {color_accent}; padding: 6px; border-radius: 6px; }}
-        .sigs {{ margin-top: 25px; display: flex; justify-content: space-between; align-items: flex-end; font-weight: bold; font-size: 13px; position: relative; }}
+        .sigs {{ margin-top: 35px; display: flex; justify-content: space-between; align-items: flex-end; font-weight: bold; font-size: 13px; }}
         .sig-col {{ text-align: center; width: 30%; }}
         .stamp-img {{ width: 110px; height: 110px; object-fit: contain; }}
         .sign-img {{ width: 120px; height: 50px; object-fit: contain; margin-top: 5px; }}
@@ -1466,7 +1466,6 @@ else:
                 new_cash_given = st.number_input("المبلغ النقدي المسلم باليد (يخصم من الصندوق):", min_value=0.0, value=0.0, step=50.0)
                 purpose_txt = st.text_input("البيان / الغرض من العُهدة:", "مصاريف نقل وبنزين")
                 
-                # 🎯 معادلة التصحيح الدقيقة: (500 - 13 = 487.00 ر.س)
                 total_driver_hold = round(new_cash_given + last_diff, 2)
 
                 if new_cash_given > 0:
@@ -1487,7 +1486,6 @@ else:
                     })
                     save_drivers_data(drivers_db)
 
-                    # خصم المبلغ النقدي المسلم كاش فقط (500 ريال) من الصندوق
                     all_cash = load_cash_data()
                     if month_selected not in all_cash:
                         all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
@@ -1860,7 +1858,7 @@ else:
                     <td>0.00</td>
                 </tr>
                 <tr class="zatca-total-row">
-                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات (شاملة البند 7 و 9 و 10)</td>
+                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات</td>
                     <td>{(total_purch_net + total_purch_zero + calc_rcm_net - total_purch_ret_net):,.2f}</td>
                     <td style="color:#F59E0B; font-size:15px;">{net_input_vat:,.2f}</td>
                 </tr>
