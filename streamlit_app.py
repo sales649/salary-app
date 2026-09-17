@@ -701,79 +701,6 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# 🛠️ دالة قراءة المبالغ والضريبة التلقائية المباشرة من شيت الوعلان
-def parse_vat_total_row_smart(uploaded_file):
-    if uploaded_file is None:
-        return 0.0, 0.0, 0.0
-    try:
-        uploaded_file.seek(0)
-        try:
-            df_raw = pd.read_excel(uploaded_file, header=None)
-        except Exception:
-            uploaded_file.seek(0)
-            df_raw = pd.read_csv(uploaded_file, header=None)
-
-        header_idx = None
-        target_kws = ['الصافي', 'الصافى', 'الضريبة', 'ضريبة', 'الإجمالي', 'الأجمالى', 'صافى بعد ضريبة', 'اسم المورد', 'اسم العميل', 'العميل', 'رقم الفاتورة', 'رقم السند']
-        
-        for idx, row in df_raw.iterrows():
-            row_str = " ".join([str(v) for v in row.values if pd.notnull(v)])
-            matches = [kw for kw in target_kws if kw in row_str]
-            if len(matches) >= 2:
-                header_idx = idx; break
-                
-        if header_idx is None: header_idx = 0
-            
-        headers = [str(v).strip() for v in df_raw.iloc[header_idx].values]
-        df_data = df_raw.iloc[header_idx + 1:].reset_index(drop=True)
-        df_data.columns = headers
-        
-        doc_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['رقم الفاتورة', 'رقم السند'])), None)
-        name_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['اسم المورد', 'اسم العميل', 'العميل'])), None)
-
-        def is_valid_transaction(row):
-            if row.dropna().empty: return False
-            row_text = " ".join([str(v) for v in row.values if pd.notnull(v)]).strip()
-            if any(k in row_text for k in ['الأجمالى', 'الأجمالي', 'إجمالي السندات', 'إجمالي التقارير', 'Page -1', 'Page ']):
-                return False
-            if doc_col and pd.notnull(row[doc_col]):
-                val = pd.to_numeric(str(row[doc_col]).replace(',', '').strip(), errors='coerce')
-                if pd.isna(val): return False
-            elif name_col and pd.isna(row[name_col]):
-                return False
-            return True
-
-        df_valid = df_data[df_data.apply(is_valid_transaction, axis=1)].copy()
-
-        net_col, vat_col, gross_col = None, None, None
-        for col in df_valid.columns:
-            c_clean = str(col).strip()
-            if c_clean in ['الصافي', 'الصافى']:
-                net_col = col
-            elif c_clean in ['الضريبة', 'ضريبة']:
-                vat_col = col
-            elif c_clean in ['صافى بعد ضريبة', 'الإجمالي', 'الأجمالى']:
-                if gross_col is None or c_clean == 'صافى بعد ضريبة':
-                    gross_col = col
-
-        def clean_sum(col_name):
-            if not col_name or col_name not in df_valid.columns:
-                return 0.0
-            s = df_valid[col_name].astype(str).str.replace(',', '').str.strip()
-            return float(pd.to_numeric(s, errors='coerce').fillna(0.0).sum())
-
-        net_sum = clean_sum(net_col)
-        vat_sum = clean_sum(vat_col)
-        gross_sum = clean_sum(gross_col)
-
-        if gross_sum == 0.0 and net_sum > 0.0: gross_sum = net_sum + vat_sum
-        if vat_sum == 0.0 and net_sum > 0.0: vat_sum = net_sum * 0.15
-
-        return round(net_sum, 2), round(vat_sum, 2), round(gross_sum, 2)
-
-    except Exception:
-        return 0.0, 0.0, 0.0
-
 @st.dialog("تعديل الرصيد الافتتاحي للصندوق")
 def opening_balance_dialog(month_name, target_box):
     all_cash_db = load_cash_data()
@@ -2199,9 +2126,14 @@ else:
                     
                     dates_set.reverse()
 
+                    # 🎯 التحديد الآلي والذكي ليومية اليوم الحالي بتوقيت الرياض
+                    today_ksa_date_str = get_ksa_now().strftime('%Y-%m-%d')
+                    default_date_idx = dates_set.index(today_ksa_date_str) if today_ksa_date_str in dates_set else 0
+
                     selected_day_page = st.selectbox(
                         "📅 اختر يومية التاريخ المطلوب استعراضها:", 
                         dates_set, 
+                        index=default_date_idx,
                         key="select_cash_day_page"
                     )
 
