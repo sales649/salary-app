@@ -13,13 +13,26 @@ st.set_page_config(page_title='5M', layout='wide', page_icon='🏢', initial_sid
 
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
-# روابط سريعة ومباشرة للصور الأصلية المشفرة (Base64)
-# تم تحديث النصوص المشفرة بالكامل لضمان ظهور الصور الحقيقية
-# 1. التشفير المباشر للختم الأحمر الأصلي
-STAMP_IMG_URL = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABALDA4MChAODQ4SERATGCgaGBYWGDEjJR0oOjM9PDkzODdASFxOQERXRTc4UG1RV19iZ2hnPk1xeXBkeFxlZ2P/2wBDARESEhgVGC8aGi9jQjhXY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2P/wAARCAEgASADASIAAhEBAxEB/8QAGwAAAAeBAAAAAAAAAAAAAAAAAAECBAUGBwL/xAA6EAACAQMCBAMFBwMDBAMBAAABAgMABBEFEiExBVFhJnGRE1JTgaEiMbHB0eEVQfBicpIjM0KSssL/xAAYAQEBAQEBAAAAAAAAAAAAAAAAAQMCBP/EAB8RAQEBAQEAAgMBAQAAAAAAAAABEQIDEhMhMTJBIv/aAAwDAQACEOp4)
 
-# 2. التشفير المباشر للتوقيع الأزرق الأصلي
-SIGN_IMG_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAK8AAAA8AQMAAADo2+aLAAAABlBMVEUAAAD///+l2Z/dAAAAAXRSTlMAQObYZgAAACNJREFUeN7twQENAAAAwqD3T20PBxAAAAAAAAAAAAAAAAAAnAN33AABm0v+UAAAAABJRU5ErkJggg=="
+# دالة قراءة الصور المحلية المرفوعة بالمستودع وتحويلها تلقائياً لـ Data-URI ممتازة
+def get_local_image_b64(file_path):
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "rb") as image_file:
+                encoded = base64.b64encode(image_file.read()).decode()
+                ext = file_path.split('.')[-1].lower()
+                mime = "image/png" if ext == "png" else "image/jpeg"
+                return f"data:{mime};base64,{encoded}"
+        except Exception:
+            pass
+    return ""
+
+# قراءة الصورتين من مستودع الملفات
+STAMP_IMG_URL = get_local_image_b64("stamp.png")
+SIGN_IMG_URL = get_local_image_b64("sign.png")
+
+# إعدادات الربط السحابي بـ Supabase
+SUPABASE_URL = "https://ohoqprtvmhyjomaavwct.supabase.co"
 SUPABASE_KEY = "sb_publishable_T6YFCaos1EexLgGG9KtwCw_nNMRHjJ_"
 
 @st.cache_resource
@@ -668,6 +681,10 @@ def print_cash_voucher_dialog(v_item, month_name):
     title_txt = "سند قبض نقدية" if is_rec else "سند صرف نقدية"
     color_accent = "#10B981" if is_rec else "#EF4444"
 
+    # استخدام مسار الصورة المباشر من المستودع لتفادي أي حظر
+    stamp_path = "stamp.png" if os.path.exists("stamp.png") else STAMP_IMG_URL
+    sign_path = "sign.png" if os.path.exists("sign.png") else SIGN_IMG_URL
+
     voucher_html = f"""
     <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
     <style>
@@ -681,7 +698,7 @@ def print_cash_voucher_dialog(v_item, month_name):
         .amt-box {{ font-size: 20px; font-weight: 900; color: {color_accent}; text-align: center; background: #ecfdf5; border: 2px solid {color_accent}; padding: 6px; border-radius: 6px; }}
         .sigs {{ margin-top: 35px; display: flex; justify-content: space-between; align-items: flex-end; font-weight: bold; font-size: 13px; }}
         .sig-col {{ text-align: center; width: 30%; }}
-        .stamp-img {{ width: 120px; height: 120px; object-fit: contain; border-radius: 50%; }}
+        .stamp-img {{ width: 120px; height: 120px; object-fit: contain; }}
         .sign-img {{ width: 130px; height: 55px; object-fit: contain; margin-top: 5px; }}
     </style></head><body>
         <div class="v-box">
@@ -705,11 +722,11 @@ def print_cash_voucher_dialog(v_item, month_name):
                 </div>
                 <div class="sig-col">
                     <div>توقيع المحاسب المسؤول</div>
-                    <img src="{SIGN_IMG_URL}" class="sign-img" alt="توقيع المحاسب">
+                    <img src="{sign_path}" class="sign-img" alt="توقيع المحاسب">
                 </div>
                 <div class="sig-col">
                     <div>اعتماد وختم الشركة</div>
-                    <img src="{STAMP_IMG_URL}" class="stamp-img" alt="ختم 5M">
+                    <img src="{stamp_path}" class="stamp-img" alt="ختم 5M">
                 </div>
             </div>
         </div>
@@ -892,6 +909,9 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
     tot_out = sum(t['amount'] for t in trans_list if 'صرف' in t['type'])
     net_bal = tot_in - tot_out
 
+    stamp_path = "stamp.png" if os.path.exists("stamp.png") else STAMP_IMG_URL
+    sign_path = "sign.png" if os.path.exists("sign.png") else SIGN_IMG_URL
+
     t_account_html = f"""
     <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
     <style>
@@ -936,11 +956,11 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
             <div class="sigs">
                 <div style="text-align:center;">
                     <div>توقيع المحاسب المسؤول</div>
-                    <img src="{SIGN_IMG_URL}" style="width:110px; height:45px; object-fit:contain;">
+                    <img src="{sign_path}" style="width:110px; height:45px; object-fit:contain;">
                 </div>
                 <div style="text-align:center;">
                     <div>اعتماد وختم الشركة</div>
-                    <img src="{STAMP_IMG_URL}" style="width:100px; height:100px; object-fit:contain;">
+                    <img src="{stamp_path}" style="width:100px; height:100px; object-fit:contain;">
                 </div>
             </div>
         </div>
@@ -1169,6 +1189,9 @@ else:
 
     def generate_pretty_html_pdf(df_subset, branch_name, payment_type="جميع الدفعات"):
         output = io.BytesIO()
+        stamp_path = "stamp.png" if os.path.exists("stamp.png") else STAMP_IMG_URL
+        sign_path = "sign.png" if os.path.exists("sign.png") else SIGN_IMG_URL
+
         html = f"""
         <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
         <style>
@@ -1228,11 +1251,11 @@ else:
                     </div>
                     <div style="text-align:center;">
                         <div>اعتماد المحاسب المسلم</div>
-                        <img src="{SIGN_IMG_URL}" style="width:100px; height:40px; object-fit:contain;">
+                        <img src="{sign_path}" style="width:100px; height:40px; object-fit:contain;">
                     </div>
                     <div style="text-align:center;">
                         <div>اعتماد وختم الشركة</div>
-                        <img src="{STAMP_IMG_URL}" style="width:90px; height:90px; object-fit:contain;">
+                        <img src="{stamp_path}" style="width:90px; height:90px; object-fit:contain;">
                     </div>
                 </div>
             </div>
@@ -1274,11 +1297,11 @@ else:
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد المحاسب المسلم</div>
-                            <img src="{SIGN_IMG_URL}" style="width:100px; height:40px; object-fit:contain;">
+                            <img src="{sign_path}" style="width:100px; height:40px; object-fit:contain;">
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد وختم الشركة</div>
-                            <img src="{STAMP_IMG_URL}" style="width:90px; height:90px; object-fit:contain;">
+                            <img src="{stamp_path}" style="width:90px; height:90px; object-fit:contain;">
                         </div>
                     </div>
                 </div>
@@ -1430,6 +1453,9 @@ else:
         sc2.metric("إجمالي المصروفات المصفاة بالفواتير", f"{tot_spent_drivers:,.2f} ر.س")
         sc3.metric("🔴 المتبقي بذمته فعلياً للآن", f"{current_open_balance:,.2f} ر.س")
 
+        stamp_path = "stamp.png" if os.path.exists("stamp.png") else STAMP_IMG_URL
+        sign_path = "sign.png" if os.path.exists("sign.png") else SIGN_IMG_URL
+
         with col_drv_top2:
             drv_print_html = f"""
             <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
@@ -1479,11 +1505,11 @@ else:
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد المحاسب المسؤول</div>
-                            <img src="{SIGN_IMG_URL}" style="width:100px; height:40px; object-fit:contain;">
+                            <img src="{sign_path}" style="width:100px; height:40px; object-fit:contain;">
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد وختم الشركة</div>
-                            <img src="{STAMP_IMG_URL}" style="width:90px; height:90px; object-fit:contain;">
+                            <img src="{stamp_path}" style="width:90px; height:90px; object-fit:contain;">
                         </div>
                     </div>
                 </div>
@@ -1921,7 +1947,7 @@ else:
                     <td>0.00</td>
                 </tr>
                 <tr class="zatca-total-row">
-                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات (شاملة البند 7 و 9 و 10)</td>
+                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات</td>
                     <td>{(total_purch_net + total_purch_zero + calc_rcm_net - total_purch_ret_net):,.2f}</td>
                     <td style="color:#F59E0B; font-size:15px;">{net_input_vat:,.2f}</td>
                 </tr>
@@ -1997,11 +2023,11 @@ else:
                     <div class="sigs">
                         <div style="text-align:center;">
                             <div>إعداد المحاسب المسؤول</div>
-                            <img src="{SIGN_IMG_URL}" style="width:110px; height:45px; object-fit:contain;">
+                            <img src="{SIGN_IMG_URL}" style="width:110px; height:45px; object-fit:contain;" onerror="this.style.display='none'">
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد المدير العام وتصديق الشركة</div>
-                            <img src="{STAMP_IMG_URL}" style="width:100px; height:100px; object-fit:contain;">
+                            <img src="{STAMP_IMG_URL}" style="width:100px; height:100px; object-fit:contain;" onerror="this.style.display='none'">
                         </div>
                     </div>
                 </div>
@@ -2576,8 +2602,8 @@ else:
                 <span>إجمالي المتبقي: {df_sheet['المتبقي'].sum():,.0f} ر.س</span>
             </div>
             <div class="signatures">
-                <div>إعداد المحاسب المسؤول: <br><img src="{SIGN_IMG_URL}" style="width:90px;"></div>
-                <div>اعتماد وتصديق الشركة: <br><img src="{STAMP_IMG_URL}" style="width:80px; border-radius: 50%;"></div>
+                <div>إعداد المحاسب المسؤول: <br><img src="{SIGN_IMG_URL}" style="width:90px;" onerror="this.style.display='none'"></div>
+                <div>اعتماد وتصديق الشركة: <br><img src="{STAMP_IMG_URL}" style="width:80px;" onerror="this.style.display='none'"></div>
                 <div>اعتماد المدير العام: __________________</div>
             </div>
         </body>
