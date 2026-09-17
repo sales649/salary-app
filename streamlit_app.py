@@ -28,8 +28,8 @@ def get_local_image_b64(file_path):
     return ""
 
 # قراءة الصورتين من مستودع الملفات
-STAMP_IMG_URL = get_local_image_b64("stamp.png")
-SIGN_IMG_URL = get_local_image_b64("sign.png")
+STAMP_IMG_URL = get_local_image_b64("stamp.png.png")
+SIGN_IMG_URL = get_local_image_b64("sign.png.png")
 
 # إعدادات الربط السحابي بـ Supabase
 SUPABASE_URL = "https://ohoqprtvmhyjomaavwct.supabase.co"
