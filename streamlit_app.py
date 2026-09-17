@@ -701,79 +701,6 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# 🛠️ دالة قراءة المبالغ والضريبة التلقائية المباشرة من شيت الوعلان
-def parse_vat_total_row_smart(uploaded_file):
-    if uploaded_file is None:
-        return 0.0, 0.0, 0.0
-    try:
-        uploaded_file.seek(0)
-        try:
-            df_raw = pd.read_excel(uploaded_file, header=None)
-        except Exception:
-            uploaded_file.seek(0)
-            df_raw = pd.read_csv(uploaded_file, header=None)
-
-        header_idx = None
-        target_kws = ['الصافي', 'الصافى', 'الضريبة', 'ضريبة', 'الإجمالي', 'الأجمالى', 'صافى بعد ضريبة', 'اسم المورد', 'اسم العميل', 'العميل', 'رقم الفاتورة', 'رقم السند']
-        
-        for idx, row in df_raw.iterrows():
-            row_str = " ".join([str(v) for v in row.values if pd.notnull(v)])
-            matches = [kw for kw in target_kws if kw in row_str]
-            if len(matches) >= 2:
-                header_idx = idx; break
-                
-        if header_idx is None: header_idx = 0
-            
-        headers = [str(v).strip() for v in df_raw.iloc[header_idx].values]
-        df_data = df_raw.iloc[header_idx + 1:].reset_index(drop=True)
-        df_data.columns = headers
-        
-        doc_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['رقم الفاتورة', 'رقم السند'])), None)
-        name_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['اسم المورد', 'اسم العميل', 'العميل'])), None)
-
-        def is_valid_transaction(row):
-            if row.dropna().empty: return False
-            row_text = " ".join([str(v) for v in row.values if pd.notnull(v)]).strip()
-            if any(k in row_text for k in ['الأجمالى', 'الأجمالي', 'إجمالي السندات', 'إجمالي التقارير', 'Page -1', 'Page ']):
-                return False
-            if doc_col and pd.notnull(row[doc_col]):
-                val = pd.to_numeric(str(row[doc_col]).replace(',', '').strip(), errors='coerce')
-                if pd.isna(val): return False
-            elif name_col and pd.isna(row[name_col]):
-                return False
-            return True
-
-        df_valid = df_data[df_data.apply(is_valid_transaction, axis=1)].copy()
-
-        net_col, vat_col, gross_col = None, None, None
-        for col in df_valid.columns:
-            c_clean = str(col).strip()
-            if c_clean in ['الصافي', 'الصافى']:
-                net_col = col
-            elif c_clean in ['الضريبة', 'ضريبة']:
-                vat_col = col
-            elif c_clean in ['صافى بعد ضريبة', 'الإجمالي', 'الأجمالى']:
-                if gross_col is None or c_clean == 'صافى بعد ضريبة':
-                    gross_col = col
-
-        def clean_sum(col_name):
-            if not col_name or col_name not in df_valid.columns:
-                return 0.0
-            s = df_valid[col_name].astype(str).str.replace(',', '').str.strip()
-            return float(pd.to_numeric(s, errors='coerce').fillna(0.0).sum())
-
-        net_sum = clean_sum(net_col)
-        vat_sum = clean_sum(vat_col)
-        gross_sum = clean_sum(gross_col)
-
-        if gross_sum == 0.0 and net_sum > 0.0: gross_sum = net_sum + vat_sum
-        if vat_sum == 0.0 and net_sum > 0.0: vat_sum = net_sum * 0.15
-
-        return round(net_sum, 2), round(vat_sum, 2), round(gross_sum, 2)
-
-    except Exception:
-        return 0.0, 0.0, 0.0
-
 @st.dialog("تعديل الرصيد الافتتاحي للصندوق")
 def opening_balance_dialog(month_name, target_box):
     all_cash_db = load_cash_data()
@@ -796,7 +723,6 @@ def opening_balance_dialog(month_name, target_box):
 def driver_opening_balance_dialog(driver_name):
     drivers_db = load_drivers_data()
     
-    # البحث عن سجل افتتاحي موجود
     op_item = next((d for d in drivers_db if d.get('is_opening') is True and d.get('driver') == driver_name), None)
     current_op_val = op_item.get('diff_amt', 0.0) if op_item else 0.0
 
@@ -819,7 +745,7 @@ def driver_opening_balance_dialog(driver_name):
                     'given_amt': abs(new_driver_op_val) if new_driver_op_val > 0 else 0.0,
                     'spent_amt': abs(new_driver_op_val) if new_driver_op_val < 0 else 0.0,
                     'purpose': 'رصيد افتتاحي سابق معتمد',
-                    'status': 'تمت التصفية',
+                    'status': 'مفتوحة' if new_driver_op_val != 0 else 'تمت التصفية',
                     'diff_amt': new_driver_op_val,
                     'is_opening': True
                 })
@@ -1232,9 +1158,7 @@ else:
         total_company_cash = net_main_now + net_acc_now
 
         drivers_db = load_drivers_data()
-        tot_given_drivers = sum(d['given_amt'] for d in drivers_db)
-        tot_spent_drivers = sum(d['spent_amt'] for d in drivers_db)
-        open_driver_custody_sum = max(0.0, tot_given_drivers - tot_spent_drivers)
+        open_driver_custody_sum = sum(d['diff_amt'] for d in drivers_db if d.get('status') == 'مفتوحة')
 
         audit_history = load_audit_data()
         last_audit = audit_history[-1] if audit_history else None
@@ -1333,7 +1257,7 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 5. موديول عُهدة السواقين (المعدل كلياً مع الحساب والمقاصة الخالية من التعقيد)
+    # 5. موديول عُهدة السواقين (المحدث بالطباعة وإعادة تصحيح الرصيد المتبقي 242.00)
     elif selected_option == 'عُهدة السواقين':
         st.subheader(f'🚚 موديول إدارة عُهدة السواقين المباشر - ({month_selected})')
         st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والتسميع التراكمي المباشر بصندوق omar:')
@@ -1341,27 +1265,89 @@ else:
         drivers_db = load_drivers_data()
         driver_selected = "سمان السواق"
 
-        # زر إضافة رصيد افتتاحي للسائق
-        col_drv_top1, col_drv_top2 = st.columns([1, 2])
+        # زر إضافة رصيد افتتاحي للسائق وطباعة كشف الحساب
+        col_drv_top1, col_drv_top2, col_drv_top3 = st.columns([1.2, 1.2, 1.6])
         with col_drv_top1:
             if st.button("⚙️ تثبيت رصيد افتتاحي للسائق", key="btn_drv_op_bal"):
                 driver_opening_balance_dialog(driver_selected)
 
-        # قراءة المتبقي أو المستحق التراكمي من أحدث حركة سابقة
-        last_diff = 0.0
-        for d in reversed(drivers_db):
-            if d.get('status') == 'تمت التصفية' or d.get('is_opening') is True:
-                last_diff = d.get('diff_amt', 0.0)
-                break
+        # حساب المتبقي بذمته فعلياً للآن بناءً على العُهدة المفتوحة المباشرة
+        open_custody_item = next((d for d in drivers_db if d.get('status') == 'مفتوحة'), None)
+        current_open_balance = open_custody_item.get('given_amt', 0.0) if open_custody_item else 0.0
 
         tot_given_drivers = sum(d['given_amt'] for d in drivers_db if not d.get('is_opening'))
         tot_spent_drivers = sum(d['spent_amt'] for d in drivers_db if not d.get('is_opening'))
-        open_driver_custody_sum = max(0.0, tot_given_drivers - tot_spent_drivers)
 
         sc1, sc2, sc3 = st.columns(3)
         sc1.metric("إجمالي العُهد المسلمة لـ سمان السواق", f"{tot_given_drivers:,.2f} ر.س")
         sc2.metric("إجمالي المصروفات المصفاة بالفواتير", f"{tot_spent_drivers:,.2f} ر.س")
-        sc3.metric("🔴 المتبقي بذمته فعلياً للآن", f"{open_driver_custody_sum:,.2f} ر.س")
+        sc3.metric("🔴 المتبقي بذمته فعلياً للآن", f"{current_open_balance:,.2f} ر.س")
+
+        with col_drv_top2:
+            drv_print_html = f"""
+            <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+            <style>
+                body {{ font-family: Arial, sans-serif; background-color: #fff; padding: 15px; color:#000; }}
+                .box {{ border: 2px solid #1E3A8A; border-radius: 8px; padding: 12px; }}
+                .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 6px; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }}
+                th {{ background-color: #1E3A8A; color: white; padding: 6px; border: 1px solid #334155; }}
+                td {{ border: 1px solid #cbd5e1; padding: 6px; text-align: center; }}
+            </style></head><body>
+                <div class="box">
+                    <div class="header-logo">
+                        <div style="font-size:10px; font-weight:bold;">Five-M Company For Industry<br>C. R. : 1011145035</div>
+                        <div style="font-size:32px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
+                        <div style="font-size:10px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
+                    </div>
+                    <h3 style="text-align:center; color:#1E3A8A;">كشف حساب وتصفية عُهد السائق: ({driver_selected})</h3>
+                    <table>
+                        <thead>
+                            <tr><th>مسلسل</th><th>التاريخ والوقت</th><th>البيان / الغرض</th><th>المسلم/الافتتاحي</th><th>المصروف بالفواتير</th><th>الرصيد المتبقي</th><th>الحالة</th></tr>
+                        </thead>
+                        <tbody>
+            """
+            for d in drivers_db:
+                diff_val = d.get('diff_amt', 0.0)
+                d_status = "تصفية كاملة" if d.get('status') == 'تمت التصفية' and diff_val == 0 else (f"متبقي معه ({diff_val:,.2f} ر.س)" if diff_val > 0 else f"له مستحق ({abs(diff_val):,.2f} ر.س)")
+                drv_print_html += f"""
+                    <tr>
+                        <td>#{d['id']}</td>
+                        <td>{d['date']}</td>
+                        <td>{d.get('purpose','')}</td>
+                        <td>{d['given_amt']:,.2f} ر.س</td>
+                        <td>{d.get('spent_amt',0.0):,.2f} ر.س</td>
+                        <td>{diff_val:,.2f} ر.س</td>
+                        <td>{d_status}</td>
+                    </tr>
+                """
+            drv_print_html += f"""
+                        </tbody>
+                    </table>
+                    <div style="margin-top:20px; display:flex; justify-content:space-between; font-weight:bold; font-size:12px;">
+                        <div>استلام وتوقيع السائق: __________________</div>
+                        <div>اعتماد المحاسبة والإدارة: __________________</div>
+                    </div>
+                </div>
+            </body></html>
+            """
+            st.download_button(
+                label="🖨️ طباعة كشف حساب عُهدة سمان (A4)",
+                data=drv_print_html.encode('utf-8'),
+                file_name=f"كشف_حساب_عُهدة_{driver_selected}.html",
+                mime="text/html",
+                use_container_width=True
+            )
+
+        with col_drv_top3:
+            df_drv_export = pd.DataFrame(drivers_db)
+            st.download_button(
+                label="📥 تصدير كشف حساب العُهد إلى Excel",
+                data=df_drv_export.to_csv(index=False).encode('utf-8-sig'),
+                file_name=f"سجل_عهد_السائق_{driver_selected}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
 
         st.divider()
 
@@ -1369,6 +1355,13 @@ else:
         with d_col1:
             st.markdown("### 📝 1. تسليم عُهدة جديدة لـ (سمان السواق):")
             
+            # قراءة المتبقي أو المستحق من آخر حركتين للتسوية المباشرة الصحيحة
+            last_diff = 0.0
+            for d in reversed(drivers_db):
+                if d.get('status') == 'تمت التصفية' or d.get('is_opening') is True:
+                    last_diff = d.get('diff_amt', 0.0)
+                    break
+
             if last_diff < 0:
                 st.warning(f"💡 للسائق فرق مصروفات سابقة مستحقة له بـ ({abs(last_diff):,.2f} ر.س).")
             elif last_diff > 0:
