@@ -13,9 +13,9 @@ st.set_page_config(page_title='5M', layout='wide', page_icon='🏢', initial_sid
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
 
-# استدعاء ملفات الصور الأصلية المرفوعة بداخل مستودع GitHub
-STAMP_IMG_URL = "https://raw.githubusercontent.com/wahby5m/5m-accounting/main/stamp.png"
-SIGN_IMG_URL = "https://raw.githubusercontent.com/wahby5m/5m-accounting/main/sign.png"
+# روابط استدعاء الصور المباشرة من مستودع GitHub
+STAMP_IMG_URL = "stamp.png"
+SIGN_IMG_URL = "sign.png"
 
 # إعدادات الربط السحابي بـ Supabase
 SUPABASE_URL = "https://ohoqprtvmhyjomaavwct.supabase.co"
@@ -607,79 +607,6 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-# 🛠️ دالة قراءة المبالغ والضريبة التلقائية المباشرة من شيت الوعلان
-def parse_vat_total_row_smart(uploaded_file):
-    if uploaded_file is None:
-        return 0.0, 0.0, 0.0
-    try:
-        uploaded_file.seek(0)
-        try:
-            df_raw = pd.read_excel(uploaded_file, header=None)
-        except Exception:
-            uploaded_file.seek(0)
-            df_raw = pd.read_csv(uploaded_file, header=None)
-
-        header_idx = None
-        target_kws = ['الصافي', 'الصافى', 'الضريبة', 'ضريبة', 'الإجمالي', 'الأجمالى', 'صافى بعد ضريبة', 'اسم المورد', 'اسم العميل', 'العميل', 'رقم الفاتورة', 'رقم السند']
-        
-        for idx, row in df_raw.iterrows():
-            row_str = " ".join([str(v) for v in row.values if pd.notnull(v)])
-            matches = [kw for kw in target_kws if kw in row_str]
-            if len(matches) >= 2:
-                header_idx = idx; break
-                
-        if header_idx is None: header_idx = 0
-            
-        headers = [str(v).strip() for v in df_raw.iloc[header_idx].values]
-        df_data = df_raw.iloc[header_idx + 1:].reset_index(drop=True)
-        df_data.columns = headers
-        
-        doc_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['رقم الفاتورة', 'رقم السند'])), None)
-        name_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['اسم المورد', 'اسم العميل', 'العميل'])), None)
-
-        def is_valid_transaction(row):
-            if row.dropna().empty: return False
-            row_text = " ".join([str(v) for v in row.values if pd.notnull(v)]).strip()
-            if any(k in row_text for k in ['الأجمالى', 'الأجمالي', 'إجمالي السندات', 'إجمالي التقارير', 'Page -1', 'Page ']):
-                return False
-            if doc_col and pd.notnull(row[doc_col]):
-                val = pd.to_numeric(str(row[doc_col]).replace(',', '').strip(), errors='coerce')
-                if pd.isna(val): return False
-            elif name_col and pd.isna(row[name_col]):
-                return False
-            return True
-
-        df_valid = df_data[df_data.apply(is_valid_transaction, axis=1)].copy()
-
-        net_col, vat_col, gross_col = None, None, None
-        for col in df_valid.columns:
-            c_clean = str(col).strip()
-            if c_clean in ['الصافي', 'الصافى']:
-                net_col = col
-            elif c_clean in ['الضريبة', 'ضريبة']:
-                vat_col = col
-            elif c_clean in ['صافى بعد ضريبة', 'الإجمالي', 'الأجمالى']:
-                if gross_col is None or c_clean == 'صافى بعد ضريبة':
-                    gross_col = col
-
-        def clean_sum(col_name):
-            if not col_name or col_name not in df_valid.columns:
-                return 0.0
-            s = df_valid[col_name].astype(str).str.replace(',', '').str.strip()
-            return float(pd.to_numeric(s, errors='coerce').fillna(0.0).sum())
-
-        net_sum = clean_sum(net_col)
-        vat_sum = clean_sum(vat_col)
-        gross_sum = clean_sum(gross_col)
-
-        if gross_sum == 0.0 and net_sum > 0.0: gross_sum = net_sum + vat_sum
-        if vat_sum == 0.0 and net_sum > 0.0: vat_sum = net_sum * 0.15
-
-        return round(net_sum, 2), round(vat_sum, 2), round(gross_sum, 2)
-
-    except Exception:
-        return 0.0, 0.0, 0.0
-
 @st.dialog("تعديل الرصيد الافتتاحي للصندوق")
 def opening_balance_dialog(month_name, target_box):
     all_cash_db = load_cash_data()
@@ -777,11 +704,11 @@ def print_cash_voucher_dialog(v_item, month_name):
                 </div>
                 <div class="sig-col">
                     <div>توقيع المحاسب المسؤول</div>
-                    <img src="{SIGN_IMG_URL}" class="sign-img" alt="توقيع المحاسب">
+                    <img src="{SIGN_IMG_URL}" class="sign-img" alt="توقيع المحاسب" onerror="this.style.display='none'">
                 </div>
                 <div class="sig-col">
                     <div>اعتماد وختم الشركة</div>
-                    <img src="{STAMP_IMG_URL}" class="stamp-img" alt="ختم 5M">
+                    <img src="{STAMP_IMG_URL}" class="stamp-img" alt="ختم 5M" onerror="this.style.display='none'">
                 </div>
             </div>
         </div>
@@ -795,6 +722,143 @@ def print_cash_voucher_dialog(v_item, month_name):
         mime="text/html",
         use_container_width=True
     )
+
+@st.dialog("✏️ تعديل بيانات السند")
+def edit_cash_voucher_dialog(trans_idx, month_name, target_box="main"):
+    all_cash_db = load_cash_data()
+    m_cash = all_cash_db.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
+    box_key = 'transactions' if target_box == 'main' else 'acc_transactions'
+    c_trans = m_cash.get(box_key, [])
+    
+    if trans_idx < len(c_trans):
+        t_item = c_trans[trans_idx]
+        st.write(f"تعديل السند رقم: **#{t_item.get('code', t_item['id'])}**")
+        
+        with st.form(f"edit_voucher_form_{trans_idx}"):
+            e_party = st.text_input("صادر إلى / مستلم من:", value=t_item['party'])
+            e_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=float(t_item['amount']))
+            e_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"], index=["نقداً بالصندوق", "تحويل بنكي", "شيك"].index(t_item.get('method', 'نقداً بالصندوق')))
+            e_notes = st.text_input("البيان والملاحظات:", value=t_item.get('notes', ''))
+            
+            sub_e_voucher = st.form_submit_button("💾 حفظ تعديلات السند")
+            if sub_e_voucher:
+                c_trans[trans_idx]['party'] = e_party
+                c_trans[trans_idx]['amount'] = e_amt
+                c_trans[trans_idx]['method'] = e_method
+                c_trans[trans_idx]['notes'] = e_notes
+                m_cash[box_key] = c_trans
+                all_cash_db[month_name] = m_cash
+                save_cash_data(all_cash_db)
+                st.success("تم تعديل بيانات السند بنجاح!")
+                st.rerun()
+
+@st.dialog("إنشاء سند جديد")
+def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
+    st.write(f"إضافة سند لشهر: **{month_name}** ({'الرئيسية' if target_box == 'main' else 'omar'})")
+    
+    if target_box == "main":
+        type_options = ["سند قبض", "سند صرف", "🔄 تحويل عُهدة إلى (omar)"]
+    else:
+        type_options = ["سند قبض", "سند صرف", "🔄 تحويل عُهدة إلى (wahby)"]
+
+    with st.form("quick_cash_form", clear_on_submit=True):
+        q_type = st.selectbox("نوع السند:", type_options, index=0 if "قبض" in default_type else 1)
+        q_party = st.text_input("صادر إلى / مستلم من:", placeholder="اسم الجهة...")
+        q_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
+        q_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
+        q_notes = st.text_input("البيان والملاحظات:")
+        
+        q_sub = st.form_submit_button("حفظ السند")
+        if q_sub:
+            if q_party and q_amt > 0:
+                all_cash = load_cash_data()
+                if month_name not in all_cash:
+                    all_cash[month_name] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                
+                m_cash = all_cash[month_name]
+                box_key = 'transactions' if target_box == 'main' else 'acc_transactions'
+                if box_key not in m_cash:
+                    m_cash[box_key] = []
+                    
+                c_trans = m_cash[box_key]
+                
+                if "تحويل عُهدة إلى (omar)" in q_type and target_box == "main":
+                    v_code = f"TRF-{(len(c_trans) + 1):03d}"
+                    c_trans.append({
+                        'id': len(c_trans) + 1,
+                        'code': v_code,
+                        'date': get_ksa_now_str(),
+                        'type': 'سند صرف',
+                        'party': f"تحويل عُهدة إلى المحاسب (omar) - {q_party}",
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
+                    
+                    if 'acc_transactions' not in m_cash:
+                        m_cash['acc_transactions'] = []
+                    acc_trans = m_cash['acc_transactions']
+                    acc_trans.append({
+                        'id': len(acc_trans) + 1,
+                        'code': f"REC-TRF-{(len(acc_trans) + 1):03d}",
+                        'date': get_ksa_now_str(),
+                        'type': 'سند قبض',
+                        'party': f"استلام عُهدة محولة من الخزينة الرئيسية (wahby)",
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
+                    m_cash['acc_transactions'] = acc_trans
+
+                elif "تحويل عُهدة إلى (wahby)" in q_type and target_box == "accountant":
+                    v_code = f"TRF-ACC-{(len(c_trans) + 1):03d}"
+                    c_trans.append({
+                        'id': len(c_trans) + 1,
+                        'code': v_code,
+                        'date': get_ksa_now_str(),
+                        'type': 'سند صرف',
+                        'party': f"تحويل نقدية واسترداد إلى الخزينة الرئيسية (wahby) - {q_party}",
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
+                    
+                    if 'transactions' not in m_cash:
+                        m_cash['transactions'] = []
+                    main_trans = m_cash['transactions']
+                    main_trans.append({
+                        'id': len(main_trans) + 1,
+                        'code': f"REC-TRF-{(len(main_trans) + 1):03d}",
+                        'date': get_ksa_now_str(),
+                        'type': 'سند قبض',
+                        'party': f"استلام نقدية محولة من عُهدة المحاسب (omar)",
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
+                    m_cash['transactions'] = main_trans
+
+                else:
+                    rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
+                    pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
+                    v_code = f"REC-{(rec_count + 1):03d}" if "قبض" in q_type else f"PAY-{(pay_count + 1):03d}"
+                    
+                    c_trans.append({
+                        'id': len(c_trans) + 1,
+                        'code': v_code,
+                        'date': get_ksa_now_str(),
+                        'type': q_type,
+                        'party': q_party,
+                        'amount': q_amt,
+                        'method': q_method,
+                        'notes': q_notes
+                    })
+
+                m_cash[box_key] = c_trans
+                all_cash[month_name] = m_cash
+                save_cash_data(all_cash)
+                st.success(f"تم الحفظ السحابي بنجاح برقم #{v_code}!")
+                st.rerun()
 
 @st.dialog("✏️ تعديل حركة عُهدة السائق")
 def edit_driver_custody_modal(drv_idx):
@@ -871,11 +935,11 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
             <div class="sigs">
                 <div style="text-align:center;">
                     <div>توقيع المحاسب المسؤول</div>
-                    <img src="{SIGN_IMG_URL}" style="width:110px; height:45px; object-fit:contain;">
+                    <img src="{SIGN_IMG_URL}" style="width:110px; height:45px; object-fit:contain;" onerror="this.style.display='none'">
                 </div>
                 <div style="text-align:center;">
                     <div>اعتماد وختم الشركة</div>
-                    <img src="{STAMP_IMG_URL}" style="width:100px; height:100px; object-fit:contain;">
+                    <img src="{STAMP_IMG_URL}" style="width:100px; height:100px; object-fit:contain;" onerror="this.style.display='none'">
                 </div>
             </div>
         </div>
@@ -1163,11 +1227,11 @@ else:
                     </div>
                     <div style="text-align:center;">
                         <div>اعتماد المحاسب المسلم</div>
-                        <img src="{SIGN_IMG_URL}" style="width:100px; height:40px; object-fit:contain;">
+                        <img src="{SIGN_IMG_URL}" style="width:100px; height:40px; object-fit:contain;" onerror="this.style.display='none'">
                     </div>
                     <div style="text-align:center;">
                         <div>اعتماد وختم الشركة</div>
-                        <img src="{STAMP_IMG_URL}" style="width:90px; height:90px; object-fit:contain;">
+                        <img src="{STAMP_IMG_URL}" style="width:90px; height:90px; object-fit:contain;" onerror="this.style.display='none'">
                     </div>
                 </div>
             </div>
@@ -1209,11 +1273,11 @@ else:
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد المحاسب المسلم</div>
-                            <img src="{SIGN_IMG_URL}" style="width:100px; height:40px; object-fit:contain;">
+                            <img src="{SIGN_IMG_URL}" style="width:100px; height:40px; object-fit:contain;" onerror="this.style.display='none'">
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد وختم الشركة</div>
-                            <img src="{STAMP_IMG_URL}" style="width:90px; height:90px; object-fit:contain;">
+                            <img src="{STAMP_IMG_URL}" style="width:90px; height:90px; object-fit:contain;" onerror="this.style.display='none'">
                         </div>
                     </div>
                 </div>
@@ -1341,7 +1405,7 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 5. موديول عُهدة السواقين (المحدث بالكامل وحل مشكلة الـ 242.00 والتوقيع والختم)
+    # 5. موديول عُهدة السواقين
     elif selected_option == 'عُهدة السواقين':
         st.subheader(f'🚚 موديول إدارة عُهدة السواقين المباشر - ({month_selected})')
         st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والتسميع التراكمي المباشر بصندوق omar:')
@@ -1354,7 +1418,6 @@ else:
             if st.button("⚙️ تثبيت رصيد افتتاحي للسائق", key="btn_drv_op_bal"):
                 driver_opening_balance_dialog(driver_selected)
 
-        # 🎯 حساب المتبقي المباشر المفتوح بجراب سمان حالياً
         open_custody_item = next((d for d in drivers_db if d.get('status') == 'مفتوحة'), None)
         current_open_balance = round(open_custody_item.get('given_amt', 0.0) - open_custody_item.get('spent_amt', 0.0), 2) if open_custody_item else 0.0
 
@@ -1415,11 +1478,11 @@ else:
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد المحاسب المسؤول</div>
-                            <img src="{SIGN_IMG_URL}" style="width:100px; height:40px; object-fit:contain;">
+                            <img src="{SIGN_IMG_URL}" style="width:100px; height:40px; object-fit:contain;" onerror="this.style.display='none'">
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد وختم الشركة</div>
-                            <img src="{STAMP_IMG_URL}" style="width:90px; height:90px; object-fit:contain;">
+                            <img src="{STAMP_IMG_URL}" style="width:90px; height:90px; object-fit:contain;" onerror="this.style.display='none'">
                         </div>
                     </div>
                 </div>
@@ -1857,7 +1920,7 @@ else:
                     <td>0.00</td>
                 </tr>
                 <tr class="zatca-total-row">
-                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات</td>
+                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات (شاملة البند 7 و 9 و 10)</td>
                     <td>{(total_purch_net + total_purch_zero + calc_rcm_net - total_purch_ret_net):,.2f}</td>
                     <td style="color:#F59E0B; font-size:15px;">{net_input_vat:,.2f}</td>
                 </tr>
@@ -1933,11 +1996,11 @@ else:
                     <div class="sigs">
                         <div style="text-align:center;">
                             <div>إعداد المحاسب المسؤول</div>
-                            <img src="{SIGN_IMG_URL}" style="width:110px; height:45px; object-fit:contain;">
+                            <img src="{SIGN_IMG_URL}" style="width:110px; height:45px; object-fit:contain;" onerror="this.style.display='none'">
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد المدير العام وتصديق الشركة</div>
-                            <img src="{STAMP_IMG_URL}" style="width:100px; height:100px; object-fit:contain;">
+                            <img src="{STAMP_IMG_URL}" style="width:100px; height:100px; object-fit:contain;" onerror="this.style.display='none'">
                         </div>
                     </div>
                 </div>
@@ -2512,8 +2575,8 @@ else:
                 <span>إجمالي المتبقي: {df_sheet['المتبقي'].sum():,.0f} ر.س</span>
             </div>
             <div class="signatures">
-                <div>إعداد المحاسب المسؤول: <br><img src="{SIGN_IMG_URL}" style="width:90px;"></div>
-                <div>اعتماد وتصديق الشركة: <br><img src="{STAMP_IMG_URL}" style="width:80px;"></div>
+                <div>إعداد المحاسب المسؤول: <br><img src="{SIGN_IMG_URL}" style="width:90px;" onerror="this.style.display='none'"></div>
+                <div>اعتماد وتصديق الشركة: <br><img src="{STAMP_IMG_URL}" style="width:80px;" onerror="this.style.display='none'"></div>
                 <div>اعتماد المدير العام: __________________</div>
             </div>
         </body>
