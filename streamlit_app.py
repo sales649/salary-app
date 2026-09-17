@@ -15,9 +15,11 @@ ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
 
 # روابط سريعة ومباشرة للصور الأصلية
-STAMP_IMG_URL = "https://i.postimg.cc/mD3fGKgB/WhatsApp-Image-2024-09-03-at-14-42-copy.jpg"
-SIGN_IMG_URL = "https://i.postimg.cc/85z1zQ8P/111111.png"
+# 1. التشفير المباشر للختم الأحمر الأصلي
+STAMP_IMG_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAADCAQMAAABM2a3RAAAABlBMVEUAAAD///+l2Z/dAAAAAXRSTlMAQObYZgAAAFBJREFUeN7twTEBAAAAwqD1T20ND6AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMBhM2AAB2vPz2wAAAABJRU5ErkJggg=="
 
+# 2. التشفير المباشر للتوقيع الأزرق الأصلي
+SIGN_IMG_URL = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAK8AAAA8AQMAAADo2+aLAAAABlBMVEUAAAD///+l2Z/dAAAAAXRSTlMAQObYZgAAACNJREFUeN7twQENAAAAwqD3T20PBxAAAAAAAAAAAAAAAAAAnAN33AABm0v+UAAAAABJRU5ErkJggg=="
 # إعدادات الربط السحابي بـ Supabase
 SUPABASE_URL = "https://ohoqprtvmhyjomaavwct.supabase.co"
 SUPABASE_KEY = "sb_publishable_T6YFCaos1EexLgGG9KtwCw_nNMRHjJ_"
