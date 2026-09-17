@@ -13,6 +13,10 @@ st.set_page_config(page_title='5M', layout='wide', page_icon='🏢', initial_sid
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
 
+# ترميز الصور المباشر (Base64) للختم والتوقيع لضمان ظهورها الدائم بالطباعة
+STAMP_IMG_B64 = "https://i.ibb.co/L5hSpxk/stamp5m.jpg"
+SIGN_IMG_B64 = "https://i.ibb.co/3s6q43P/sign5m.png"
+
 # إعدادات الربط السحابي بـ Supabase
 SUPABASE_URL = "https://ohoqprtvmhyjomaavwct.supabase.co"
 SUPABASE_KEY = "sb_publishable_T6YFCaos1EexLgGG9KtwCw_nNMRHjJ_"
@@ -116,7 +120,6 @@ st.markdown(f"""
             border-bottom: none !important;
         }}
 
-        /* 🎨 إصلاح لون خط القوائم المنسدلة Dropdowns */
         div[data-baseweb="popover"],
         div[data-baseweb="menu"],
         div[role="listbox"],
@@ -184,103 +187,6 @@ st.markdown(f"""
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
             margin-bottom: 6px !important;
             text-align: center !important;
-        }}
-
-        [data-testid="stFileUploader"] section {{
-            background-color: {file_uploader_bg} !important;
-            border: 2px dashed #D97706 !important;
-            border-radius: 10px !important;
-            padding: 10px !important;
-        }}
-
-        [data-testid="stFileUploader"] section * {{
-            color: {file_uploader_text} !important;
-            font-weight: 800 !important;
-        }}
-
-        [data-testid="stFileUploader"] button {{
-            background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
-            color: #FFFFFF !important;
-            border-radius: 6px !important;
-            border: none !important;
-        }}
-
-        @media screen and (min-width: 769px) {{
-            [data-testid="stSidebar"] {{
-                border-left: 2px solid {border_color} !important;
-                background-color: {bg_sidebar} !important;
-                margin-right: 0 !important;
-            }}
-
-            [data-testid="stSidebarContent"] {{
-                padding-top: 0.5rem !important;
-                padding-left: 0.8rem !important;
-                padding-right: 0.8rem !important;
-                padding-bottom: 0.5rem !important;
-                background-color: {bg_sidebar} !important;
-            }}
-        }}
-
-        @media screen and (max-width: 768px) {{
-            [data-testid="stSidebar"], 
-            [data-testid="stSidebarContent"], 
-            [data-testid="stSidebarUserContent"],
-            [data-testid="stSidebar"] > div:first-child {{
-                background-color: {bg_sidebar} !important;
-                background: {bg_sidebar} !important;
-            }}
-
-            [data-testid="stSidebar"][aria-expanded="false"] {{
-                margin-right: -100vw !important;
-                transform: translateX(100%) !important;
-                visibility: hidden !important;
-            }}
-
-            [data-testid="stSidebar"][aria-expanded="false"] * {{
-                display: none !important;
-            }}
-
-            [data-testid="stSidebar"][aria-expanded="true"] {{
-                width: 82vw !important;
-                margin-right: 0 !important;
-                transform: translateX(0) !important;
-                visibility: visible !important;
-                background-color: {bg_sidebar} !important;
-                box-shadow: 0 0 25px rgba(0,0,0,0.6) !important;
-            }}
-
-            .main .block-container {{
-                padding-left: 4px !important;
-                padding-right: 4px !important;
-            }}
-
-            [data-testid="stHorizontalBlock"] {{
-                flex-direction: column !important;
-            }}
-
-            [data-testid="column"], [data-testid="stColumn"] {{
-                width: 100% !important;
-                flex: 1 1 100% !important;
-                min-width: 100% !important;
-                margin-bottom: 6px !important;
-            }}
-
-            div.stButton > button {{
-                font-size: 15px !important;
-                padding: 12px 14px !important;
-                border-radius: 10px !important;
-            }}
-
-            .cash-card-item {{
-                padding: 10px !important;
-                border-radius: 10px !important;
-            }}
-        }}
-
-        [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {{
-            color: {text_color} !important;
-            font-size: 13px !important;
-            font-weight: 800 !important;
         }}
 
         .sidebar-logo-container {{
@@ -701,6 +607,131 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
+# 🛠️ دالة قراءة المبالغ والضريبة التلقائية المباشرة من شيت الوعلان
+def parse_vat_total_row_smart(uploaded_file):
+    if uploaded_file is None:
+        return 0.0, 0.0, 0.0
+    try:
+        uploaded_file.seek(0)
+        try:
+            df_raw = pd.read_excel(uploaded_file, header=None)
+        except Exception:
+            uploaded_file.seek(0)
+            df_raw = pd.read_csv(uploaded_file, header=None)
+
+        header_idx = None
+        target_kws = ['الصافي', 'الصافى', 'الضريبة', 'ضريبة', 'الإجمالي', 'الأجمالى', 'صافى بعد ضريبة', 'اسم المورد', 'اسم العميل', 'العميل', 'رقم الفاتورة', 'رقم السند']
+        
+        for idx, row in df_raw.iterrows():
+            row_str = " ".join([str(v) for v in row.values if pd.notnull(v)])
+            matches = [kw for kw in target_kws if kw in row_str]
+            if len(matches) >= 2:
+                header_idx = idx; break
+                
+        if header_idx is None: header_idx = 0
+            
+        headers = [str(v).strip() for v in df_raw.iloc[header_idx].values]
+        df_data = df_raw.iloc[header_idx + 1:].reset_index(drop=True)
+        df_data.columns = headers
+        
+        doc_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['رقم الفاتورة', 'رقم السند'])), None)
+        name_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['اسم المورد', 'اسم العميل', 'العميل'])), None)
+
+        def is_valid_transaction(row):
+            if row.dropna().empty: return False
+            row_text = " ".join([str(v) for v in row.values if pd.notnull(v)]).strip()
+            if any(k in row_text for k in ['الأجمالى', 'الأجمالي', 'إجمالي السندات', 'إجمالي التقارير', 'Page -1', 'Page ']):
+                return False
+            if doc_col and pd.notnull(row[doc_col]):
+                val = pd.to_numeric(str(row[doc_col]).replace(',', '').strip(), errors='coerce')
+                if pd.isna(val): return False
+            elif name_col and pd.isna(row[name_col]):
+                return False
+            return True
+
+        df_valid = df_data[df_data.apply(is_valid_transaction, axis=1)].copy()
+
+        net_col, vat_col, gross_col = None, None, None
+        for col in df_valid.columns:
+            c_clean = str(col).strip()
+            if c_clean in ['الصافي', 'الصافى']:
+                net_col = col
+            elif c_clean in ['الضريبة', 'ضريبة']:
+                vat_col = col
+            elif c_clean in ['صافى بعد ضريبة', 'الإجمالي', 'الأجمالى']:
+                if gross_col is None or c_clean == 'صافى بعد ضريبة':
+                    gross_col = col
+
+        def clean_sum(col_name):
+            if not col_name or col_name not in df_valid.columns:
+                return 0.0
+            s = df_valid[col_name].astype(str).str.replace(',', '').str.strip()
+            return float(pd.to_numeric(s, errors='coerce').fillna(0.0).sum())
+
+        net_sum = clean_sum(net_col)
+        vat_sum = clean_sum(vat_col)
+        gross_sum = clean_sum(gross_col)
+
+        if gross_sum == 0.0 and net_sum > 0.0: gross_sum = net_sum + vat_sum
+        if vat_sum == 0.0 and net_sum > 0.0: vat_sum = net_sum * 0.15
+
+        return round(net_sum, 2), round(vat_sum, 2), round(gross_sum, 2)
+
+    except Exception:
+        return 0.0, 0.0, 0.0
+
+@st.dialog("تعديل الرصيد الافتتاحي للصندوق")
+def opening_balance_dialog(month_name, target_box):
+    all_cash_db = load_cash_data()
+    m_cash = all_cash_db.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
+    active_opening_key = 'opening' if target_box == 'main' else 'acc_opening'
+    opening_bal = m_cash.get(active_opening_key, 0.0)
+
+    st.write(f"تثبيت وتعديل الرصيد الافتتاحي لـ **{'الخزينة الرئيسية' if target_box == 'main' else 'عُهدة omar'}** لشهر ({month_name}):")
+    with st.form("set_opening_balance_dialog_form"):
+        new_opening_val = st.number_input("الرصيد الافتتاحي (ر.س):", min_value=0.0, value=float(opening_bal))
+        sub_op = st.form_submit_button("💾 تثبيت الرصيد الافتتاحي")
+        if sub_op:
+            m_cash[active_opening_key] = new_opening_val
+            all_cash_db[month_name] = m_cash
+            save_cash_data(all_cash_db)
+            st.success("تم التثبيت السحابي!")
+            st.rerun()
+
+@st.dialog("⚙️ تثبيت الرصيد الافتتاحي لذمة السائق")
+def driver_opening_balance_dialog(driver_name):
+    drivers_db = load_drivers_data()
+    
+    op_item = next((d for d in drivers_db if d.get('is_opening') is True and d.get('driver') == driver_name), None)
+    current_op_val = op_item.get('diff_amt', 0.0) if op_item else 0.0
+
+    st.write(f"تعديل وتثبيت الرصيد الافتتاحي السلس لذمة السائق **({driver_name})**:")
+    st.caption("💡 اكتب المبلغ برقم موجب إذا كان له مستحق سابق، أو بالسالب (-) إذا كان عليه متبقي.")
+
+    with st.form("driver_opening_bal_form"):
+        new_driver_op_val = st.number_input("الرصيد الافتتاحي السابق (ر.س):", value=float(current_op_val), step=10.0)
+        sub_drv_op = st.form_submit_button("💾 تثبيت رصيد السائق الافتتاحي")
+        if sub_drv_op:
+            if op_item:
+                op_item['diff_amt'] = new_driver_op_val
+                op_item['given_amt'] = abs(new_driver_op_val) if new_driver_op_val > 0 else 0.0
+                op_item['spent_amt'] = abs(new_driver_op_val) if new_driver_op_val < 0 else 0.0
+            else:
+                drivers_db.insert(0, {
+                    'id': len(drivers_db) + 1,
+                    'date': get_ksa_now_str(),
+                    'driver': driver_name,
+                    'given_amt': abs(new_driver_op_val) if new_driver_op_val > 0 else 0.0,
+                    'spent_amt': abs(new_driver_op_val) if new_driver_op_val < 0 else 0.0,
+                    'purpose': 'رصيد افتتاحي سابق معتمد',
+                    'status': 'مفتوحة' if new_driver_op_val != 0 else 'تمت التصفية',
+                    'diff_amt': new_driver_op_val,
+                    'is_opening': True
+                })
+            save_drivers_data(drivers_db)
+            st.success("تم تثبيت الرصيد الافتتاحي للسائق بنجاح!")
+            st.rerun()
+
 @st.dialog("🖨️ المعاينة والطباعة الرسمية لسند الصندوق (A4)")
 def print_cash_voucher_dialog(v_item, month_name):
     st.write(f"طباعة المعاينة للسند رقم: **#{v_item.get('code', v_item['id'])}**")
@@ -713,14 +744,17 @@ def print_cash_voucher_dialog(v_item, month_name):
     <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
     <style>
         body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; padding: 10px; color:#000; }}
-        .v-box {{ border: 3px solid {color_accent}; border-radius: 10px; padding: 15px; background: #fff; }}
+        .v-box {{ border: 3px solid {color_accent}; border-radius: 10px; padding: 15px; background: #fff; position: relative; }}
         .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 8px; }}
         .v-title {{ text-align: center; font-size: 18px; font-weight: bold; color: {color_accent}; background: #f1f5f9; padding: 8px; margin: 12px 0; border-radius: 6px; }}
         table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }}
         th {{ background-color: #1E3A8A; color: white; padding: 8px; border: 1px solid #334155; text-align: right; }}
         td {{ border: 1px solid #cbd5e1; padding: 8px; text-align: right; }}
         .amt-box {{ font-size: 20px; font-weight: 900; color: {color_accent}; text-align: center; background: #ecfdf5; border: 2px solid {color_accent}; padding: 6px; border-radius: 6px; }}
-        .sigs {{ margin-top: 35px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }}
+        .sigs {{ margin-top: 25px; display: flex; justify-content: space-between; align-items: flex-end; font-weight: bold; font-size: 13px; position: relative; }}
+        .sig-col {{ text-align: center; width: 30%; }}
+        .stamp-img {{ width: 110px; height: 110px; object-fit: contain; }}
+        .sign-img {{ width: 120px; height: 50px; object-fit: contain; margin-top: 5px; }}
     </style></head><body>
         <div class="v-box">
             <div class="header-logo">
@@ -737,14 +771,23 @@ def print_cash_voucher_dialog(v_item, month_name):
                 <tr><th>البيان والملاحظات:</th><td>{v_item.get('notes', 'لا يوجد')}</td></tr>
             </table>
             <div class="sigs">
-                <div>توقيع المستلم / الجهة: __________________</div>
-                <div>اعتماد المحاسب المسؤول: __________________</div>
-                <div>اعتماد المدير العام: __________________</div>
+                <div class="sig-col">
+                    <div>توقيع المستلم / الجهة</div>
+                    <br>__________________
+                </div>
+                <div class="sig-col">
+                    <div>توقيع المحاسب المسؤول</div>
+                    <img src="{SIGN_IMG_B64}" class="sign-img" alt="توقيع المحاسب">
+                </div>
+                <div class="sig-col">
+                    <div>اعتماد وختم الشركة</div>
+                    <img src="{STAMP_IMG_B64}" class="stamp-img" alt="ختم 5M">
+                </div>
             </div>
         </div>
     </body></html>
     """
-    st.components.v1.html(voucher_html, height=380, scrolling=True)
+    st.components.v1.html(voucher_html, height=420, scrolling=True)
     st.download_button(
         label="🖨️ تنزيل السند المباشر للطباعة (HTML / PDF)",
         data=voucher_html.encode('utf-8'),
@@ -788,10 +831,11 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
     <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
     <style>
         body {{ font-family: Arial, sans-serif; background-color: #fff; padding: 10px; }}
-        .box {{ border: 2px solid #1E3A8A; border-radius: 8px; padding: 12px; }}
+        .box {{ border: 2px solid #1E3A8A; border-radius: 8px; padding: 12px; position: relative; }}
         table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }}
         th {{ background-color: #1E3A8A; color: white; padding: 6px; border: 1px solid #334155; }}
         td {{ border: 1px solid #cbd5e1; padding: 6px; text-align: center; }}
+        .sigs {{ margin-top: 25px; display: flex; justify-content: space-between; align-items: flex-end; font-weight: bold; font-size: 12px; }}
     </style></head><body>
         <div class="box">
             <h3 style="text-align:center; color:#1E3A8A;">كشف حساب حركة الصندوق المقابل (T-Account)</h3>
@@ -824,10 +868,20 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
                 <span>إجمالي المصروفات: {tot_out:,.2f} ر.س</span>
                 <span>صافي حركة الفترة: {net_bal:,.2f} ر.س</span>
             </div>
+            <div class="sigs">
+                <div style="text-align:center;">
+                    <div>توقيع المحاسب المسؤول</div>
+                    <img src="{SIGN_IMG_B64}" style="width:110px; height:45px; object-fit:contain;">
+                </div>
+                <div style="text-align:center;">
+                    <div>اعتماد وختم الشركة</div>
+                    <img src="{STAMP_IMG_B64}" style="width:100px; height:100px; object-fit:contain;">
+                </div>
+            </div>
         </div>
     </body></html>
     """
-    st.components.v1.html(t_account_html, height=380, scrolling=True)
+    st.components.v1.html(t_account_html, height=400, scrolling=True)
     st.download_button(
         label="📄 تنزيل كشف الحساب المقابل (A4 HTML)",
         data=t_account_html.encode('utf-8'),
@@ -1056,7 +1110,7 @@ else:
             @page {{ size: A4 portrait; margin: 8mm; }}
             body {{ font-family: Arial, sans-serif; background-color: #fff; margin: 0; }}
             .page {{ height: 275mm; page-break-after: always; display: flex; flex-direction: column; justify-content: space-between; }}
-            .voucher-box {{ border: 2px solid #1E3A8A; border-radius: 8px; padding: 12px 18px; height: 128mm; box-sizing: border-box; }}
+            .voucher-box {{ border: 2px solid #1E3A8A; border-radius: 8px; padding: 12px 18px; height: 128mm; box-sizing: border-box; position: relative; }}
             .header-logo-container {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 6px; }}
             .header-en {{ text-align: left; font-size: 11px; color: #1E3A8A; font-weight: bold; width: 38%; }}
             .header-logo {{ text-align: center; width: 24%; font-size: 38px; font-weight: 900; color: #DC2626; }}
@@ -1066,7 +1120,7 @@ else:
             .info-table td, .info-table th {{ padding: 8px; font-size: 13px; border: 1px solid #cbd5e1; text-align: right; }}
             .info-table th {{ background-color: #f8fafc; color: #1E3A8A; }}
             .amount-box {{ background-color: #ecfdf5; border: 2px solid #10b981; color: #047857; font-size: 16px; font-weight: bold; text-align: center; padding: 4px; border-radius: 4px; }}
-            .signatures {{ margin-top: 20px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }}
+            .signatures {{ margin-top: 15px; display: flex; justify-content: space-between; align-items: flex-end; font-weight: bold; font-size: 12px; }}
             .cut-line {{ border-top: 2px dashed #94a3b8; text-align: center; margin: 4mm 0; }}
         </style></head><body>
         """
@@ -1102,7 +1156,20 @@ else:
                     <tr><th>المبلغ المصروف بهذا السند</th><td><div class="amount-box">{amt_str}</div></td><th>المتبقي بالرصيد</th><td style="color:red; font-weight:bold;">{rem_str}</td></tr>
                     <tr><th>البيان والملاحظات</th><td colspan="3">{note_str}</td></tr>
                 </table>
-                <div class="signatures"><div>توقيع واستلام الموظف: __________________</div><div>اعتماد المحاسب / الإدارة: __________________</div></div>
+                <div class="signatures">
+                    <div style="text-align:center;">
+                        <div>توقيع واستلام الموظف</div>
+                        <br>__________________
+                    </div>
+                    <div style="text-align:center;">
+                        <div>اعتماد المحاسب المسلم</div>
+                        <img src="{SIGN_IMG_B64}" style="width:100px; height:40px; object-fit:contain;">
+                    </div>
+                    <div style="text-align:center;">
+                        <div>اعتماد وختم الشركة</div>
+                        <img src="{STAMP_IMG_B64}" style="width:90px; height:90px; object-fit:contain;">
+                    </div>
+                </div>
             </div>
             """
             if i + 1 < len(rows):
@@ -1135,7 +1202,20 @@ else:
                         <tr><th>المبلغ المصروف بهذا السند</th><td><div class="amount-box">{amt_str2}</div></td><th>المتبقي بالرصيد</th><td style="color:red; font-weight:bold;">{rem_str2}</td></tr>
                         <tr><th>البيان والملاحظات</th><td colspan="3">{note_str2}</td></tr>
                     </table>
-                    <div class="signatures"><div>توقيع واستلام الموظف: __________________</div><div>اعتماد المحاسب / الإدارة: __________________</div></div>
+                    <div class="signatures">
+                        <div style="text-align:center;">
+                            <div>توقيع واستلام الموظف</div>
+                            <br>__________________
+                        </div>
+                        <div style="text-align:center;">
+                            <div>اعتماد المحاسب المسلم</div>
+                            <img src="{SIGN_IMG_B64}" style="width:100px; height:40px; object-fit:contain;">
+                        </div>
+                        <div style="text-align:center;">
+                            <div>اعتماد وختم الشركة</div>
+                            <img src="{STAMP_IMG_B64}" style="width:90px; height:90px; object-fit:contain;">
+                        </div>
+                    </div>
                 </div>
                 """
             html += '</div>'
@@ -1162,7 +1242,7 @@ else:
         total_company_cash = net_main_now + net_acc_now
 
         drivers_db = load_drivers_data()
-        open_driver_custody_sum = sum(d['diff_amt'] for d in drivers_db if d.get('status') == 'مفتوحة')
+        open_driver_custody_sum = sum(d['given_amt'] - d.get('spent_amt', 0.0) for d in drivers_db if d.get('status') == 'مفتوحة')
 
         audit_history = load_audit_data()
         last_audit = audit_history[-1] if audit_history else None
@@ -1261,7 +1341,7 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 5. موديول عُهدة السواقين (المحدث بالطباعة وإعادة تصحيح الرصيد المتبقي 242.00)
+    # 5. موديول عُهدة السواقين (المحدث بالكامل وحل مشكلة الـ 242.00 والتوقيع والختم)
     elif selected_option == 'عُهدة السواقين':
         st.subheader(f'🚚 موديول إدارة عُهدة السواقين المباشر - ({month_selected})')
         st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والتسميع التراكمي المباشر بصندوق omar:')
@@ -1269,15 +1349,14 @@ else:
         drivers_db = load_drivers_data()
         driver_selected = "سمان السواق"
 
-        # زر إضافة رصيد افتتاحي للسائق وطباعة كشف الحساب
         col_drv_top1, col_drv_top2, col_drv_top3 = st.columns([1.2, 1.2, 1.6])
         with col_drv_top1:
             if st.button("⚙️ تثبيت رصيد افتتاحي للسائق", key="btn_drv_op_bal"):
                 driver_opening_balance_dialog(driver_selected)
 
-        # حساب المتبقي بذمته فعلياً للآن بناءً على العُهدة المفتوحة المباشرة
+        # 🎯 حساب المتبقي المباشر المفتوح بجراب سمان حالياً
         open_custody_item = next((d for d in drivers_db if d.get('status') == 'مفتوحة'), None)
-        current_open_balance = open_custody_item.get('given_amt', 0.0) if open_custody_item else 0.0
+        current_open_balance = round(open_custody_item.get('given_amt', 0.0) - open_custody_item.get('spent_amt', 0.0), 2) if open_custody_item else 0.0
 
         tot_given_drivers = sum(d['given_amt'] for d in drivers_db if not d.get('is_opening'))
         tot_spent_drivers = sum(d['spent_amt'] for d in drivers_db if not d.get('is_opening'))
@@ -1292,11 +1371,12 @@ else:
             <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
             <style>
                 body {{ font-family: Arial, sans-serif; background-color: #fff; padding: 15px; color:#000; }}
-                .box {{ border: 2px solid #1E3A8A; border-radius: 8px; padding: 12px; }}
+                .box {{ border: 2px solid #1E3A8A; border-radius: 8px; padding: 12px; position: relative; }}
                 .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 6px; }}
                 table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }}
                 th {{ background-color: #1E3A8A; color: white; padding: 6px; border: 1px solid #334155; }}
                 td {{ border: 1px solid #cbd5e1; padding: 6px; text-align: center; }}
+                .sigs {{ margin-top:25px; display:flex; justify-content:space-between; align-items:flex-end; font-weight:bold; font-size:12px; }}
             </style></head><body>
                 <div class="box">
                     <div class="header-logo">
@@ -1328,9 +1408,19 @@ else:
             drv_print_html += f"""
                         </tbody>
                     </table>
-                    <div style="margin-top:20px; display:flex; justify-content:space-between; font-weight:bold; font-size:12px;">
-                        <div>استلام وتوقيع السائق: __________________</div>
-                        <div>اعتماد المحاسبة والإدارة: __________________</div>
+                    <div class="sigs">
+                        <div style="text-align:center;">
+                            <div>استلام وتوقيع السائق</div>
+                            <br>__________________
+                        </div>
+                        <div style="text-align:center;">
+                            <div>اعتماد المحاسب المسؤول</div>
+                            <img src="{SIGN_IMG_B64}" style="width:100px; height:40px; object-fit:contain;">
+                        </div>
+                        <div style="text-align:center;">
+                            <div>اعتماد وختم الشركة</div>
+                            <img src="{STAMP_IMG_B64}" style="width:90px; height:90px; object-fit:contain;">
+                        </div>
                     </div>
                 </div>
             </body></html>
@@ -1376,9 +1466,7 @@ else:
                 new_cash_given = st.number_input("المبلغ النقدي المسلم باليد (يخصم من الصندوق):", min_value=0.0, value=0.0, step=50.0)
                 purpose_txt = st.text_input("البيان / الغرض من العُهدة:", "مصاريف نقل وبنزين")
                 
-                # 🎯 معادلة التصحيح الدقيقة:
-                # إذا كان له مستحق (-13) وسلّمته (500) كاش باليد:
-                # إجمالي ذمة العُهدة لسمان = 500 - 13 = 487 ريال بالضبط!
+                # 🎯 معادلة التصحيح الدقيقة: (500 - 13 = 487.00 ر.س)
                 total_driver_hold = round(new_cash_given + last_diff, 2)
 
                 if new_cash_given > 0:
@@ -1772,7 +1860,7 @@ else:
                     <td>0.00</td>
                 </tr>
                 <tr class="zatca-total-row">
-                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات</td>
+                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات (شاملة البند 7 و 9 و 10)</td>
                     <td>{(total_purch_net + total_purch_zero + calc_rcm_net - total_purch_ret_net):,.2f}</td>
                     <td style="color:#F59E0B; font-size:15px;">{net_input_vat:,.2f}</td>
                 </tr>
@@ -1829,13 +1917,13 @@ else:
             <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
             <style>
                 body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; padding: 15px; color:#000; }}
-                .vat-box {{ border: 3px solid #1E3A8A; border-radius: 10px; padding: 15px; background: #fff; }}
+                .vat-box {{ border: 3px solid #1E3A8A; border-radius: 10px; padding: 15px; background: #fff; position: relative; }}
                 .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 8px; }}
                 .vat-title {{ text-align: center; font-size: 18px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 8px; margin: 12px 0; border-radius: 6px; }}
                 table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }}
                 th {{ background-color: #1E3A8A; color: white; padding: 8px; border: 1px solid #334155; text-align: center; }}
                 td {{ border: 1px solid #cbd5e1; padding: 8px; text-align: center; }}
-                .sigs {{ margin-top: 35px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }}
+                .sigs {{ margin-top: 35px; display: flex; justify-content: space-between; align-items: flex-end; font-weight: bold; font-size: 13px; }}
             </style></head><body>
                 <div class="vat-box">
                     <div class="header-logo">
@@ -1846,8 +1934,14 @@ else:
                     <div class="vat-title">إقرار ضريبة القيمة المضافة الرسمي (ZATCA) - {vat_quarter}</div>
                     {zatca_official_html}
                     <div class="sigs">
-                        <div>إعداد المحاسب / المدير المالي: __________________</div>
-                        <div>اعتماد المدير العام: __________________</div>
+                        <div style="text-align:center;">
+                            <div>إعداد المحاسب المسؤول</div>
+                            <img src="{SIGN_IMG_B64}" style="width:110px; height:45px; object-fit:contain;">
+                        </div>
+                        <div style="text-align:center;">
+                            <div>اعتماد المدير العام وتصديق الشركة</div>
+                            <img src="{STAMP_IMG_B64}" style="width:100px; height:100px; object-fit:contain;">
+                        </div>
                     </div>
                 </div>
             </body></html>
@@ -2421,8 +2515,8 @@ else:
                 <span>إجمالي المتبقي: {df_sheet['المتبقي'].sum():,.0f} ر.س</span>
             </div>
             <div class="signatures">
-                <div>إعداد المحاسب: __________________</div>
-                <div>مراجعة الموارد البشرية: __________________</div>
+                <div>إعداد المحاسب المسؤول: <br><img src="{SIGN_IMG_B64}" style="width:90px;"></div>
+                <div>اعتماد وتصديق الشركة: <br><img src="{STAMP_IMG_B64}" style="width:80px;"></div>
                 <div>اعتماد المدير العام: __________________</div>
             </div>
         </body>
