@@ -4,7 +4,6 @@ import io
 import json
 import os
 import re
-import base64
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 
@@ -14,20 +13,7 @@ st.set_page_config(page_title='5M', layout='wide', page_icon='🏢', initial_sid
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
 
-# دالة قراءة الصور المحلية المرفوعة بالمستودع وتحويلها تلقائياً لـ Data-URI ممتازة
-def get_local_image_b64(file_path):
-    if os.path.exists(file_path):
-        try:
-            with open(file_path, "rb") as image_file:
-                encoded = base64.b64encode(image_file.read()).decode()
-                ext = file_path.split('.')[-1].lower()
-                mime = "image/png" if ext == "png" else "image/jpeg"
-                return f"data:{mime};base64,{encoded}"
-        except Exception:
-            pass
-    return ""
-
-# قراءة الصورتين من مستودع الملفات
+# روابط استدعاء الصور المباشرة من مستودع GitHub الخاص بك
 STAMP_IMG_URL = "https://raw.githubusercontent.com/sales649/salary-app/main/stamp.png.png"
 SIGN_IMG_URL = "https://raw.githubusercontent.com/sales649/salary-app/main/sign.png.png"
 
@@ -66,6 +52,9 @@ if '🌙' in st.session_state['theme_mode']:
     btn_main_text = "#FFFFFF"
     file_uploader_bg = "#1C2541"
     file_uploader_text = "#FFFFFF"
+    dropdown_bg = "#1C2541"
+    dropdown_text = "#F59E0B"
+    dropdown_hover = "#0B132B"
     
     stars_css = """
         body, .stApp, [data-testid="stHeader"] {
@@ -96,6 +85,9 @@ else:
     btn_main_text = "#0B132B"
     file_uploader_bg = "#F1F5F9"
     file_uploader_text = "#0F172A"
+    dropdown_bg = "#FFFFFF"
+    dropdown_text = "#D97706"
+    dropdown_hover = "#F1F5F9"
     stars_css = ""
 
 pwa_manifest_json = json.dumps({
@@ -134,6 +126,7 @@ st.markdown(f"""
             border-bottom: none !important;
         }}
 
+        /* 🎨 القوائم المنسدلة باللون الكحلي والخط الذهبي الفخم */
         div[data-baseweb="popover"],
         div[data-baseweb="menu"],
         div[role="listbox"],
@@ -142,15 +135,16 @@ st.markdown(f"""
         div[data-baseweb="menu"] *,
         div[role="listbox"] *,
         ul[role="listbox"] * {{
-            background-color: #FFFFFF !important;
-            color: #0F172A !important;
+            background-color: {dropdown_bg} !important;
+            color: {dropdown_text} !important;
             font-weight: 800 !important;
             font-size: 14px !important;
+            border-color: #D97706 !important;
         }}
 
         li[role="option"]:hover, div[role="option"]:hover {{
-            background-color: #F1F5F9 !important;
-            color: #D97706 !important;
+            background-color: {dropdown_hover} !important;
+            color: #FFFFFF !important;
         }}
 
         [data-testid="stSidebarCollapseButton"] span, 
@@ -681,10 +675,6 @@ def print_cash_voucher_dialog(v_item, month_name):
     title_txt = "سند قبض نقدية" if is_rec else "سند صرف نقدية"
     color_accent = "#10B981" if is_rec else "#EF4444"
 
-    # استخدام مسار الصورة المباشر من المستودع لتفادي أي حظر
-    stamp_path = "stamp.png" if os.path.exists("stamp.png") else STAMP_IMG_URL
-    sign_path = "sign.png" if os.path.exists("sign.png") else SIGN_IMG_URL
-
     voucher_html = f"""
     <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
     <style>
@@ -696,10 +686,10 @@ def print_cash_voucher_dialog(v_item, month_name):
         th {{ background-color: #1E3A8A; color: white; padding: 8px; border: 1px solid #334155; text-align: right; }}
         td {{ border: 1px solid #cbd5e1; padding: 8px; text-align: right; }}
         .amt-box {{ font-size: 20px; font-weight: 900; color: {color_accent}; text-align: center; background: #ecfdf5; border: 2px solid {color_accent}; padding: 6px; border-radius: 6px; }}
-        .sigs {{ margin-top: 35px; display: flex; justify-content: space-between; align-items: flex-end; font-weight: bold; font-size: 13px; }}
-        .sig-col {{ text-align: center; width: 30%; }}
-        .stamp-img {{ width: 120px; height: 120px; object-fit: contain; }}
-        .sign-img {{ width: 130px; height: 55px; object-fit: contain; margin-top: 5px; }}
+        .sigs-table {{ width: 100%; margin-top: 25px; border: none !important; }}
+        .sigs-table td {{ border: none !important; text-align: center; vertical-align: bottom; width: 33.33%; padding: 0 5px; }}
+        .stamp-img {{ width: 110px; height: 110px; object-fit: contain; margin: 0 auto; display: block; }}
+        .sign-img {{ width: 120px; height: 50px; object-fit: contain; margin: 0 auto; display: block; }}
     </style></head><body>
         <div class="v-box">
             <div class="header-logo">
@@ -715,20 +705,23 @@ def print_cash_voucher_dialog(v_item, month_name):
                 <tr><th>تاريخ التسجيل:</th><td>{v_item['date']}</td></tr>
                 <tr><th>البيان والملاحظات:</th><td>{v_item.get('notes', 'لا يوجد')}</td></tr>
             </table>
-            <div class="sigs">
-                <div class="sig-col">
-                    <div>توقيع المستلم / الجهة</div>
-                    <br>__________________
-                </div>
-                <div class="sig-col">
-                    <div>توقيع المحاسب المسؤول</div>
-                    <img src="{sign_path}" class="sign-img" alt="توقيع المحاسب">
-                </div>
-                <div class="sig-col">
-                    <div>اعتماد وختم الشركة</div>
-                    <img src="{stamp_path}" class="stamp-img" alt="ختم 5M">
-                </div>
-            </div>
+            
+            <table class="sigs-table">
+                <tr>
+                    <td>
+                        <div style="margin-bottom: 20px;">توقيع المستلم / الجهة</div>
+                        <div>__________________</div>
+                    </td>
+                    <td>
+                        <div style="margin-bottom: 5px;">توقيع المحاسب المسؤول</div>
+                        <img src="{SIGN_IMG_URL}" class="sign-img" alt="توقيع المحاسب">
+                    </td>
+                    <td>
+                        <div style="margin-bottom: 5px;">اعتماد وختم الشركة</div>
+                        <img src="{STAMP_IMG_URL}" class="stamp-img" alt="ختم 5M">
+                    </td>
+                </tr>
+            </table>
         </div>
     </body></html>
     """
@@ -909,9 +902,6 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
     tot_out = sum(t['amount'] for t in trans_list if 'صرف' in t['type'])
     net_bal = tot_in - tot_out
 
-    stamp_path = "stamp.png" if os.path.exists("stamp.png") else STAMP_IMG_URL
-    sign_path = "sign.png" if os.path.exists("sign.png") else SIGN_IMG_URL
-
     t_account_html = f"""
     <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
     <style>
@@ -920,7 +910,10 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
         table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }}
         th {{ background-color: #1E3A8A; color: white; padding: 6px; border: 1px solid #334155; }}
         td {{ border: 1px solid #cbd5e1; padding: 6px; text-align: center; }}
-        .sigs {{ margin-top: 25px; display: flex; justify-content: space-between; align-items: flex-end; font-weight: bold; font-size: 12px; }}
+        .sigs-table {{ width: 100%; margin-top: 25px; border: none !important; }}
+        .sigs-table td {{ border: none !important; text-align: center; vertical-align: bottom; width: 50%; padding: 0 5px; }}
+        .stamp-img {{ width: 100px; height: 100px; object-fit: contain; margin: 0 auto; display: block; }}
+        .sign-img {{ width: 110px; height: 45px; object-fit: contain; margin: 0 auto; display: block; }}
     </style></head><body>
         <div class="box">
             <h3 style="text-align:center; color:#1E3A8A;">كشف حساب حركة الصندوق المقابل (T-Account)</h3>
@@ -953,16 +946,18 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
                 <span>إجمالي المصروفات: {tot_out:,.2f} ر.س</span>
                 <span>صافي حركة الفترة: {net_bal:,.2f} ر.س</span>
             </div>
-            <div class="sigs">
-                <div style="text-align:center;">
-                    <div>توقيع المحاسب المسؤول</div>
-                    <img src="{sign_path}" style="width:110px; height:45px; object-fit:contain;">
-                </div>
-                <div style="text-align:center;">
-                    <div>اعتماد وختم الشركة</div>
-                    <img src="{stamp_path}" style="width:100px; height:100px; object-fit:contain;">
-                </div>
-            </div>
+            <table class="sigs-table">
+                <tr>
+                    <td>
+                        <div style="margin-bottom: 5px;">توقيع المحاسب المسؤول</div>
+                        <img src="{SIGN_IMG_URL}" class="sign-img" alt="توقيع المحاسب">
+                    </td>
+                    <td>
+                        <div style="margin-bottom: 5px;">اعتماد وختم الشركة</div>
+                        <img src="{STAMP_IMG_URL}" class="stamp-img" alt="ختم 5M">
+                    </td>
+                </tr>
+            </table>
         </div>
     </body></html>
     """
@@ -1189,9 +1184,6 @@ else:
 
     def generate_pretty_html_pdf(df_subset, branch_name, payment_type="جميع الدفعات"):
         output = io.BytesIO()
-        stamp_path = "stamp.png" if os.path.exists("stamp.png") else STAMP_IMG_URL
-        sign_path = "sign.png" if os.path.exists("sign.png") else SIGN_IMG_URL
-
         html = f"""
         <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
         <style>
@@ -1208,7 +1200,10 @@ else:
             .info-table td, .info-table th {{ padding: 8px; font-size: 13px; border: 1px solid #cbd5e1; text-align: right; }}
             .info-table th {{ background-color: #f8fafc; color: #1E3A8A; }}
             .amount-box {{ background-color: #ecfdf5; border: 2px solid #10b981; color: #047857; font-size: 16px; font-weight: bold; text-align: center; padding: 4px; border-radius: 4px; }}
-            .signatures {{ margin-top: 15px; display: flex; justify-content: space-between; align-items: flex-end; font-weight: bold; font-size: 12px; }}
+            .sigs-table {{ width: 100%; margin-top: 15px; border: none !important; }}
+            .sigs-table td {{ border: none !important; text-align: center; vertical-align: bottom; width: 33.33%; padding: 0 5px; }}
+            .stamp-img {{ width: 110px; height: 110px; object-fit: contain; margin: 0 auto; display: block; }}
+            .sign-img {{ width: 120px; height: 50px; object-fit: contain; margin: 0 auto; display: block; }}
             .cut-line {{ border-top: 2px dashed #94a3b8; text-align: center; margin: 4mm 0; }}
         </style></head><body>
         """
@@ -1244,20 +1239,22 @@ else:
                     <tr><th>المبلغ المصروف بهذا السند</th><td><div class="amount-box">{amt_str}</div></td><th>المتبقي بالرصيد</th><td style="color:red; font-weight:bold;">{rem_str}</td></tr>
                     <tr><th>البيان والملاحظات</th><td colspan="3">{note_str}</td></tr>
                 </table>
-                <div class="signatures">
-                    <div style="text-align:center;">
-                        <div>توقيع واستلام الموظف</div>
-                        <br>__________________
-                    </div>
-                    <div style="text-align:center;">
-                        <div>اعتماد المحاسب المسلم</div>
-                        <img src="{sign_path}" style="width:100px; height:40px; object-fit:contain;">
-                    </div>
-                    <div style="text-align:center;">
-                        <div>اعتماد وختم الشركة</div>
-                        <img src="{stamp_path}" style="width:90px; height:90px; object-fit:contain;">
-                    </div>
-                </div>
+                <table class="sigs-table">
+                    <tr>
+                        <td>
+                            <div style="margin-bottom: 20px;">توقيع واستلام الموظف</div>
+                            <div>__________________</div>
+                        </td>
+                        <td>
+                            <div style="margin-bottom: 5px;">اعتماد المحاسب المسلم</div>
+                            <img src="{SIGN_IMG_URL}" class="sign-img" alt="توقيع المحاسب">
+                        </td>
+                        <td>
+                            <div style="margin-bottom: 5px;">اعتماد وختم الشركة</div>
+                            <img src="{STAMP_IMG_URL}" class="stamp-img" alt="ختم 5M">
+                        </td>
+                    </tr>
+                </table>
             </div>
             """
             if i + 1 < len(rows):
@@ -1290,20 +1287,22 @@ else:
                         <tr><th>المبلغ المصروف بهذا السند</th><td><div class="amount-box">{amt_str2}</div></td><th>المتبقي بالرصيد</th><td style="color:red; font-weight:bold;">{rem_str2}</td></tr>
                         <tr><th>البيان والملاحظات</th><td colspan="3">{note_str2}</td></tr>
                     </table>
-                    <div class="signatures">
-                        <div style="text-align:center;">
-                            <div>توقيع واستلام الموظف</div>
-                            <br>__________________
-                        </div>
-                        <div style="text-align:center;">
-                            <div>اعتماد المحاسب المسلم</div>
-                            <img src="{sign_path}" style="width:100px; height:40px; object-fit:contain;">
-                        </div>
-                        <div style="text-align:center;">
-                            <div>اعتماد وختم الشركة</div>
-                            <img src="{stamp_path}" style="width:90px; height:90px; object-fit:contain;">
-                        </div>
-                    </div>
+                    <table class="sigs-table">
+                        <tr>
+                            <td>
+                                <div style="margin-bottom: 20px;">توقيع واستلام الموظف</div>
+                                <div>__________________</div>
+                            </td>
+                            <td>
+                                <div style="margin-bottom: 5px;">اعتماد المحاسب المسلم</div>
+                                <img src="{SIGN_IMG_URL}" class="sign-img" alt="توقيع المحاسب">
+                            </td>
+                            <td>
+                                <div style="margin-bottom: 5px;">اعتماد وختم الشركة</div>
+                                <img src="{STAMP_IMG_URL}" class="stamp-img" alt="ختم 5M">
+                            </td>
+                        </tr>
+                    </table>
                 </div>
                 """
             html += '</div>'
@@ -1453,9 +1452,6 @@ else:
         sc2.metric("إجمالي المصروفات المصفاة بالفواتير", f"{tot_spent_drivers:,.2f} ر.س")
         sc3.metric("🔴 المتبقي بذمته فعلياً للآن", f"{current_open_balance:,.2f} ر.س")
 
-        stamp_path = "stamp.png" if os.path.exists("stamp.png") else STAMP_IMG_URL
-        sign_path = "sign.png" if os.path.exists("sign.png") else SIGN_IMG_URL
-
         with col_drv_top2:
             drv_print_html = f"""
             <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
@@ -1466,7 +1462,10 @@ else:
                 table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }}
                 th {{ background-color: #1E3A8A; color: white; padding: 6px; border: 1px solid #334155; }}
                 td {{ border: 1px solid #cbd5e1; padding: 6px; text-align: center; }}
-                .sigs {{ margin-top:25px; display:flex; justify-content:space-between; align-items:flex-end; font-weight:bold; font-size:12px; }}
+                .sigs-table {{ width: 100%; margin-top: 25px; border: none !important; }}
+                .sigs-table td {{ border: none !important; text-align: center; vertical-align: bottom; width: 33.33%; padding: 0 5px; }}
+                .stamp-img {{ width: 100px; height: 100px; object-fit: contain; margin: 0 auto; display: block; }}
+                .sign-img {{ width: 110px; height: 45px; object-fit: contain; margin: 0 auto; display: block; }}
             </style></head><body>
                 <div class="box">
                     <div class="header-logo">
@@ -1498,20 +1497,22 @@ else:
             drv_print_html += f"""
                         </tbody>
                     </table>
-                    <div class="sigs">
-                        <div style="text-align:center;">
-                            <div>استلام وتوقيع السائق</div>
-                            <br>__________________
-                        </div>
-                        <div style="text-align:center;">
-                            <div>اعتماد المحاسب المسؤول</div>
-                            <img src="{sign_path}" style="width:100px; height:40px; object-fit:contain;">
-                        </div>
-                        <div style="text-align:center;">
-                            <div>اعتماد وختم الشركة</div>
-                            <img src="{stamp_path}" style="width:90px; height:90px; object-fit:contain;">
-                        </div>
-                    </div>
+                    <table class="sigs-table">
+                        <tr>
+                            <td>
+                                <div style="margin-bottom: 20px;">استلام وتوقيع السائق</div>
+                                <div>__________________</div>
+                            </td>
+                            <td>
+                                <div style="margin-bottom: 5px;">اعتماد المحاسب المسؤول</div>
+                                <img src="{SIGN_IMG_URL}" class="sign-img" alt="توقيع المحاسب">
+                            </td>
+                            <td>
+                                <div style="margin-bottom: 5px;">اعتماد وختم الشركة</div>
+                                <img src="{STAMP_IMG_URL}" class="stamp-img" alt="ختم 5M">
+                            </td>
+                        </tr>
+                    </table>
                 </div>
             </body></html>
             """
@@ -2010,7 +2011,10 @@ else:
                 table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }}
                 th {{ background-color: #1E3A8A; color: white; padding: 8px; border: 1px solid #334155; text-align: center; }}
                 td {{ border: 1px solid #cbd5e1; padding: 8px; text-align: center; }}
-                .sigs {{ margin-top: 35px; display: flex; justify-content: space-between; align-items: flex-end; font-weight: bold; font-size: 13px; }}
+                .sigs-table {{ width: 100%; margin-top: 25px; border: none !important; }}
+                .sigs-table td {{ border: none !important; text-align: center; vertical-align: bottom; width: 50%; padding: 0 5px; }}
+                .stamp-img {{ width: 110px; height: 110px; object-fit: contain; margin: 0 auto; display: block; }}
+                .sign-img {{ width: 120px; height: 50px; object-fit: contain; margin: 0 auto; display: block; }}
             </style></head><body>
                 <div class="vat-box">
                     <div class="header-logo">
@@ -2020,16 +2024,18 @@ else:
                     </div>
                     <div class="vat-title">إقرار ضريبة القيمة المضافة الرسمي (ZATCA) - {vat_quarter}</div>
                     {zatca_official_html}
-                    <div class="sigs">
-                        <div style="text-align:center;">
-                            <div>إعداد المحاسب المسؤول</div>
-                            <img src="{SIGN_IMG_URL}" style="width:110px; height:45px; object-fit:contain;" onerror="this.style.display='none'">
-                        </div>
-                        <div style="text-align:center;">
-                            <div>اعتماد المدير العام وتصديق الشركة</div>
-                            <img src="{STAMP_IMG_URL}" style="width:100px; height:100px; object-fit:contain;" onerror="this.style.display='none'">
-                        </div>
-                    </div>
+                    <table class="sigs-table">
+                        <tr>
+                            <td>
+                                <div style="margin-bottom: 5px;">إعداد المحاسب المسؤول</div>
+                                <img src="{SIGN_IMG_URL}" class="sign-img" alt="توقيع المحاسب">
+                            </td>
+                            <td>
+                                <div style="margin-bottom: 5px;">اعتماد المدير العام وتصديق الشركة</div>
+                                <img src="{STAMP_IMG_URL}" class="stamp-img" alt="ختم 5M">
+                            </td>
+                        </tr>
+                    </table>
                 </div>
             </body></html>
             """
@@ -2603,7 +2609,7 @@ else:
             </div>
             <div class="signatures">
                 <div>إعداد المحاسب المسؤول: <br><img src="{SIGN_IMG_URL}" style="width:90px;" onerror="this.style.display='none'"></div>
-                <div>اعتماد وتصديق الشركة: <br><img src="{STAMP_IMG_URL}" style="width:80px;" onerror="this.style.display='none'"></div>
+                <div>اعتماد وتصديق الشركة: <br><img src="{STAMP_IMG_URL}" style="width:80px; border-radius: 50%;"></div>
                 <div>اعتماد المدير العام: __________________</div>
             </div>
         </body>
