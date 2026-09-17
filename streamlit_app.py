@@ -1298,13 +1298,21 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 5. موديول عُهدة السواقين
+    # 5. موديول عُهدة السواقين (مع التسوية والحساب التراكمي المباشر)
     elif selected_option == 'عُهدة السواقين':
         st.subheader(f'🚚 موديول إدارة عُهدة السواقين المباشر - ({month_selected})')
         st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والتسميع التراكمي المباشر بصندوق omar:')
 
         drivers_db = load_drivers_data()
         driver_selected = "سمان السواق"
+
+        # حساب صافي الرصيد المترصد في جيب السائق من كل العُهد السابقة
+        prev_driver_balance = 0.0
+        for d in drivers_db:
+            if d.get('status') == 'تمت التصفية':
+                prev_driver_balance += d.get('diff_amt', 0.0) # المتبقي معه
+            else:
+                prev_driver_balance += d.get('given_amt', 0.0)
 
         tot_given_drivers = sum(d['given_amt'] for d in drivers_db)
         tot_spent_drivers = sum(d['spent_amt'] for d in drivers_db)
@@ -1320,26 +1328,43 @@ else:
         d_col1, d_col2 = st.columns([1, 1.8])
         with d_col1:
             st.markdown("### 📝 1. تسليم عُهدة جديدة لـ (سمان السواق):")
-            if open_driver_custody_sum > 0:
-                st.warning(f"💡 المتبقي المترصد في جيب السائق حالياً من العُهد السابقة: **{open_driver_custody_sum:,.2f} ر.س**")
+            
+            # حساب الرصيد الصافي المترصد له/عليه من التسويات السابقة
+            last_diff = 0.0
+            for d in reversed(drivers_db):
+                if d.get('status') == 'تمت التصفية':
+                    last_diff = d.get('diff_amt', 0.0)
+                    break
+
+            if last_diff < 0:
+                st.warning(f"💡 للسائق فرق مصروفات سابقة مستحقة بـ ({abs(last_diff):,.2f} ر.س) سيتم خصمها آلياً لصالح السائق من العُهدة الجديدة.")
+            elif last_diff > 0:
+                st.info(f"💡 بجراب السائق متبقي سابق بـ ({last_diff:,.2f} ر.س) سيتم إضافته آلياً لذمته بالعُهدة الجديدة.")
 
             with st.form("add_driver_custody_form"):
                 st.text_input("اسم السائق:", "سمان السواق", disabled=True)
-                given_amt = st.number_input("المبلغ الجديد المسلم كعُهدة (ر.س):", min_value=0.0, value=0.0, step=50.0)
+                new_custody_input = st.number_input("المبلغ الجديد المطلوب تسليمه كعُهدة (ر.س):", min_value=0.0, value=0.0, step=50.0)
                 purpose_txt = st.text_input("البيان / الغرض من العُهدة:", "مصاريف نقل وبنزين")
                 
+                # التسوية الآلية للخصم أو الإضافة
+                net_to_pay_box = max(0.0, new_custody_input + last_diff) if last_diff < 0 else new_custody_input
+                total_driver_hold = new_custody_input + max(0.0, last_diff)
+
+                if new_custody_input > 0 and last_diff < 0:
+                    st.success(f"💵 **الصافي الفعلي المسلم للسائق والمخصوم من الخزينة الآن:** `{net_to_pay_box:,.2f} ر.س`")
+
                 sub_d = st.form_submit_button("تسليم وتأكيد العُهدة")
-                if sub_d and given_amt > 0:
+                if sub_d and new_custody_input > 0:
                     drivers_db.append({
                         'id': len(drivers_db) + 1,
                         'date': get_ksa_now_str(),
                         'driver': driver_selected,
-                        'given_amt': given_amt,
+                        'given_amt': total_driver_hold,
                         'purpose': purpose_txt,
                         'status': 'مفتوحة',
                         'spent_amt': 0.0,
                         'returned_amt': 0.0,
-                        'diff_amt': given_amt
+                        'diff_amt': total_driver_hold
                     })
                     save_drivers_data(drivers_db)
 
@@ -1354,16 +1379,16 @@ else:
                         'code': f"DRV-OUT-{(len(acc_trans) + 1):03d}",
                         'date': get_ksa_now_str(),
                         'type': 'سند صرف',
-                        'party': f"عُهدة سمان السواق",
-                        'amount': given_amt,
+                        'party': f"عُهدة سمان السواق - صافي بعد التسوية",
+                        'amount': net_to_pay_box,
                         'method': 'نقداً بالصندوق',
-                        'notes': purpose_txt
+                        'notes': f"{purpose_txt} (عُهدة {new_custody_input} ر.س تسوية {last_diff} ر.س)"
                     })
                     m_cash['acc_transactions'] = acc_trans
                     all_cash[month_selected] = m_cash
                     save_cash_data(all_cash)
 
-                    st.success(f"تم تسليم {given_amt:,.2f} ر.س للسائق وتوثيقها سحابياً بصندوق omar!")
+                    st.success(f"تم تسليم الصافي {net_to_pay_box:,.2f} ر.س للسائق وتوثيقها سحابياً بصندوق omar!")
                     st.rerun()
 
         with d_col2:
@@ -1386,7 +1411,7 @@ else:
                 if diff_val > 0:
                     st.success(f"🟢 **متبقي بجراب السائق لليوم القادم: {diff_val:,.2f} ر.س** (تترحل تلقائياً بذمته دون إعادة إدخالها للصندوق)")
                 elif diff_val < 0:
-                    st.error(f"🔴 **السائق صرف زيادة من جيبه يستحق ردها: ({abs(diff_val):,.2f} ر.س)**")
+                    st.error(f"🔴 **السائق صرف زيادة من جيبه يستحق ردها: ({abs(diff_val):,.2f} ر.س)** (ستُخصم آلياً من العُهدة القادمة)")
                 else:
                     st.info("🟢 **المطابقة تامة! المصروفات تتطابق مع العُهدة.**")
 
@@ -1398,31 +1423,7 @@ else:
                     target_item['settle_notes'] = settle_notes
                     
                     save_drivers_data(drivers_db)
-
-                    if diff_val < 0:
-                        all_cash = load_cash_data()
-                        if month_selected not in all_cash:
-                            all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
-                        
-                        m_cash = all_cash[month_selected]
-                        acc_trans = m_cash.get('acc_transactions', [])
-                        
-                        acc_trans.append({
-                            'id': len(acc_trans) + 1,
-                            'code': f"DRV-REF-{(len(acc_trans) + 1):03d}",
-                            'date': get_ksa_now_str(),
-                            'type': 'سند صرف',
-                            'party': f"عُهدة سمان السواق - سداد فرق مصروفات زيادة",
-                            'amount': abs(diff_val),
-                            'method': 'نقداً بالصندوق',
-                            'notes': settle_notes
-                        })
-
-                        m_cash['acc_transactions'] = acc_trans
-                        all_cash[month_selected] = m_cash
-                        save_cash_data(all_cash)
-
-                    st.success("تمت التصفية والتسميع المباشر بنجاح!")
+                    st.success("تمت التصفية وتسوية العُهدة بنجاح!")
                     st.rerun()
             else:
                 st.info("لا توجد عُهد مفتوحة حالياً لـ سمان السواق بانتظار التصفية.")
@@ -1439,7 +1440,7 @@ else:
                 col_d3.write(f"المسلم: **{d_item['given_amt']:,.2f} ر.س**\nالمصروف: **{d_item.get('spent_amt', 0.0):,.2f} ر.س**")
                 
                 diff_val = d_item.get('diff_amt', 0.0)
-                diff_str = "🟢 تصفية كاملة" if d_item['status'] == 'تمت التصفية' and diff_val == 0 else (f"🔴 متبقي معه ({diff_val:,.2f} ر.س)" if diff_val > 0 else f"🔵 زيادة له ({abs(diff_val):,.2f} ر.س)")
+                diff_str = "🟢 تصفية كاملة" if d_item['status'] == 'تمت التصفية' and diff_val == 0 else (f"🔴 متبقي معه ({diff_val:,.2f} ر.س)" if diff_val > 0 else f"🔵 له متبقي مستحق ({abs(diff_val):,.2f} ر.س)")
                 col_d4.write(f"الحالة: **{diff_str}**\n{diff_str}")
                 
                 if col_d5.button("✏️ تعديل", key=f"edit_drv_btn_{real_d_idx}"):
@@ -1569,7 +1570,7 @@ else:
     # 🏛️ موديول ضريبة القيمة المضافة (ZATCA) المطور المباشر بـ 0.00 الافتراضية
     elif selected_option == 'تقرير القيمة المضافة' and st.session_state.user_role == "admin":
         st.subheader('🏛️ موديول إقرار ضريبة القيمة المضافة الربع سنوي (ZATCA)')
-        st.write('قم بإدخال مبالغ إجمالي التقارير والضريبة المستخرجة من شيتات الوعلان وسيتم توزيع المبيعات والمشتريات الخاضعة لـ 15% والصفرية تلقائياً بموجب المعادلة العكسية:')
+        st.write('قم بإدخال مبالغ إجمالي التقارير والضريبة المستخرجة من شيتات الوعلان وسيتم توزيع المبيعات والمشتريات الخاضعة لـ 15% والصفرية تلقائياً بموجب المعادلة العكسية[cite: 1]:')
 
         v_top1, v_top2 = st.columns(2)
         with v_top1:
@@ -1615,7 +1616,6 @@ else:
             tot_purch_gross_input = st.number_input("إجمالي تقرير المشتريات (الصافي الكلي):", min_value=0.0, value=0.0, key="tot_purch_gross_input")
             tot_purch_vat_input = st.number_input("إجمالي ضريبة المشتريات العامة (15%):", min_value=0.0, value=0.0, key="tot_purch_vat_input")
 
-            # تقسيم المشتريات آلياً للنسبة 15% والصفرية
             calc_purch_taxable = round(tot_purch_vat_input / 0.15, 2) if tot_purch_vat_input > 0 else 0.0
             calc_purch_zero = max(0.0, round(tot_purch_gross_input - calc_purch_taxable, 2))
 
@@ -1628,7 +1628,8 @@ else:
             st.markdown("---")
             st.markdown("##### ⚓ البند (9): المشتريات التي تطبق عليها آلية الاحتساب العكسي (فسح):")
             in_rcm_vat_input = st.number_input("أدخل مبلغ ضريبة الاحتساب العكسي مباشرة (فسح):", min_value=0.0, value=0.0, key="in_rcm_vat_input")
-            # قسمة الضريبة المباشرة على 15% لستخراج المبلغ الخاضع آلياً
+            
+            # قسمة الضريبة المباشرة على 15% لاستخراج المبلغ الخاضع آلياً
             calc_rcm_net = round(in_rcm_vat_input / 0.15, 2) if in_rcm_vat_input > 0 else 0.0
             st.caption(f"📦 المبلغ المحسوب تلقائياً قبل الضريبة لـ البند (9): **{calc_rcm_net:,.2f} ر.س**")
 
@@ -1649,12 +1650,12 @@ else:
         total_purch_ret_vat = tot_purch_ret_vat_input
 
         net_output_vat = total_sales_vat - total_sales_ret_vat
-        # تجميع ضريبة المشتريات المخصومة بالكامل (المحلية + الاحتساب العكسي فسح)
+        # تجميع ضريبة المشتريات المخصومة بالكامل (المحلية + الاحتساب العكسي فسح - البند 9)
         net_input_vat = (total_purch_vat - total_purch_ret_vat) + in_rcm_vat_input
         net_vat_payable = (net_output_vat - net_input_vat) - prev_carried_vat
 
         st.divider()
-        st.markdown(f"### 📋 2. نموذج الإقرار الضريبي المعمد المطابق لهيئة الزكاة والضريبة والجمارك (ZATCA) - {vat_quarter}:")
+        st.markdown(f"### 📋 2. نموذج الإقرار الضريبي المعمد المطابق لهيئة الزكاة والضريبة والجمارك (ZATCA) - {vat_quarter}[cite: 1]:")
 
         m_v1, m_v2, m_v3 = st.columns(3)
         m_v1.metric("إجمالي ضريبة المبيعات (المخرجات)", f"{net_output_vat:,.2f} ر.س")
@@ -1743,7 +1744,7 @@ else:
                     <td>0.00</td>
                 </tr>
                 <tr class="zatca-total-row">
-                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات</td>
+                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات (شاملة البند 7 و 9 و 10)</td>
                     <td>{(total_purch_net + total_purch_zero + calc_rcm_net - total_purch_ret_net):,.2f}</td>
                     <td style="color:#F59E0B; font-size:15px;">{net_input_vat:,.2f}</td>
                 </tr>
@@ -1814,7 +1815,7 @@ else:
                         <div style="font-size:40px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
                         <div style="font-size:11px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
                     </div>
-                    <div class="vat-title">إقرار ضريبة القيمة المضافة الرسمي (ZATCA) - {vat_quarter}</div>
+                    <div class="vat-title">إقرار ضريبة القيمة المضافة الرسمي (ZATCA) - {vat_quarter}[cite: 1]</div>
                     {zatca_official_html}
                     <div class="sigs">
                         <div>إعداد المحاسب / المدير المالي: __________________</div>
