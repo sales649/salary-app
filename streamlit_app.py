@@ -701,193 +701,197 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
-@st.dialog("تعديل الرصيد الافتتاحي للصندوق")
-def opening_balance_dialog(month_name, target_box):
-    all_cash_db = load_cash_data()
-    m_cash = all_cash_db.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
-    active_opening_key = 'opening' if target_box == 'main' else 'acc_opening'
-    opening_bal = m_cash.get(active_opening_key, 0.0)
+@st.dialog("🖨️ المعاينة والطباعة الرسمية لسند الصندوق (A4)")
+def print_cash_voucher_dialog(v_item, month_name):
+    st.write(f"طباعة المعاينة للسند رقم: **#{v_item.get('code', v_item['id'])}**")
+    
+    is_rec = "قبض" in v_item['type']
+    title_txt = "سند قبض نقدية" if is_rec else "سند صرف نقدية"
+    color_accent = "#10B981" if is_rec else "#EF4444"
 
-    st.write(f"تثبيت وتعديل الرصيد الافتتاحي لـ **{'الخزينة الرئيسية' if target_box == 'main' else 'عُهدة omar'}** لشهر ({month_name}):")
-    with st.form("set_opening_balance_dialog_form"):
-        new_opening_val = st.number_input("الرصيد الافتتاحي (ر.س):", min_value=0.0, value=float(opening_bal))
-        sub_op = st.form_submit_button("💾 تثبيت الرصيد الافتتاحي")
-        if sub_op:
-            m_cash[active_opening_key] = new_opening_val
-            all_cash_db[month_name] = m_cash
-            save_cash_data(all_cash_db)
-            st.success("تم التثبيت السحابي!")
-            st.rerun()
+    voucher_html = f"""
+    <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; padding: 10px; color:#000; }}
+        .v-box {{ border: 3px solid {color_accent}; border-radius: 10px; padding: 15px; background: #fff; }}
+        .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 8px; }}
+        .v-title {{ text-align: center; font-size: 18px; font-weight: bold; color: {color_accent}; background: #f1f5f9; padding: 8px; margin: 12px 0; border-radius: 6px; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }}
+        th {{ background-color: #1E3A8A; color: white; padding: 8px; border: 1px solid #334155; text-align: right; }}
+        td {{ border: 1px solid #cbd5e1; padding: 8px; text-align: right; }}
+        .amt-box {{ font-size: 20px; font-weight: 900; color: {color_accent}; text-align: center; background: #ecfdf5; border: 2px solid {color_accent}; padding: 6px; border-radius: 6px; }}
+        .sigs {{ margin-top: 35px; display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; }}
+    </style></head><body>
+        <div class="v-box">
+            <div class="header-logo">
+                <div style="font-size:11px; font-weight:bold;">Five-M Company For Industry<br>C. R. : 1011145035</div>
+                <div style="font-size:40px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
+                <div style="font-size:11px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
+            </div>
+            <div class="v-title">{title_txt} - شهر ({month_name}) | رقم السند: #{v_item.get('code', v_item['id'])}</div>
+            <table>
+                <tr><th style="width:25%;">صادر إلى / مستلم من:</th><td><strong>{v_item['party']}</strong></td></tr>
+                <tr><th>المبلغ الرقمي:</th><td><div class="amt-box">{v_item['amount']:,.2f} ريال سعودي</div></td></tr>
+                <tr><th>طريقة الدفع / السداد:</th><td><strong>{v_item.get('method', 'نقداً بالصندوق')}</strong></td></tr>
+                <tr><th>تاريخ التسجيل:</th><td>{v_item['date']} (توقيت السعودية)</td></tr>
+                <tr><th>البيان والملاحظات:</th><td>{v_item.get('notes', 'لا يوجد')}</td></tr>
+            </table>
+            <div class="sigs">
+                <div>توقيع المستلم / الجهة: __________________</div>
+                <div>اعتماد المحاسب المسؤول: __________________</div>
+                <div>اعتماد المدير العام: __________________</div>
+            </div>
+        </div>
+    </body></html>
+    """
+    st.components.v1.html(voucher_html, height=380, scrolling=True)
+    st.download_button(
+        label="🖨️ تنزيل السند المباشر للطباعة (HTML / PDF)",
+        data=voucher_html.encode('utf-8'),
+        file_name=f"سند_{v_item.get('code', v_item['id'])}.html",
+        mime="text/html",
+        use_container_width=True
+    )
 
-@st.dialog("⚙️ تثبيت الرصيد الافتتاحي لذمة السائق")
-def driver_opening_balance_dialog(driver_name):
+@st.dialog("✏️ تعديل حركة عُهدة السائق")
+def edit_driver_custody_modal(drv_idx):
     drivers_db = load_drivers_data()
-    
-    op_item = next((d for d in drivers_db if d.get('is_opening') is True and d.get('driver') == driver_name), None)
-    current_op_val = op_item.get('diff_amt', 0.0) if op_item else 0.0
-
-    st.write(f"تعديل وتثبيت الرصيد الافتتاحي السلس لذمة السائق **({driver_name})**:")
-    st.caption("💡 اكتب المبلغ برقم موجب إذا كان له مستحق سابق، أو بالسالب (-) إذا كان عليه متبقي.")
-
-    with st.form("driver_opening_bal_form"):
-        new_driver_op_val = st.number_input("الرصيد الافتتاحي السابق (ر.س):", value=float(current_op_val), step=10.0)
-        sub_drv_op = st.form_submit_button("💾 تثبيت رصيد السائق الافتتاحي")
-        if sub_drv_op:
-            if op_item:
-                op_item['diff_amt'] = new_driver_op_val
-                op_item['given_amt'] = abs(new_driver_op_val) if new_driver_op_val > 0 else 0.0
-                op_item['spent_amt'] = abs(new_driver_op_val) if new_driver_op_val < 0 else 0.0
-            else:
-                drivers_db.insert(0, {
-                    'id': len(drivers_db) + 1,
-                    'date': get_ksa_now_str(),
-                    'driver': driver_name,
-                    'given_amt': abs(new_driver_op_val) if new_driver_op_val > 0 else 0.0,
-                    'spent_amt': abs(new_driver_op_val) if new_driver_op_val < 0 else 0.0,
-                    'purpose': 'رصيد افتتاحي سابق معتمد',
-                    'status': 'مفتوحة' if new_driver_op_val != 0 else 'تمت التصفية',
-                    'diff_amt': new_driver_op_val,
-                    'is_opening': True
-                })
-            save_drivers_data(drivers_db)
-            st.success("تم تثبيت الرصيد الافتتاحي للسائق بنجاح!")
-            st.rerun()
-
-@st.dialog("✏️ تعديل بيانات السند")
-def edit_cash_voucher_dialog(trans_idx, month_name, target_box="main"):
-    all_cash_db = load_cash_data()
-    m_cash = all_cash_db.get(month_name, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
-    box_key = 'transactions' if target_box == 'main' else 'acc_transactions'
-    c_trans = m_cash.get(box_key, [])
-    
-    if trans_idx < len(c_trans):
-        t_item = c_trans[trans_idx]
-        st.write(f"تعديل السند رقم: **#{t_item.get('code', t_item['id'])}**")
+    if drv_idx < len(drivers_db):
+        d_item = drivers_db[drv_idx]
+        st.write(f"تعديل السند رقم **#{d_item['id']}** لـ **{d_item['driver']}**:")
         
-        with st.form(f"edit_voucher_form_{trans_idx}"):
-            e_party = st.text_input("صادر إلى / مستلم من:", value=t_item['party'])
-            e_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=float(t_item['amount']))
-            e_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"], index=["نقداً بالصندوق", "تحويل بنكي", "شيك"].index(t_item.get('method', 'نقداً بالصندوق')))
-            e_notes = st.text_input("البيان والملاحظات:", value=t_item.get('notes', ''))
+        with st.form(f"edit_driver_form_{drv_idx}"):
+            e_given = st.number_input("المبلغ المسلم / الافتتاحي (ر.س):", min_value=0.0, value=float(d_item['given_amt']))
+            e_spent = st.number_input("المصروف بالفواتير (ر.س):", min_value=0.0, value=float(d_item.get('spent_amt', 0.0)))
+            e_purpose = st.text_input("البيان / الغرض:", value=d_item.get('purpose', ''))
             
-            sub_e_voucher = st.form_submit_button("💾 حفظ تعديلات السند")
-            if sub_e_voucher:
-                c_trans[trans_idx]['party'] = e_party
-                c_trans[trans_idx]['amount'] = e_amt
-                c_trans[trans_idx]['method'] = e_method
-                c_trans[trans_idx]['notes'] = e_notes
-                m_cash[box_key] = c_trans
-                all_cash_db[month_name] = m_cash
-                save_cash_data(all_cash_db)
-                st.success("تم تعديل بيانات السند بنجاح!")
+            sub_e_drv = st.form_submit_button("💾 حفظ تعديلات العُهدة")
+            if sub_e_drv:
+                d_item['given_amt'] = e_given
+                d_item['spent_amt'] = e_spent
+                d_item['diff_amt'] = round(e_given - e_spent, 2)
+                d_item['purpose'] = e_purpose
+                drivers_db[drv_idx] = d_item
+                save_drivers_data(drivers_db)
+                st.success("تم التعديل بنجاح!")
                 st.rerun()
 
-@st.dialog("إنشاء سند جديد")
-def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
-    st.write(f"إضافة سند لشهر: **{month_name}** ({'الرئيسية' if target_box == 'main' else 'omar'})")
+@st.dialog("🖨️ معاينة كشف حساب الصندوق المقابل (T-Account)")
+def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
+    st.write(f"معاينة كشف الحساب لـ **{box_title}** ({period_txt}):")
     
-    if target_box == "main":
-        type_options = ["سند قبض", "سند صرف", "🔄 تحويل عُهدة إلى (omar)"]
-    else:
-        type_options = ["سند قبض", "سند صرف", "🔄 تحويل عُهدة إلى (wahby)"]
+    tot_in = sum(t['amount'] for t in trans_list if 'قبض' in t['type'])
+    tot_out = sum(t['amount'] for t in trans_list if 'صرف' in t['type'])
+    net_bal = tot_in - tot_out
 
-    with st.form("quick_cash_form", clear_on_submit=True):
-        q_type = st.selectbox("نوع السند:", type_options, index=0 if "قبض" in default_type else 1)
-        q_party = st.text_input("صادر إلى / مستلم من:", placeholder="اسم الجهة...")
-        q_amt = st.number_input("المبلغ (ر.س):", min_value=0.0, value=0.0)
-        q_method = st.selectbox("طريقة الدفع:", ["نقداً بالصندوق", "تحويل بنكي", "شيك"])
-        q_notes = st.text_input("البيان والملاحظات:")
+    t_account_html = f"""
+    <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+    <style>
+        body {{ font-family: Arial, sans-serif; background-color: #fff; padding: 10px; }}
+        .box {{ border: 2px solid #1E3A8A; border-radius: 8px; padding: 12px; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }}
+        th {{ background-color: #1E3A8A; color: white; padding: 6px; border: 1px solid #334155; }}
+        td {{ border: 1px solid #cbd5e1; padding: 6px; text-align: center; }}
+    </style></head><body>
+        <div class="box">
+            <h3 style="text-align:center; color:#1E3A8A;">كشف حساب حركة الصندوق المقابل (T-Account)</h3>
+            <h4 style="text-align:center; color:#475569;">{box_title} - {period_txt}</h4>
+            <table>
+                <thead>
+                    <tr><th>رقم السند</th><th>التاريخ</th><th>النوع</th><th>الجهة / البيان</th><th>المقبوضات (+)</th><th>المصروفات (-)</th></tr>
+                </thead>
+                <tbody>
+    """
+    for t in trans_list:
+        is_rec = 'قبض' in t['type']
+        rec_amt = f"{t['amount']:,.2f} ر.س" if is_rec else "-"
+        pay_amt = f"{t['amount']:,.2f} ر.س" if not is_rec else "-"
+        t_account_html += f"""
+            <tr>
+                <td>#{t.get('code', t['id'])}</td>
+                <td>{t['date']}</td>
+                <td>{t['type']}</td>
+                <td>{t['party']}</td>
+                <td style="color:#047857; font-weight:bold;">{rec_amt}</td>
+                <td style="color:#b91c1c; font-weight:bold;">{pay_amt}</td>
+            </tr>
+        """
+    t_account_html += f"""
+                </tbody>
+            </table>
+            <div style="margin-top:15px; font-size:14px; font-weight:bold; background:#f1f5f9; padding:8px; display:flex; justify-content:space-around; border:1px solid #cbd5e1;">
+                <span>إجمالي المقبوضات: {tot_in:,.2f} ر.س</span>
+                <span>إجمالي المصروفات: {tot_out:,.2f} ر.س</span>
+                <span>صافي حركة الفترة: {net_bal:,.2f} ر.س</span>
+            </div>
+        </div>
+    </body></html>
+    """
+    st.components.v1.html(t_account_html, height=380, scrolling=True)
+    st.download_button(
+        label="📄 تنزيل كشف الحساب المقابل (A4 HTML)",
+        data=t_account_html.encode('utf-8'),
+        file_name=f"كشف_حساب_الصندوق_{month_name}.html",
+        mime="text/html",
+        use_container_width=True
+    )
+
+@st.dialog("👤 إضافة موظف جديد للدليل")
+def add_employee_dialog(branch_name):
+    payroll_df = st.session_state.payroll_df
+    new_id = int(payroll_df['م'].max() + 1) if not payroll_df.empty else 1
+
+    with st.form("add_emp_modal_form"):
+        st.write(f"إضافة موظف جديد لفرع **{branch_name}**:")
+        e_name = st.text_input("اسم الموظف الكامل:")
+        e_job = st.text_input("الوظيفة:")
+        e_salary = st.number_input("الراتب المستحق (ر.س):", min_value=0.0, value=2500.0)
+        e_start = st.date_input("تاريخ بداية العمل:", datetime.now().date())
         
-        q_sub = st.form_submit_button("حفظ السند")
-        if q_sub:
-            if q_party and q_amt > 0:
-                all_cash = load_cash_data()
-                if month_name not in all_cash:
-                    all_cash[month_name] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
-                
-                m_cash = all_cash[month_name]
-                box_key = 'transactions' if target_box == 'main' else 'acc_transactions'
-                if box_key not in m_cash:
-                    m_cash[box_key] = []
-                    
-                c_trans = m_cash[box_key]
-                
-                if "تحويل عُهدة إلى (omar)" in q_type and target_box == "main":
-                    v_code = f"TRF-{(len(c_trans) + 1):03d}"
-                    c_trans.append({
-                        'id': len(c_trans) + 1,
-                        'code': v_code,
-                        'date': get_ksa_now_str(),
-                        'type': 'سند صرف',
-                        'party': f"تحويل عُهدة إلى المحاسب (omar) - {q_party}",
-                        'amount': q_amt,
-                        'method': q_method,
-                        'notes': q_notes
-                    })
-                    
-                    if 'acc_transactions' not in m_cash:
-                        m_cash['acc_transactions'] = []
-                    acc_trans = m_cash['acc_transactions']
-                    acc_trans.append({
-                        'id': len(acc_trans) + 1,
-                        'code': f"REC-TRF-{(len(acc_trans) + 1):03d}",
-                        'date': get_ksa_now_str(),
-                        'type': 'سند قبض',
-                        'party': f"استلام عُهدة محولة من الخزينة الرئيسية (wahby)",
-                        'amount': q_amt,
-                        'method': q_method,
-                        'notes': q_notes
-                    })
-                    m_cash['acc_transactions'] = acc_trans
+        sub_emp = st.form_submit_button("💾 حفظ الموظف")
+        if sub_emp and e_name:
+            new_emp = {
+                'م': new_id,
+                'الاسم': e_name,
+                'الوظيفة': e_job,
+                'الراتب الأساسي': e_salary,
+                'الفرع': branch_name,
+                'تاريخ بداية العمل': str(e_start),
+                'تاريخ انتهاء الإقامة': '2027-12-31',
+                'تاريخ انتهاء العقد': '2027-12-31',
+                'الخصومات': 0.0,
+                'الدفعة 1': 0.0,
+                'الدفعة 2': 0.0,
+                'الدفعة المدفوعة': 0.0,
+                'المتبقي': e_salary,
+                'نوع الإجراء': 'لم يُصرف',
+                'الملاحظات': ''
+            }
+            updated_df = pd.concat([payroll_df, pd.DataFrame([new_emp])], ignore_index=True)
+            st.session_state.payroll_df = updated_df
+            save_payroll_for_month(updated_df, st.session_state.current_active_month)
+            st.success("تمت إضافة الموظف وسماع البيانات بالسحابة بنجاح!")
+            st.rerun()
 
-                elif "تحويل عُهدة إلى (wahby)" in q_type and target_box == "accountant":
-                    v_code = f"TRF-ACC-{(len(c_trans) + 1):03d}"
-                    c_trans.append({
-                        'id': len(c_trans) + 1,
-                        'code': v_code,
-                        'date': get_ksa_now_str(),
-                        'type': 'سند صرف',
-                        'party': f"تحويل نقدية واسترداد إلى الخزينة الرئيسية (wahby) - {q_party}",
-                        'amount': q_amt,
-                        'method': q_method,
-                        'notes': q_notes
-                    })
-                    
-                    if 'transactions' not in m_cash:
-                        m_cash['transactions'] = []
-                    main_trans = m_cash['transactions']
-                    main_trans.append({
-                        'id': len(main_trans) + 1,
-                        'code': f"REC-TRF-{(len(main_trans) + 1):03d}",
-                        'date': get_ksa_now_str(),
-                        'type': 'سند قبض',
-                        'party': f"استلام نقدية محولة من عُهدة المحاسب (omar)",
-                        'amount': q_amt,
-                        'method': q_method,
-                        'notes': q_notes
-                    })
-                    m_cash['transactions'] = main_trans
-
-                else:
-                    rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
-                    pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
-                    v_code = f"REC-{(rec_count + 1):03d}" if "قبض" in q_type else f"PAY-{(pay_count + 1):03d}"
-                    
-                    c_trans.append({
-                        'id': len(c_trans) + 1,
-                        'code': v_code,
-                        'date': get_ksa_now_str(),
-                        'type': q_type,
-                        'party': q_party,
-                        'amount': q_amt,
-                        'method': q_method,
-                        'notes': q_notes
-                    })
-
-                m_cash[box_key] = c_trans
-                all_cash[month_name] = m_cash
-                save_cash_data(all_cash)
-                st.success(f"تم الحفظ السحابي بنجاح برقم #{v_code}!")
+@st.dialog("✏️ تعديل بيانات موظف")
+def edit_employee_dialog(emp_idx, month_name):
+    payroll_df = st.session_state.payroll_df
+    if emp_idx in payroll_df.index:
+        emp_row = payroll_df.loc[emp_idx]
+        st.write(f"تعديل بيانات الموظف: **{emp_row['الاسم']}**")
+        
+        with st.form(f"edit_emp_form_{emp_idx}"):
+            e_name = st.text_input("الاسم:", value=emp_row['الاسم'])
+            e_job = st.text_input("الوظيفة:", value=emp_row['الوظيفة'])
+            e_salary = st.number_input("الراتب المستحق (ر.س):", min_value=0.0, value=float(emp_row['الراتب الأساسي']))
+            
+            sub_e = st.form_submit_button("💾 حفظ التعديلات")
+            if sub_e:
+                st.session_state.payroll_df.loc[emp_idx, 'الاسم'] = e_name
+                st.session_state.payroll_df.loc[emp_idx, 'الوظيفة'] = e_job
+                st.session_state.payroll_df.loc[emp_idx, 'الراتب الأساسي'] = e_salary
+                save_payroll_for_month(st.session_state.payroll_df, month_name)
+                st.success("تم حفظ التعديلات بنجاح!")
                 st.rerun()
 
 # الشاشة الافتتاحية وواجهة المستخدم الموحدة
