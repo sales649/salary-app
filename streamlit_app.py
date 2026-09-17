@@ -13,9 +13,9 @@ st.set_page_config(page_title='5M', layout='wide', page_icon='🏢', initial_sid
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
 
-# روابط استدعاء الصور المباشرة من مستودع GitHub
-STAMP_IMG_URL = "stamp.png"
-SIGN_IMG_URL = "sign.png"
+# إعدادات الصور المدمجة بداخل الكود مباشرة لضمان عدم التلف أو الحظر
+STAMP_IMG_URL = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><circle cx='60' cy='60' r='55' fill='none' stroke='%23DC2626' stroke-width='4'/><circle cx='60' cy='60' r='46' fill='none' stroke='%23DC2626' stroke-width='2'/><text x='60' y='32' text-anchor='middle' fill='%23DC2626' font-size='9' font-weight='bold' font-family='Arial'>شركة ميم الخماسية للتصنيع</text><text x='60' y='68' text-anchor='middle' fill='%23DC2626' font-size='28' font-weight='900' font-family='Arial'>5M</text><text x='60' y='86' text-anchor='middle' fill='%23DC2626' font-size='8' font-weight='bold' font-family='Arial'>سجل تجاري : 1011145035</text><text x='60' y='98' text-anchor='middle' fill='%23DC2626' font-size='7' font-weight='bold' font-family='Arial'>C.R. 1011145035</text></svg>"
+SIGN_IMG_URL = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='60' viewBox='0 0 140 60'><path d='M 10 30 Q 30 5, 50 30 T 90 30 T 130 15 M 15 35 Q 40 50, 70 20 T 120 35' fill='none' stroke='%231D4ED8' stroke-width='3' stroke-linecap='round'/><text x='70' y='52' text-anchor='middle' fill='%231D4ED8' font-size='10' font-weight='bold' font-family='Cairo, Arial'>توقيع المحاسب المعمد</text></svg>"
 
 # إعدادات الربط السحابي بـ Supabase
 SUPABASE_URL = "https://ohoqprtvmhyjomaavwct.supabase.co"
@@ -27,7 +27,7 @@ def init_supabase() -> Client:
 
 supabase = init_supabase()
 
-# دالة الحصول على توقيت الرياض المباشر (KSA GMT+3)
+# دالة الحصول على التوقيت المباشر (GMT+3)
 def get_ksa_now():
     return datetime.utcnow() + timedelta(hours=3)
 
@@ -607,6 +607,79 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
     except:
         return 0.0, 0.0, 0.0
 
+# 🛠️ دالة قراءة المبالغ والضريبة التلقائية المباشرة من شيت الوعلان
+def parse_vat_total_row_smart(uploaded_file):
+    if uploaded_file is None:
+        return 0.0, 0.0, 0.0
+    try:
+        uploaded_file.seek(0)
+        try:
+            df_raw = pd.read_excel(uploaded_file, header=None)
+        except Exception:
+            uploaded_file.seek(0)
+            df_raw = pd.read_csv(uploaded_file, header=None)
+
+        header_idx = None
+        target_kws = ['الصافي', 'الصافى', 'الضريبة', 'ضريبة', 'الإجمالي', 'الأجمالى', 'صافى بعد ضريبة', 'اسم المورد', 'اسم العميل', 'العميل', 'رقم الفاتورة', 'رقم السند']
+        
+        for idx, row in df_raw.iterrows():
+            row_str = " ".join([str(v) for v in row.values if pd.notnull(v)])
+            matches = [kw for kw in target_kws if kw in row_str]
+            if len(matches) >= 2:
+                header_idx = idx; break
+                
+        if header_idx is None: header_idx = 0
+            
+        headers = [str(v).strip() for v in df_raw.iloc[header_idx].values]
+        df_data = df_raw.iloc[header_idx + 1:].reset_index(drop=True)
+        df_data.columns = headers
+        
+        doc_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['رقم الفاتورة', 'رقم السند'])), None)
+        name_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['اسم المورد', 'اسم العميل', 'العميل'])), None)
+
+        def is_valid_transaction(row):
+            if row.dropna().empty: return False
+            row_text = " ".join([str(v) for v in row.values if pd.notnull(v)]).strip()
+            if any(k in row_text for k in ['الأجمالى', 'الأجمالي', 'إجمالي السندات', 'إجمالي التقارير', 'Page -1', 'Page ']):
+                return False
+            if doc_col and pd.notnull(row[doc_col]):
+                val = pd.to_numeric(str(row[doc_col]).replace(',', '').strip(), errors='coerce')
+                if pd.isna(val): return False
+            elif name_col and pd.isna(row[name_col]):
+                return False
+            return True
+
+        df_valid = df_data[df_data.apply(is_valid_transaction, axis=1)].copy()
+
+        net_col, vat_col, gross_col = None, None, None
+        for col in df_valid.columns:
+            c_clean = str(col).strip()
+            if c_clean in ['الصافي', 'الصافى']:
+                net_col = col
+            elif c_clean in ['الضريبة', 'ضريبة']:
+                vat_col = col
+            elif c_clean in ['صافى بعد ضريبة', 'الإجمالي', 'الأجمالى']:
+                if gross_col is None or c_clean == 'صافى بعد ضريبة':
+                    gross_col = col
+
+        def clean_sum(col_name):
+            if not col_name or col_name not in df_valid.columns:
+                return 0.0
+            s = df_valid[col_name].astype(str).str.replace(',', '').str.strip()
+            return float(pd.to_numeric(s, errors='coerce').fillna(0.0).sum())
+
+        net_sum = clean_sum(net_col)
+        vat_sum = clean_sum(vat_col)
+        gross_sum = clean_sum(gross_col)
+
+        if gross_sum == 0.0 and net_sum > 0.0: gross_sum = net_sum + vat_sum
+        if vat_sum == 0.0 and net_sum > 0.0: vat_sum = net_sum * 0.15
+
+        return round(net_sum, 2), round(vat_sum, 2), round(gross_sum, 2)
+
+    except Exception:
+        return 0.0, 0.0, 0.0
+
 @st.dialog("تعديل الرصيد الافتتاحي للصندوق")
 def opening_balance_dialog(month_name, target_box):
     all_cash_db = load_cash_data()
@@ -694,7 +767,7 @@ def print_cash_voucher_dialog(v_item, month_name):
                 <tr><th style="width:25%;">صادر إلى / مستلم من:</th><td><strong>{v_item['party']}</strong></td></tr>
                 <tr><th>المبلغ الرقمي:</th><td><div class="amt-box">{v_item['amount']:,.2f} ريال سعودي</div></td></tr>
                 <tr><th>طريقة الدفع / السداد:</th><td><strong>{v_item.get('method', 'نقداً بالصندوق')}</strong></td></tr>
-                <tr><th>تاريخ التسجيل:</th><td>{v_item['date']} (توقيت السعودية)</td></tr>
+                <tr><th>تاريخ التسجيل:</th><td>{v_item['date']}</td></tr>
                 <tr><th>البيان والملاحظات:</th><td>{v_item.get('notes', 'لا يوجد')}</td></tr>
             </table>
             <div class="sigs">
@@ -1157,7 +1230,7 @@ else:
 
     st.markdown(f"""
         <div class="company-header-inner">
-            <div class="date-badge-lux">{date_formatted} (توقيت السعودية)</div>
+            <div class="date-badge-lux">{date_formatted}</div>
             <h1 class="company-header-inner-title">🏢 شركة ميم الخماسية للتصنيع</h1>
             <p class="company-header-inner-sub">النظام المحاسبي والإداري الموحد</p>
             <div style="margin-top: 4px;">
@@ -1405,7 +1478,7 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 5. موديول عُهدة السواقين
+    # 5. موديول عُهدة السواقين (المحدث بالكامل وحل مشكلة الـ 242.00 والتوقيع والختم)
     elif selected_option == 'عُهدة السواقين':
         st.subheader(f'🚚 موديول إدارة عُهدة السواقين المباشر - ({month_selected})')
         st.write('يتيح هذا الموديول تسليم العُهد الموقتة للسائق **(سمان السواق)** وتصفية الفواتير والتسميع التراكمي المباشر بصندوق omar:')
@@ -1418,6 +1491,7 @@ else:
             if st.button("⚙️ تثبيت رصيد افتتاحي للسائق", key="btn_drv_op_bal"):
                 driver_opening_balance_dialog(driver_selected)
 
+        # 🎯 حساب المتبقي المباشر المفتوح بجراب سمان حالياً
         open_custody_item = next((d for d in drivers_db if d.get('status') == 'مفتوحة'), None)
         current_open_balance = round(open_custody_item.get('given_amt', 0.0) - open_custody_item.get('spent_amt', 0.0), 2) if open_custody_item else 0.0
 
@@ -1512,6 +1586,7 @@ else:
         with d_col1:
             st.markdown("### 📝 1. تسليم عُهدة جديدة لـ (سمان السواق):")
             
+            # قراءة المتبقي أو المستحق من آخر حركتين للتسوية المباشرة الصحيحة
             last_diff = 0.0
             for d in reversed(drivers_db):
                 if d.get('status') == 'تمت التصفية' or d.get('is_opening') is True:
@@ -1548,6 +1623,7 @@ else:
                     })
                     save_drivers_data(drivers_db)
 
+                    # خصم المبلغ النقدي المسلم كاش فقط (500 ريال) من الصندوق
                     all_cash = load_cash_data()
                     if month_selected not in all_cash:
                         all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
@@ -2410,7 +2486,7 @@ else:
                             <div class="cash-card-item" style="border-right: 5px solid {border_c};">
                                 <div>
                                     <span style="font-weight:bold; font-size:14px;">#{t_item.get('code', t_item['id'])} - {t_item['party']}</span><br>
-                                    <span style="font-size:11px; color:#94A3B8;">📅 {t_item['date']} (توقيت السعودية) | 💳 {t_item['method']} | 📝 {t_item.get('notes','')}</span>
+                                    <span style="font-size:11px; color:#94A3B8;">📅 {t_item['date']} | 💳 {t_item['method']} | 📝 {t_item.get('notes','')}</span>
                                 </div>
                                 <div class="{amt_cls}">
                                     {t_sign} {t_item['amount']:,.2f} ر.س
