@@ -13,9 +13,9 @@ st.set_page_config(page_title='5M', layout='wide', page_icon='🏢', initial_sid
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
 
-# إعدادات الصور المدمجة بداخل الكود مباشرة (SVG/Data-URI) لضمان عدم تلف الروابط
-STAMP_IMG_B64 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'><circle cx='60' cy='60' r='55' fill='none' stroke='%23DC2626' stroke-width='4'/><circle cx='60' cy='60' r='46' fill='none' stroke='%23DC2626' stroke-width='2'/><text x='60' y='32' text-anchor='middle' fill='%23DC2626' font-size='9' font-weight='bold' font-family='Arial'>شركة ميم الخماسية للتصنيع</text><text x='60' y='68' text-anchor='middle' fill='%23DC2626' font-size='28' font-weight='900' font-family='Arial'>5M</text><text x='60' y='86' text-anchor='middle' fill='%23DC2626' font-size='8' font-weight='bold' font-family='Arial'>سجل تجاري : 1011145035</text><text x='60' y='98' text-anchor='middle' fill='%23DC2626' font-size='7' font-weight='bold' font-family='Arial'>C.R. 1011145035</text></svg>"
-SIGN_IMG_B64 = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='60' viewBox='0 0 140 60'><path d='M 10 30 Q 30 5, 50 30 T 90 30 T 130 15 M 15 35 Q 40 50, 70 20 T 120 35' fill='none' stroke='%231D4ED8' stroke-width='3' stroke-linecap='round'/><text x='70' y='52' text-anchor='middle' fill='%231D4ED8' font-size='10' font-weight='bold' font-family='Cairo, Arial'>توقيع المحاسب المعمد</text></svg>"
+# استدعاء ملفات الصور الأصلية المرفوعة بداخل مستودع GitHub
+STAMP_IMG_URL = "https://raw.githubusercontent.com/wahby5m/5m-accounting/main/stamp.png"
+SIGN_IMG_URL = "https://raw.githubusercontent.com/wahby5m/5m-accounting/main/sign.png"
 
 # إعدادات الربط السحابي بـ Supabase
 SUPABASE_URL = "https://ohoqprtvmhyjomaavwct.supabase.co"
@@ -777,11 +777,11 @@ def print_cash_voucher_dialog(v_item, month_name):
                 </div>
                 <div class="sig-col">
                     <div>توقيع المحاسب المسؤول</div>
-                    <img src="{SIGN_IMG_B64}" class="sign-img" alt="توقيع المحاسب">
+                    <img src="{SIGN_IMG_URL}" class="sign-img" alt="توقيع المحاسب">
                 </div>
                 <div class="sig-col">
                     <div>اعتماد وختم الشركة</div>
-                    <img src="{STAMP_IMG_B64}" class="stamp-img" alt="ختم 5M">
+                    <img src="{STAMP_IMG_URL}" class="stamp-img" alt="ختم 5M">
                 </div>
             </div>
         </div>
@@ -871,11 +871,11 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
             <div class="sigs">
                 <div style="text-align:center;">
                     <div>توقيع المحاسب المسؤول</div>
-                    <img src="{SIGN_IMG_B64}" style="width:110px; height:45px; object-fit:contain;">
+                    <img src="{SIGN_IMG_URL}" style="width:110px; height:45px; object-fit:contain;">
                 </div>
                 <div style="text-align:center;">
                     <div>اعتماد وختم الشركة</div>
-                    <img src="{STAMP_IMG_B64}" style="width:100px; height:100px; object-fit:contain;">
+                    <img src="{STAMP_IMG_URL}" style="width:100px; height:100px; object-fit:contain;">
                 </div>
             </div>
         </div>
@@ -1163,11 +1163,11 @@ else:
                     </div>
                     <div style="text-align:center;">
                         <div>اعتماد المحاسب المسلم</div>
-                        <img src="{SIGN_IMG_B64}" style="width:100px; height:40px; object-fit:contain;">
+                        <img src="{SIGN_IMG_URL}" style="width:100px; height:40px; object-fit:contain;">
                     </div>
                     <div style="text-align:center;">
                         <div>اعتماد وختم الشركة</div>
-                        <img src="{STAMP_IMG_B64}" style="width:90px; height:90px; object-fit:contain;">
+                        <img src="{STAMP_IMG_URL}" style="width:90px; height:90px; object-fit:contain;">
                     </div>
                 </div>
             </div>
@@ -1209,11 +1209,11 @@ else:
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد المحاسب المسلم</div>
-                            <img src="{SIGN_IMG_B64}" style="width:100px; height:40px; object-fit:contain;">
+                            <img src="{SIGN_IMG_URL}" style="width:100px; height:40px; object-fit:contain;">
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد وختم الشركة</div>
-                            <img src="{STAMP_IMG_B64}" style="width:90px; height:90px; object-fit:contain;">
+                            <img src="{STAMP_IMG_URL}" style="width:90px; height:90px; object-fit:contain;">
                         </div>
                     </div>
                 </div>
@@ -1415,11 +1415,11 @@ else:
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد المحاسب المسؤول</div>
-                            <img src="{SIGN_IMG_B64}" style="width:100px; height:40px; object-fit:contain;">
+                            <img src="{SIGN_IMG_URL}" style="width:100px; height:40px; object-fit:contain;">
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد وختم الشركة</div>
-                            <img src="{STAMP_IMG_B64}" style="width:90px; height:90px; object-fit:contain;">
+                            <img src="{STAMP_IMG_URL}" style="width:90px; height:90px; object-fit:contain;">
                         </div>
                     </div>
                 </div>
@@ -1449,7 +1449,6 @@ else:
         with d_col1:
             st.markdown("### 📝 1. تسليم عُهدة جديدة لـ (سمان السواق):")
             
-            # قراءة المتبقي أو المستحق من آخر حركتين للتسوية المباشرة الصحيحة
             last_diff = 0.0
             for d in reversed(drivers_db):
                 if d.get('status') == 'تمت التصفية' or d.get('is_opening') is True:
@@ -1934,11 +1933,11 @@ else:
                     <div class="sigs">
                         <div style="text-align:center;">
                             <div>إعداد المحاسب المسؤول</div>
-                            <img src="{SIGN_IMG_B64}" style="width:110px; height:45px; object-fit:contain;">
+                            <img src="{SIGN_IMG_URL}" style="width:110px; height:45px; object-fit:contain;">
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد المدير العام وتصديق الشركة</div>
-                            <img src="{STAMP_IMG_B64}" style="width:100px; height:100px; object-fit:contain;">
+                            <img src="{STAMP_IMG_URL}" style="width:100px; height:100px; object-fit:contain;">
                         </div>
                     </div>
                 </div>
@@ -2513,8 +2512,8 @@ else:
                 <span>إجمالي المتبقي: {df_sheet['المتبقي'].sum():,.0f} ر.س</span>
             </div>
             <div class="signatures">
-                <div>إعداد المحاسب المسؤول: <br><img src="{SIGN_IMG_B64}" style="width:90px;"></div>
-                <div>اعتماد وتصديق الشركة: <br><img src="{STAMP_IMG_B64}" style="width:80px;"></div>
+                <div>إعداد المحاسب المسؤول: <br><img src="{SIGN_IMG_URL}" style="width:90px;"></div>
+                <div>اعتماد وتصديق الشركة: <br><img src="{STAMP_IMG_URL}" style="width:80px;"></div>
                 <div>اعتماد المدير العام: __________________</div>
             </div>
         </body>
