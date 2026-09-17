@@ -116,7 +116,7 @@ st.markdown(f"""
             border-bottom: none !important;
         }}
 
-        /* 🎨 إصلاح قاطع وشامل للون خط القوائم المنسدلة Dropdowns */
+        /* 🎨 إصلاح لون خط القوائم المنسدلة Dropdowns */
         div[data-baseweb="popover"],
         div[data-baseweb="menu"],
         div[role="listbox"],
@@ -184,25 +184,6 @@ st.markdown(f"""
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
             margin-bottom: 6px !important;
             text-align: center !important;
-        }}
-
-        [data-testid="stFileUploader"] section {{
-            background-color: {file_uploader_bg} !important;
-            border: 2px dashed #D97706 !important;
-            border-radius: 10px !important;
-            padding: 10px !important;
-        }}
-
-        [data-testid="stFileUploader"] section * {{
-            color: {file_uploader_text} !important;
-            font-weight: 800 !important;
-        }}
-
-        [data-testid="stFileUploader"] button {{
-            background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
-            color: #FFFFFF !important;
-            border-radius: 6px !important;
-            border: none !important;
         }}
 
         @media screen and (min-width: 769px) {{
@@ -699,79 +680,6 @@ def calculate_saudi_gratuity_and_leave(salary, start_date_str):
         leave_allowance = annual_leave_days * daily_rate
         return round(years, 2), round(gratuity, 2), round(leave_allowance, 2)
     except:
-        return 0.0, 0.0, 0.0
-
-# 🛠️ دالة قراءة المبالغ والضريبة التلقائية المباشرة من شيت الوعلان
-def parse_vat_total_row_smart(uploaded_file):
-    if uploaded_file is None:
-        return 0.0, 0.0, 0.0
-    try:
-        uploaded_file.seek(0)
-        try:
-            df_raw = pd.read_excel(uploaded_file, header=None)
-        except Exception:
-            uploaded_file.seek(0)
-            df_raw = pd.read_csv(uploaded_file, header=None)
-
-        header_idx = None
-        target_kws = ['الصافي', 'الصافى', 'الضريبة', 'ضريبة', 'الإجمالي', 'الأجمالى', 'صافى بعد ضريبة', 'اسم المورد', 'اسم العميل', 'العميل', 'رقم الفاتورة', 'رقم السند']
-        
-        for idx, row in df_raw.iterrows():
-            row_str = " ".join([str(v) for v in row.values if pd.notnull(v)])
-            matches = [kw for kw in target_kws if kw in row_str]
-            if len(matches) >= 2:
-                header_idx = idx; break
-                
-        if header_idx is None: header_idx = 0
-            
-        headers = [str(v).strip() for v in df_raw.iloc[header_idx].values]
-        df_data = df_raw.iloc[header_idx + 1:].reset_index(drop=True)
-        df_data.columns = headers
-        
-        doc_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['رقم الفاتورة', 'رقم السند'])), None)
-        name_col = next((c for c in df_data.columns if any(k in str(c).strip() for k in ['اسم المورد', 'اسم العميل', 'العميل'])), None)
-
-        def is_valid_transaction(row):
-            if row.dropna().empty: return False
-            row_text = " ".join([str(v) for v in row.values if pd.notnull(v)]).strip()
-            if any(k in row_text for k in ['الأجمالى', 'الأجمالي', 'إجمالي السندات', 'إجمالي التقارير', 'Page -1', 'Page ']):
-                return False
-            if doc_col and pd.notnull(row[doc_col]):
-                val = pd.to_numeric(str(row[doc_col]).replace(',', '').strip(), errors='coerce')
-                if pd.isna(val): return False
-            elif name_col and pd.isna(row[name_col]):
-                return False
-            return True
-
-        df_valid = df_data[df_data.apply(is_valid_transaction, axis=1)].copy()
-
-        net_col, vat_col, gross_col = None, None, None
-        for col in df_valid.columns:
-            c_clean = str(col).strip()
-            if c_clean in ['الصافي', 'الصافى']:
-                net_col = col
-            elif c_clean in ['الضريبة', 'ضريبة']:
-                vat_col = col
-            elif c_clean in ['صافى بعد ضريبة', 'الإجمالي', 'الأجمالى']:
-                if gross_col is None or c_clean == 'صافى بعد ضريبة':
-                    gross_col = col
-
-        def clean_sum(col_name):
-            if not col_name or col_name not in df_valid.columns:
-                return 0.0
-            s = df_valid[col_name].astype(str).str.replace(',', '').str.strip()
-            return float(pd.to_numeric(s, errors='coerce').fillna(0.0).sum())
-
-        net_sum = clean_sum(net_col)
-        vat_sum = clean_sum(vat_col)
-        gross_sum = clean_sum(gross_col)
-
-        if gross_sum == 0.0 and net_sum > 0.0: gross_sum = net_sum + vat_sum
-        if vat_sum == 0.0 and net_sum > 0.0: vat_sum = net_sum * 0.15
-
-        return round(net_sum, 2), round(vat_sum, 2), round(gross_sum, 2)
-
-    except Exception:
         return 0.0, 0.0, 0.0
 
 @st.dialog("تعديل الرصيد الافتتاحي للصندوق")
@@ -1569,7 +1477,7 @@ else:
     # 🏛️ موديول ضريبة القيمة المضافة (ZATCA) المطور المباشر بـ 0.00 الافتراضية
     elif selected_option == 'تقرير القيمة المضافة' and st.session_state.user_role == "admin":
         st.subheader('🏛️ موديول إقرار ضريبة القيمة المضافة الربع سنوي (ZATCA)')
-        st.write('قم برفع شيتات ERP الوعلان المخصصة للفروع وسيتم توزيع مبيعات ومشتريات الـ 15% والصفرية تلقائياً بموجب معادلة الضريبة العكسية[cite: 1]:')
+        st.write('قم بإدخال مبالغ إجمالي التقارير والضريبة المستخرجة من شيتات الوعلان وسيتم توزيع المبيعات والمشتريات الخاضعة لـ 15% والصفرية تلقائياً بموجب المعادلة العكسية[cite: 1]:')
 
         v_top1, v_top2 = st.columns(2)
         with v_top1:
@@ -1578,17 +1486,14 @@ else:
             prev_carried_vat = st.number_input("ضريبة القيمة المضافة المترحلة من الفترة/الفترات السابقة (ر.س):", min_value=0.0, value=0.0, step=1000.0)
 
         st.divider()
-        st.markdown("### 📥 1. رفع وتأكيد مبالغ فروع الوعلان والمشتريات (ريال سعودي):")
+        st.markdown("### 📥 1. إدخال وتأكيد مبالغ فروع الوعلان والمشتريات (ريال سعودي):")
 
         v_c1, v_c2, v_c3 = st.columns(3)
         
         with v_c1:
             st.markdown("#### 🏢 مبيعات ومرتجعات الرياض:")
-            file_s_ry = st.file_uploader("شيت مبيعات الرياض:", type=['xlsx', 'xls', 'csv'], key="vat_ry_s")
-            auto_ry_s_net, auto_ry_s_vat, _ = parse_vat_total_row_smart(file_s_ry)
-            
-            tot_ry_s_gross_input = st.number_input("إجمالي تقرير مبيعات الرياض (الصافي الكلي):", min_value=0.0, value=float(auto_ry_s_net), key="tot_ry_s_gross_input")
-            tot_ry_s_vat_input = st.number_input("إجمالي مبلغ ضريبة مبيعات الرياض:", min_value=0.0, value=float(auto_ry_s_vat), key="tot_ry_s_vat_input")
+            tot_ry_s_gross_input = st.number_input("إجمالي تقرير مبيعات الرياض (الصافي الكلي):", min_value=0.0, value=0.0, key="tot_ry_s_gross_input")
+            tot_ry_s_vat_input = st.number_input("إجمالي مبلغ ضريبة مبيعات الرياض:", min_value=0.0, value=0.0, key="tot_ry_s_vat_input")
 
             calc_ry_s_taxable = round(tot_ry_s_vat_input / 0.15, 2) if tot_ry_s_vat_input > 0 else 0.0
             calc_ry_s_zero = max(0.0, round(tot_ry_s_gross_input - calc_ry_s_taxable, 2))
@@ -1596,19 +1501,13 @@ else:
             st.caption(f"📊 الخاضع لـ 15%: **{calc_ry_s_taxable:,.2f} ر.س** | 🟢 الصفرية (0%): **{calc_ry_s_zero:,.2f} ر.س**")
 
             st.write("")
-            file_r_ry = st.file_uploader("شيت مرتجعات الرياض:", type=['xlsx', 'xls', 'csv'], key="vat_ry_r")
-            auto_ry_r_net, auto_ry_r_vat, _ = parse_vat_total_row_smart(file_r_ry)
-
-            tot_ry_r_gross_input = st.number_input("إجمالي مرتجعات الرياض (قبل الضريبة):", min_value=0.0, value=float(auto_ry_r_net), key="tot_ry_r_gross_input")
-            tot_ry_r_vat_input = st.number_input("ضريبة مرتجعات الرياض (15%):", min_value=0.0, value=float(auto_ry_r_vat), key="tot_ry_r_vat_input")
+            tot_ry_r_gross_input = st.number_input("إجمالي مرتجعات الرياض (قبل الضريبة):", min_value=0.0, value=0.0, key="tot_ry_r_gross_input")
+            tot_ry_r_vat_input = st.number_input("ضريبة مرتجعات الرياض (15%):", min_value=0.0, value=0.0, key="tot_ry_r_vat_input")
 
         with v_c2:
             st.markdown("#### 🌊 مبيعات ومرتجعات جدة:")
-            file_s_jd = st.file_uploader("شيت مبيعات جدة:", type=['xlsx', 'xls', 'csv'], key="vat_jd_s")
-            auto_jd_s_net, auto_jd_s_vat, _ = parse_vat_total_row_smart(file_s_jd)
-
-            tot_jd_s_gross_input = st.number_input("إجمالي تقرير مبيعات جدة (الصافي الكلي):", min_value=0.0, value=float(auto_jd_s_net), key="tot_jd_s_gross_input")
-            tot_jd_s_vat_input = st.number_input("إجمالي مبلغ ضريبة مبيعات جدة:", min_value=0.0, value=float(auto_jd_s_vat), key="tot_jd_s_vat_input")
+            tot_jd_s_gross_input = st.number_input("إجمالي تقرير مبيعات جدة (الصافي الكلي):", min_value=0.0, value=0.0, key="tot_jd_s_gross_input")
+            tot_jd_s_vat_input = st.number_input("إجمالي مبلغ ضريبة مبيعات جدة:", min_value=0.0, value=0.0, key="tot_jd_s_vat_input")
 
             calc_jd_s_taxable = round(tot_jd_s_vat_input / 0.15, 2) if tot_jd_s_vat_input > 0 else 0.0
             calc_jd_s_zero = max(0.0, round(tot_jd_s_gross_input - calc_jd_s_taxable, 2))
@@ -1616,19 +1515,13 @@ else:
             st.caption(f"📊 الخاضع لـ 15%: **{calc_jd_s_taxable:,.2f} ر.س** | 🟢 الصفرية (0%): **{calc_jd_s_zero:,.2f} ر.س**")
 
             st.write("")
-            file_r_jd = st.file_uploader("شيت مرتجعات جدة:", type=['xlsx', 'xls', 'csv'], key="vat_jd_r")
-            auto_jd_r_net, auto_jd_r_vat, _ = parse_vat_total_row_smart(file_r_jd)
-
-            tot_jd_r_gross_input = st.number_input("إجمالي مرتجعات جدة (قبل الضريبة):", min_value=0.0, value=float(auto_jd_r_net), key="tot_jd_r_gross_input")
-            tot_jd_r_vat_input = st.number_input("ضريبة مرتجعات جدة (15%):", min_value=0.0, value=float(auto_jd_r_vat), key="tot_jd_r_vat_input")
+            tot_jd_r_gross_input = st.number_input("إجمالي مرتجعات جدة (قبل الضريبة):", min_value=0.0, value=0.0, key="tot_jd_r_gross_input")
+            tot_jd_r_vat_input = st.number_input("ضريبة مرتجعات جدة (15%):", min_value=0.0, value=0.0, key="tot_jd_r_vat_input")
 
         with v_c3:
             st.markdown("#### 📦 المشتريات والاحتساب العكسي (فسح):")
-            file_purch = st.file_uploader("شيت المشتريات العامة:", type=['xlsx', 'xls', 'csv'], key="vat_purch")
-            auto_p_s_net, auto_p_s_vat, _ = parse_vat_total_row_smart(file_purch)
-
-            tot_purch_gross_input = st.number_input("إجمالي تقرير المشتريات (الصافي الكلي):", min_value=0.0, value=float(auto_p_s_net), key="tot_purch_gross_input")
-            tot_purch_vat_input = st.number_input("إجمالي ضريبة المشتريات العامة (15%):", min_value=0.0, value=float(auto_p_s_vat), key="tot_purch_vat_input")
+            tot_purch_gross_input = st.number_input("إجمالي تقرير المشتريات (الصافي الكلي):", min_value=0.0, value=0.0, key="tot_purch_gross_input")
+            tot_purch_vat_input = st.number_input("إجمالي ضريبة المشتريات العامة (15%):", min_value=0.0, value=0.0, key="tot_purch_vat_input")
 
             # تقسيم المشتريات آلياً للنسبة 15% والصفرية
             calc_purch_taxable = round(tot_purch_vat_input / 0.15, 2) if tot_purch_vat_input > 0 else 0.0
@@ -1636,10 +1529,16 @@ else:
 
             st.caption(f"📊 الخاضع لـ 15%: **{calc_purch_taxable:,.2f} ر.س** | 🟢 الصفرية (0%): **{calc_purch_zero:,.2f} ر.س**")
 
+            st.write("")
+            tot_purch_ret_gross_input = st.number_input("إجمالي مرتجعات المشتريات (إن وجد):", min_value=0.0, value=0.0, key="tot_purch_ret_gross_input")
+            tot_purch_ret_vat_input = st.number_input("ضريبة مرتجعات المشتريات (15%):", min_value=0.0, value=0.0, key="tot_purch_ret_vat_input")
+
             st.markdown("---")
             st.markdown("##### ⚓ البند (9): المشتريات التي تطبق عليها آلية الاحتساب العكسي (فسح):")
-            in_rcm_net = st.number_input("مبلغ التوريدات الخاضعة لآلية الاحتساب العكسي (قبل الضريبة):", min_value=0.0, value=0.0, key="in_rcm_net")
-            in_rcm_vat = st.number_input("مبلغ ضريبة الاحتساب العكسي (15%):", min_value=0.0, value=float(round(in_rcm_net * 0.15, 2)), key="in_rcm_vat")
+            in_rcm_vat_input = st.number_input("أدخل مبلغ ضريبة الاحتساب العكسي مباشرة (فسح):", min_value=0.0, value=0.0, key="in_rcm_vat_input")
+            # قسمة الضريبة المباشرة على 15% لستخراج المبلغ الخاضع آلياً
+            calc_rcm_net = round(in_rcm_vat_input / 0.15, 2) if in_rcm_vat_input > 0 else 0.0
+            st.caption(f"📦 المبلغ المحسوب تلقائياً قبل الضريبة لـ البند (9): **{calc_rcm_net:,.2f} ر.س**")
 
         # التجميع النهائي المعمد للإقرار بحسب نموذج هيئة الزكاة والضريبة (ZATCA) مع تجميع البند 9 الحصري
         total_taxable_sales = calc_ry_s_taxable + calc_jd_s_taxable
@@ -1654,9 +1553,12 @@ else:
         total_purch_vat = tot_purch_vat_input
         total_purch_zero = calc_purch_zero
 
+        total_purch_ret_net = tot_purch_ret_gross_input
+        total_purch_ret_vat = tot_purch_ret_vat_input
+
         net_output_vat = total_sales_vat - total_sales_ret_vat
-        # تجميع ضريبة المشتريات مع ضريبة الاحتساب العكسي البند (9)
-        net_input_vat = total_purch_vat + in_rcm_vat
+        # تجميع ضريبة المشتريات المخصومة بالكامل (المحلية + الاحتساب العكسي فسح)
+        net_input_vat = (total_purch_vat - total_purch_ret_vat) + in_rcm_vat_input
         net_vat_payable = (net_output_vat - net_input_vat) - prev_carried_vat
 
         st.divider()
@@ -1725,8 +1627,8 @@ else:
                 </tr>
                 <tr>
                     <td style="text-align:right;">- تعديلات ومرتجعات المشتريات الخاضعة للنسبة الأساسية[cite: 1]</td>
-                    <td>0.00</td>
-                    <td>0.00</td>
+                    <td>({total_purch_ret_net:,.2f})</td>
+                    <td style="color:#EF4444; font-weight:bold;">({total_purch_ret_vat:,.2f})</td>
                 </tr>
                 <tr>
                     <td style="text-align:right;">8. الاستيرادات الخاضعة لضريبة القيمة المضافة بالنسبة الأساسية[cite: 1]</td>
@@ -1735,8 +1637,8 @@ else:
                 </tr>
                 <tr>
                     <td style="text-align:right;">9. التوريدات الخاضعة لضريبة القيمة المضافة التي تطبق عليها آلية الاحتساب العكسي (فسح)[cite: 1]</td>
-                    <td>{in_rcm_net:,.2f}</td>
-                    <td style="color:#10B981; font-weight:bold;">{in_rcm_vat:,.2f}</td>
+                    <td>{calc_rcm_net:,.2f}</td>
+                    <td style="color:#10B981; font-weight:bold;">{in_rcm_vat_input:,.2f}</td>
                 </tr>
                 <tr>
                     <td style="text-align:right;">10. المشتريات الخاضعة للنسبة الصفرية (0%)[cite: 1]</td>
@@ -1749,8 +1651,8 @@ else:
                     <td>0.00</td>
                 </tr>
                 <tr class="zatca-total-row">
-                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات (تجميع البند 7 و 9 و 10)[cite: 1]</td>
-                    <td>{(total_purch_net + total_purch_zero + in_rcm_net):,.2f}</td>
+                    <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات[cite: 1]</td>
+                    <td>{(total_purch_net + total_purch_zero + calc_rcm_net - total_purch_ret_net):,.2f}</td>
                     <td style="color:#F59E0B; font-size:15px;">{net_input_vat:,.2f}</td>
                 </tr>
                 <tr class="zatca-total-row">
@@ -1787,9 +1689,10 @@ else:
                 {'البند': 'مبيعات جدة الخاضعة للنسبة الصفرية (0%)', 'المبلغ قبل الضريبة': calc_jd_s_zero, 'الضريبة (15%)': 0.0},
                 {'البند': 'مرتجعات مبيعات جدة', 'المبلغ قبل الضريبة': tot_jd_r_gross_input, 'الضريبة (15%)': tot_jd_r_vat_input},
                 {'البند': 'المشتريات العامة الخاضعة للنسبة الأساسية (15%)', 'المبلغ قبل الضريبة': total_purch_net, 'الضريبة (15%)': total_purch_vat},
+                {'البند': 'مرتجعات المشتريات العامة', 'المبلغ قبل الضريبة': total_purch_ret_net, 'الضريبة (15%)': total_purch_ret_vat},
                 {'البند': 'المشتريات العامة الخاضعة للنسبة الصفرية (0%)', 'المبلغ قبل الضريبة': total_purch_zero, 'الضريبة (15%)': 0.0},
-                {'البند': 'المشتريات الخاضعة لآلية الاحتساب العكسي (فسح - بند 9)', 'المبلغ قبل الضريبة': in_rcm_net, 'الضريبة (15%)': in_rcm_vat},
-                {'البند': 'صافي الضريبة المستحقة للهيئة (ZATCA)', 'المبلغ قبل الضريبة': (total_taxable_sales + total_zero_sales - total_sales_ret_net) - (total_purch_net + total_purch_zero + in_rcm_net), 'الضريبة (15%)': net_vat_payable}
+                {'البند': 'المشتريات الخاضعة لآلية الاحتساب العكسي (فسح - بند 9)', 'المبلغ قبل الضريبة': calc_rcm_net, 'الضريبة (15%)': in_rcm_vat_input},
+                {'البند': 'صافي الضريبة المستحقة للهيئة (ZATCA)', 'المبلغ قبل الضريبة': (total_taxable_sales + total_zero_sales - total_sales_ret_net) - (total_purch_net + total_purch_zero + calc_rcm_net - total_purch_ret_net), 'الضريبة (15%)': net_vat_payable}
             ])
             csv_vat_bytes = vat_export_df.to_csv(index=False).encode('utf-8-sig')
             st.download_button(
