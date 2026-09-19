@@ -4,6 +4,7 @@ import io
 import json
 import os
 import re
+import csv
 import base64
 from datetime import datetime, timedelta
 from supabase import create_client, Client
@@ -1512,7 +1513,7 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 📦 5. موديول إدارة المستودع والمخزون المحدث مع دعم الترميز وشريط البحث
+    # 📦 5. موديول إدارة المستودع والمخزون المحدث المحسّن
     elif selected_option == 'جرد وحركة المخزون':
         st.subheader('📦 موديول إدارة المستودع وجرد المخزون التلقائي')
         st.write('يتيح هذا الموديول جرد الكميات والتكويد الآلي وخصم المبيعات المباشر **عبر رفع ملف تقرير الوعلان (.csv)**:')
@@ -1536,76 +1537,90 @@ else:
 
         st.divider()
 
-        # 📥 1. التكويد والخصم التلقائي عبر ملف الوعلان .csv
+        # 📥 1. التكويد والخصم التلقائي عبر ملف الوعلان .csv المباشر القارئ للأسطر
         st.markdown("### 📥 1. الخصم والتكويد الآلي عبر تقرير الوعلان (.csv):")
-        st.write("ارفع ملف الوعلان بصيغة `.csv` وسيتم قراءة الأصناف، **تكويد الأصناف الجديدة تلقائياً**، وخصم كميات المبيعات فوراً:")
+        st.write("ارفع ملف الوعلان التفصيلي بصيغة `.csv` وسيتم قراءة الأصناف، **تكويد الأصناف الجديدة تلقائياً**، وخصم كميات المبيعات فوراً:")
 
-        uploaded_csv = st.file_uploader("اختر تقرير الوعلان (.csv):", type=['csv'], key="oalan_csv_uploader")
+        uploaded_csv = st.file_uploader("اختر تقرير الوعلان التفصيلي (.csv):", type=['csv'], key="oalan_csv_uploader")
         
         if uploaded_csv is not None:
             if st.button("⚡ تطبيق التكويد الآلي وخصم المبيعات من المخزون", use_container_width=True):
-                # تجربة الترميزات المختلفة لحل مشكلة utf-8 المتقدمة
-                bytes_data = uploaded_csv.read()
-                df_csv = None
-                
-                # قائمة المحاولات الذكية لقراءة ترميزات برنامج الوعلان
-                encodings_to_try = ['windows-1256', 'cp1256', 'iso-8859-6', 'utf-8', 'utf-8-sig', 'utf-16', 'latin1']
-                for enc in encodings_to_try:
-                    try:
-                        df_csv = pd.read_csv(io.BytesIO(bytes_data), encoding=enc, on_bad_lines='skip')
-                        if len(df_csv.columns) > 1:
+                try:
+                    bytes_data = uploaded_csv.read()
+
+                    # فك الترميز بـ windows-1256 أو utf-8
+                    text_content = ""
+                    for enc in ['windows-1256', 'cp1256', 'utf-8-sig', 'utf-8', 'iso-8859-6', 'latin1']:
+                        try:
+                            text_content = bytes_data.decode(enc)
                             break
-                    except Exception:
-                        continue
+                        except Exception:
+                            continue
 
-                if df_csv is not None:
-                    # التعرف التلقائي على الأعمدة في تقرير الوعلان
-                    code_c = next((c for c in df_csv.columns if any(k in str(c) for k in ['رمز المادة', 'كود', 'رقم', 'Code', 'code', 'Item', 'الاصناف'])), None)
-                    name_c = next((c for c in df_csv.columns if any(k in str(c) for k in ['تفاصيل الصنف', 'المادة', 'اسم', 'الصنف', 'Name', 'name'])), None)
-                    qty_c = next((c for c in df_csv.columns if any(k in str(c) for k in ['الكمية', 'كمية', 'Qty', 'qty'])), None)
-
-                    if qty_c and (code_c or name_c):
+                    if text_content:
+                        reader = csv.reader(io.StringIO(text_content))
                         added_new_items = 0
                         deducted_items = 0
-                        
                         existing_codes = {str(item['كود_الصنف']).strip(): item for item in inv_data}
 
-                        for _, row in df_csv.iterrows():
-                            item_code = str(row.get(code_c, '')).strip() if code_c else str(len(inv_data) + 101)
-                            item_name = str(row.get(name_c, f"صنف_{item_code}")).strip() if name_c else f"صنف_{item_code}"
-                            
-                            # تنظيف وتجهيز رقم الكمية
-                            raw_qty = str(row.get(qty_c, 0)).replace(',', '')
-                            qty_val = float(pd.to_numeric(raw_qty, errors='coerce') or 0)
+                        for row in reader:
+                            # فحص الصفوف للبحث عن الكود والكمية والاسم
+                            if len(row) >= 30:
+                                # البحث عن الكود في الخانات المتوقعة بالوعلان (36)
+                                potential_code = ""
+                                for cell in row:
+                                    cell_s = str(cell).strip()
+                                    if cell_s.isdigit() and len(cell_s) >= 4 and len(cell_s) <= 15:
+                                        potential_code = cell_s
+                                        break
+                                
+                                # البحث عن اسم الصنف النصي بالإنجليزية أو العربية
+                                potential_name = ""
+                                for cell in row:
+                                    cell_s = str(cell).strip()
+                                    if len(cell_s) > 3 and not cell_s.isdigit() and not 'http' in cell_s and not 'Page' in cell_s and not 'شركة' in cell_s:
+                                        potential_name = cell_s
 
-                            if qty_val > 0 and item_code and item_code != 'nan' and item_code != '':
-                                if item_code in existing_codes:
-                                    # صنف موجود - خصم المنصرف
-                                    existing_codes[item_code]['المنصرف'] = float(existing_codes[item_code].get('المنصرف', 0)) + qty_val
-                                    deducted_items += 1
-                                else:
-                                    # صنف جديد - تكويد آلي وخصم
-                                    new_item_dict = {
-                                        "كود_الصنف": item_code,
-                                        "اسم_الصنف": item_name,
-                                        "الوحدة": "حبة/كرتونة",
-                                        "المخزون_الافتتاحي": 0.0,
-                                        "الوارد": 0.0,
-                                        "المنصرف": qty_val,
-                                        "الحد_الأدنى": 10.0
-                                    }
-                                    inv_data.append(new_item_dict)
-                                    existing_codes[item_code] = new_item_dict
-                                    added_new_items += 1
-                                    deducted_items += 1
+                                # البحث عن رقم الكمية
+                                potential_qty = 0.0
+                                for cell in reversed(row):
+                                    try:
+                                        c_val = float(str(cell).strip().replace(',', ''))
+                                        if 0 < c_val < 100000 and c_val != float(potential_code or 0):
+                                            potential_qty = c_val
+                                            break
+                                    except:
+                                        continue
+
+                                if potential_qty > 0 and (potential_code or potential_name):
+                                    item_code = potential_code if potential_code else str(len(inv_data) + 101)
+                                    item_name = potential_name if potential_name else f"صنف_{item_code}"
+
+                                    if item_code in existing_codes:
+                                        existing_codes[item_code]['المنصرف'] = float(existing_codes[item_code].get('المنصرف', 0)) + potential_qty
+                                        deducted_items += 1
+                                    else:
+                                        new_item_dict = {
+                                            "كود_الصنف": item_code,
+                                            "اسم_الصنف": item_name,
+                                            "الوحدة": "حبة/كرتونة",
+                                            "المخزون_الافتتاحي": 0.0,
+                                            "الوارد": 0.0,
+                                            "المنصرف": potential_qty,
+                                            "الحد_الأدنى": 10.0
+                                        }
+                                        inv_data.append(new_item_dict)
+                                        existing_codes[item_code] = new_item_dict
+                                        added_new_items += 1
+                                        deducted_items += 1
 
                         save_inventory_data(inv_data)
-                        st.success(f"تمت العملية بنجاح! تم خصم مبيعات ({deducted_items}) صنف، وتكويد ({added_new_items}) صنف جديد آلياً!")
+                        st.success(f"تمت معالجة الملف بنجاح! تم خصم كميات ({deducted_items}) حركة مبيعات، وتكويد ({added_new_items}) صنف جديد آلياً!")
                         st.rerun()
                     else:
-                        st.error("لم يتم العثور على أعمدة (الكمية/الكود) داخل الملف. يرجى التأكد من اختيار ملف الوعلان التفصيلي الصحيح.")
-                else:
-                    st.error("تعذر قراءة ملف .csv. يرجى التأكد من تصدير التقرير بشكل صحيح.")
+                        st.error("تعذر فك ترميز الملف المرفق.")
+                except Exception as e:
+                    st.error(f"حدث خطأ أثناء معالجة الملف: {e}")
 
         st.divider()
 
@@ -1657,7 +1672,6 @@ else:
         tab_inv1, tab_inv2, tab_inv3 = st.tabs(["📋 جدول الرصيد التراكمي والبحث", "➕ إضافة توريد/وارد جديد", "📑 سجل سندات الصرف المخزني"])
 
         with tab_inv1:
-            # 🔍 شريط البحث عن الأصناف
             search_inv_kw = st.text_input("🔍 استعلام وسريع عن صنف (بالكود أو الاسم):", placeholder="اكتب اسم الصنف أو كوده لفلترة النتائج...")
             
             df_display_inv = df_inv[['كود_الصنف', 'اسم_الصنف', 'الوحدة', 'المخزون_الافتتاحي', 'الوارد', 'المنصرف', 'الرصيد_الحالي', 'الحد_الأدنى']].copy()
