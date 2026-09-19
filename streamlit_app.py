@@ -1593,7 +1593,7 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 📦 5. موديول إدارة المستودع والمخزون المطور للربط المباشر بتقرير الوعلان AK, AX, AW
+   # 📦 5. موديول إدارة المستودع والمخزون المطور للربط المباشر بتقرير الوعلان AK, AX, AW
     elif selected_option == 'جرد وحركة المخزون':
         st.subheader('📦 موديول إدارة المستودع وجرد المخزون التلقائي')
         st.write('يتيح هذا الموديول الجرد، التكويد الآلي، وخصم المبيعات المباشر من الحقول **AK (كود), AX (الاسم), AW (الكمية)** لتقرير الوعلان:')
@@ -1621,14 +1621,14 @@ else:
 
         st.divider()
 
-        # 📥 1. الخصم والتكويد الآلي المباشر من الحقول AK, AX, AW
+        # 📥 1. الخصم والتكويد الآلي المباشر الدقيق من الحقول AK (36), AW (48), AX (49)
         st.markdown("### 📥 1. الخصم والتكويد الآلي عبر تقرير الوعلان (.csv):")
-        st.write("ارفع تقرير الوعلان وسيتم القراءة آلياً من حقول **`AK` (الكود)** و **`AX` (اسم الصنف)** و **`AW` (الكمية المبيعة)**:")
+        st.write("ارفع تقرير الوعلان وسيتم القراءة المباشرة من حقول **`AK` (الكود)** و **`AX` (اسم الصنف)** و **`AW` (الكمية المبيعة)**:")
 
         uploaded_csv = st.file_uploader("اختر تقرير الوعلان التفصيلي (.csv):", type=['csv'], key="oalan_csv_uploader_ak_ax_aw")
         
         if uploaded_csv is not None:
-            if st.button("⚡ تطبيق التكويد والخصم من حقول AK/AX/AW", use_container_width=True):
+            if st.button("⚡ تطبيق التكويد والخصم المباشر من حقول AK/AX/AW", use_container_width=True):
                 try:
                     bytes_data = uploaded_csv.read()
 
@@ -1648,31 +1648,19 @@ else:
                         existing_codes = {str(item['كود_الصنف']).strip(): item for item in inv_data}
 
                         for row in reader:
-                            # فحص وجود الأعمدة المستهدفة بالأدلة المكانية AK=36, AW=48/49, AX=49/50
+                            # القراءة المباشرة والدقيقة بناء على التحليل الفعلي لـ 2.csv
                             if len(row) >= 40:
                                 try:
-                                    # حقل AK هو الكود في أسلوب فهرسة المصفوفات (غالباً الصف الأخير أو 36)
+                                    # AK = الخانة 36 (الكود)
                                     raw_code = str(row[36]).strip() if len(row) > 36 else ""
-                                    # حقل AX اسم الصنف (عادة الخانة 50 أو القريبة منها)
-                                    raw_name = str(row[50]).strip() if len(row) > 50 else (str(row[49]).strip() if len(row) > 49 else "")
-                                    # حقل AW الكمية
-                                    raw_qty_str = str(row[49]).strip() if len(row) > 49 else (str(row[48]).strip() if len(row) > 48 else "0")
-                                    
-                                    # تنظيف القيم
+                                    # AW = الخانة 48 (الكمية)
+                                    raw_qty_str = str(row[48]).strip() if len(row) > 48 else "0"
+                                    # AX = الخانة 49 (الاسم)
+                                    raw_name = str(row[49]).strip() if len(row) > 49 else ""
+
+                                    # تنظيف واستخراج رقم الكمية
                                     raw_qty_clean = raw_qty_str.replace(',', '')
                                     qty_val = float(pd.to_numeric(raw_qty_clean, errors='coerce') or 0)
-
-                                    if not raw_code.isdigit() and len(row) >= 51:
-                                        # محاولة البديل في حال زحزحة الأعمدة
-                                        for idx_c, cell_val in enumerate(row):
-                                            if str(cell_val).strip().isdigit() and len(str(cell_val).strip()) >= 5:
-                                                raw_code = str(cell_val).strip()
-                                                if idx_c + 14 < len(row):
-                                                    raw_name = str(row[idx_c + 14]).strip()
-                                                if idx_c + 13 < len(row):
-                                                    raw_qty_clean = str(row[idx_c + 13]).strip().replace(',', '')
-                                                    qty_val = float(pd.to_numeric(raw_qty_clean, errors='coerce') or 0)
-                                                break
 
                                     if qty_val > 0 and raw_code and raw_code != 'nan':
                                         item_code = raw_code
@@ -1713,7 +1701,7 @@ else:
                             save_uploaded_sales_batches(uploaded_batches)
 
                         save_inventory_data(inv_data)
-                        st.success(f"تمت معالجة التقرير بنجاح! تم خصم كميات ({deducted_items}) صنف من حقول AK/AX/AW، وتكويد ({added_new_items}) صنف جديد آلياً!")
+                        st.success(f"تمت العملية بنجاح! تم خصم مبيعات ({deducted_items}) صنف من حقول AK/AX/AW، وتكويد ({added_new_items}) صنف جديد آلياً!")
                         st.rerun()
                     else:
                         st.error("تعذر فك ترميز الملف المرفق.")
@@ -1785,7 +1773,6 @@ else:
         with tab_inv2:
             st.markdown("#### 📆 سجل حركة المستودع اليومية (نظام الصفحات):")
             
-            # تجميع التواريخ المسجلة بالسندات والباتشات
             recorded_dates = set()
             for sv in stock_vouchers:
                 recorded_dates.add(sv['date'].split(' ')[0])
@@ -1815,7 +1802,6 @@ else:
                         print_stock_out_dialog(sv_item)
 
                     if col_v5.button("🗑️ حذف", key=f"del_day_sv_{sv_idx}"):
-                        # رد الكميات للمخزن عند الحذف
                         t_item = next((item for item in inv_data if str(item['كود_الصنف']).strip() == str(sv_item['item_code']).strip()), None)
                         if t_item:
                             t_item['المنصرف'] = max(0.0, float(t_item.get('المنصرف', 0)) - float(sv_item['qty']))
@@ -1837,7 +1823,6 @@ else:
                     col_b3.write(f"عدد الأصناف المخصومة: **{b_item['items_count']} صنف**")
 
                     if col_b4.button("🗑️ إلغاء التقرير وردّ الكميات", key=f"revert_batch_btn_{b_idx}"):
-                        # رد كافة الكميات الخاصة بالباتش
                         for d_sub in b_item.get('details', []):
                             t_code = str(d_sub['code']).strip()
                             t_qty = float(d_sub['qty'])
