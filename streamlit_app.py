@@ -1593,7 +1593,7 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-# 📦 5. موديول إدارة المستودع والمخزون المطور المباشر والمتكامل 100%
+# # 📦 5. موديول إدارة المستودع والمخزون المطور المباشر والمتكامل 100%
     elif selected_option == 'جرد وحركة المخزون':
         st.subheader('📦 موديول إدارة المستودع وجرد المخزون التلقائي')
         st.caption('إدارة التوريدات، سندات الإدخال والصرف متعددة الأصناف، الخصم الآلي، وسندات الفروع الرسمية')
@@ -1713,7 +1713,7 @@ else:
                                 save_uploaded_sales_batches(uploaded_batches)
 
                             save_inventory_data(inv_data)
-                            st.success(f"تم خصم كميات ({deducted_items}) صنف وتكويد ({added_new_items}) صنف جديد بنجاح بنسبة 100%!")
+                            st.success(f"تم خصم كميات ({deducted_items}) صنف وتكويد ({added_new_items}) صنف جديد بنجاح!")
                             st.rerun()
                         else:
                             st.error("تعذر فك ترميز الملف المرفق.")
@@ -1731,9 +1731,8 @@ else:
                 
                 st.markdown("##### 📦 حدد الأصناف المُراد صرفها بهذا السند:")
                 
-                # أداة الاختيار المتعدد للأصناف
                 item_options_list = [item['اسم_الصنف'] for item in inv_data] if inv_data else []
-                selected_items_multi = st.multiselect("اختر صنف أو كذا صنف معاً:", options=item_options_list, key="ms_stock_out_items")
+                selected_items_multi = st.multiselect("اختر صنف أو كذا صنف معاً للصرف:", options=item_options_list, key="ms_stock_out_items")
 
                 qtys_to_deduct = {}
                 if selected_items_multi:
@@ -1741,7 +1740,7 @@ else:
                     for s_item_name in selected_items_multi:
                         t_item = next((it for it in inv_data if it['اسم_الصنف'] == s_item_name), None)
                         rem_curr = float(t_item.get('المخزون_الافتتاحي',0)) + float(t_item.get('الوارد',0)) - float(t_item.get('المنصرف',0)) if t_item else 0
-                        qtys_to_deduct[s_item_name] = st.number_input(f"الكمية لـ ({s_item_name}) - المتبقي بالمخزن [{rem_curr:,.0f}]:", min_value=0.1, value=1.0, step=1.0, key=f"ms_qty_{s_item_name}")
+                        qtys_to_deduct[s_item_name] = st.number_input(f"الكمية لـ ({s_item_name}) [الرصيد المتبقي بالمخزن: {rem_curr:,.0f}]:", min_value=0.1, value=1.0, step=1.0, key=f"ms_qty_{s_item_name}")
 
                 sub_so = st.form_submit_button("🚀 تأكيد إنشاء سند الصرف الموحد")
                 if sub_so and qtys_to_deduct:
@@ -1787,76 +1786,53 @@ else:
         with tab_inv1:
             search_inv_kw = st.text_input("🔍 استعلام سريع عن صنف (بالكود أو الاسم):", placeholder="اكتب اسم الصنف أو كوده لفلترة النتائج...")
             
-            if inv_data:
-                filtered_inv_list = inv_data.copy()
+            if not df_inv.empty:
+                df_display_inv = df_inv[['كود_الصنف', 'اسم_الصنف', 'الوحدة', 'المخزون_الافتتاحي', 'الوارد', 'المنصرف', 'الرصيد_الحالي', 'الحد_الأدنى']].copy()
                 
+                # إصلاح معالجة الأكواد الأسية
+                df_display_inv['كود_الصنف'] = df_display_inv['كود_الصنف'].apply(lambda x: f"{int(float(x))}" if 'E+' in str(x) or 'e+' in str(x) else str(x))
+
                 if search_inv_kw:
-                    filtered_inv_list = [
-                        it for it in filtered_inv_list 
-                        if search_inv_kw.lower() in str(it['كود_الصنف']).lower() or search_inv_kw.lower() in str(it['اسم_الصنف']).lower()
+                    df_display_inv = df_display_inv[
+                        df_display_inv['كود_الصنف'].astype(str).str.contains(search_inv_kw, case=False, na=False) |
+                        df_display_inv['اسم_الصنف'].astype(str).str.contains(search_inv_kw, case=False, na=False)
                     ]
 
-                # عرض جدول HTML مصمم خصيصاً برؤية واضحة 100% يمنع قص الكود والاسم نهائياً
-                inv_table_html = f"""
-                <div style="overflow-x:auto; background-color:{bg_card}; border:2px solid #D97706; border-radius:10px; padding:10px;">
-                <table style="width:100%; border-collapse:collapse; font-family:'Cairo', sans-serif; direction:rtl; text-align:center;">
-                    <thead>
-                        <tr style="background-color:#1E3A8A; color:#FFFFFF; font-size:14px; font-weight:bold;">
-                            <th style="padding:10px; border:1px solid #334155; width:22%;">كود الصنف / الباركود</th>
-                            <th style="padding:10px; border:1px solid #334155; width:35%; text-align:right;">اسم الصنف بالكامل</th>
-                            <th style="padding:10px; border:1px solid #334155; width:10%;">الوحدة</th>
-                            <th style="padding:10px; border:1px solid #334155;">الافتتاحي</th>
-                            <th style="padding:10px; border:1px solid #334155;">الوارد (+)</th>
-                            <th style="padding:10px; border:1px solid #334155;">المنصرف (-)</th>
-                            <th style="padding:10px; border:1px solid #334155;">الرصيد المتبقي</th>
-                            <th style="padding:10px; border:1px solid #334155;">الحد الأدنى</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                """
-                for item in filtered_inv_list:
-                    c_init = float(item.get('المخزون_الافتتاحي', 0))
-                    c_in = float(item.get('الوارد', 0))
-                    c_out = float(item.get('المنصرف', 0))
-                    c_rem = c_init + c_in - c_out
-                    
-                    display_code = str(item['كود_الصنف']).strip()
-                    if 'E+' in display_code or 'e+' in display_code:
-                        try: display_code = str(int(float(display_code)))
-                        except: pass
-
-                    inv_table_html += f"""
-                        <tr style="border-bottom:1px solid #334155; font-size:13px; color:{text_color};">
-                            <td style="padding:8px; border:1px solid #334155; font-weight:bold; color:#F59E0B;">{display_code}</td>
-                            <td style="padding:8px; border:1px solid #334155; font-weight:bold; text-align:right;">{item['اسم_الصنف']}</td>
-                            <td style="padding:8px; border:1px solid #334155;">{item.get('الوحدة','حبة/كرتونة')}</td>
-                            <td style="padding:8px; border:1px solid #334155;">{c_init:,.0f}</td>
-                            <td style="padding:8px; border:1px solid #334155; color:#10B981; font-weight:bold;">{c_in:,.0f}</td>
-                            <td style="padding:8px; border:1px solid #334155; color:#EF4444; font-weight:bold;">{c_out:,.0f}</td>
-                            <td style="padding:8px; border:1px solid #334155; font-weight:bold; font-size:14px; background:#0F172A; color:#F59E0B;">{c_rem:,.0f}</td>
-                            <td style="padding:8px; border:1px solid #334155;">{float(item.get('الحد_الأدنى',10)):,.0f}</td>
-                        </tr>
-                    """
-                inv_table_html += "</tbody></table></div>"
-                st.markdown(inv_table_html, unsafe_allow_html=True)
+                # عرض جدول Streamlit التفاعلي الرسمي الواضح 100% بدون أي HTML أو نصوص بيضاء
+                st.dataframe(
+                    df_display_inv, 
+                    use_container_width=True, 
+                    hide_index=True,
+                    column_config={
+                        "كود_الصنف": st.column_config.TextColumn("كود الصنف / الباركود"),
+                        "اسم_الصنف": st.column_config.TextColumn("اسم الصنف بالكامل"),
+                        "الوحدة": st.column_config.TextColumn("الوحدة"),
+                        "المخزون_الافتتاحي": st.column_config.NumberColumn("الافتتاحي", format="%.0f"),
+                        "الوارد": st.column_config.NumberColumn("الوارد (+)", format="%.0f"),
+                        "المنصرف": st.column_config.NumberColumn("المنصرف (-)", format="%.0f"),
+                        "الرصيد_الحالي": st.column_config.NumberColumn("الرصيد المتبقي بالمخزن", format="%.0f"),
+                        "الحد_الأدنى": st.column_config.NumberColumn("الحد الأدنى", format="%.0f")
+                    }
+                )
             else:
                 st.info("المستودع فارغ حالياً (0 أصناف). ارفع تقرير الوعلان أو أضف سند إدخال بضاعة للبدء.")
 
         with tab_inv2:
             st.markdown("#### 📥 إنشاء سند استلام / إدخال بضاعة واردة من المصنع (متعدد الأصناف):")
-            st.caption("حدد كذا صنف معاً للتوريد واحتساب زيادة الرصيد بالمستودع:")
+            st.caption("حدد الأصناف الواردة من المصنع وضع كمية كل صنف لتوليد السند وزيادة الرصيد المباشر:")
 
             with st.form("multi_item_stock_in_form"):
                 supplier_src = st.text_input("مصدر التوريد / اسم المصنع:", value="مصنع ميم الخماسية للتصنيع - الخرج")
                 in_voucher_notes = st.text_input("رقم إذن التسليم / بيان الشحنة:")
                 
-                st.markdown("##### قائمة الأصناف المراد إدخالها:")
+                st.markdown("##### قائمة الأصناف المراد إدخالها وتوريدها:")
                 
-                existing_item_choices = [item['اسم_الصنف'] for item in inv_data] if inv_data else []
-                selected_in_items_multi = st.multiselect("اختر صنف أو كذا صنف وارد من المصنع:", options=existing_in_choices if 'existing_in_choices' in locals() else item_options_list if 'item_options_list' in locals() else [], key="ms_stock_in_items")
+                item_options_list_in = [item['اسم_الصنف'] for item in inv_data] if inv_data else []
+                selected_in_items_multi = st.multiselect("اختر صنف أو كذا صنف وارد من المصنع:", options=item_options_list_in, key="ms_stock_in_items")
 
                 in_qtys = {}
                 if selected_in_items_multi:
+                    st.write("📌 أدخل الكمية الواردة لكل صنف مختار:")
                     for in_s_name in selected_in_items_multi:
                         in_qtys[in_s_name] = st.number_input(f"الكمية الواردة لـ ({in_s_name}):", min_value=1.0, value=100.0, step=10.0, key=f"ms_in_qty_{in_s_name}")
 
