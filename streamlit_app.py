@@ -1544,19 +1544,23 @@ else:
         
         if uploaded_csv is not None:
             if st.button("⚡ تطبيق التكويد الآلي وخصم المبيعات من المخزون", use_container_width=True):
-                # تجربة الترميزات المختلفة لحل مشكلة utf-8
+                # تجربة الترميزات المختلفة لحل مشكلة utf-8 المتقدمة
                 bytes_data = uploaded_csv.read()
                 df_csv = None
-                for enc in ['windows-1256', 'utf-8', 'iso-8859-6', 'cp1256']:
+                
+                # قائمة المحاولات الذكية لقراءة ترميزات برنامج الوعلان
+                encodings_to_try = ['windows-1256', 'cp1256', 'iso-8859-6', 'utf-8', 'utf-8-sig', 'utf-16', 'latin1']
+                for enc in encodings_to_try:
                     try:
-                        df_csv = pd.read_csv(io.BytesIO(bytes_data), encoding=enc)
-                        break
+                        df_csv = pd.read_csv(io.BytesIO(bytes_data), encoding=enc, on_bad_lines='skip')
+                        if len(df_csv.columns) > 1:
+                            break
                     except Exception:
                         continue
 
                 if df_csv is not None:
                     # التعرف التلقائي على الأعمدة في تقرير الوعلان
-                    code_c = next((c for c in df_csv.columns if any(k in str(c) for k in ['رمز المادة', 'كود', 'رقم', 'Code', 'code', 'Item'])), None)
+                    code_c = next((c for c in df_csv.columns if any(k in str(c) for k in ['رمز المادة', 'كود', 'رقم', 'Code', 'code', 'Item', 'الاصناف'])), None)
                     name_c = next((c for c in df_csv.columns if any(k in str(c) for k in ['تفاصيل الصنف', 'المادة', 'اسم', 'الصنف', 'Name', 'name'])), None)
                     qty_c = next((c for c in df_csv.columns if any(k in str(c) for k in ['الكمية', 'كمية', 'Qty', 'qty'])), None)
 
@@ -1569,9 +1573,12 @@ else:
                         for _, row in df_csv.iterrows():
                             item_code = str(row.get(code_c, '')).strip() if code_c else str(len(inv_data) + 101)
                             item_name = str(row.get(name_c, f"صنف_{item_code}")).strip() if name_c else f"صنف_{item_code}"
-                            qty_val = float(pd.to_numeric(row.get(qty_c, 0), errors='coerce') or 0)
+                            
+                            # تنظيف وتجهيز رقم الكمية
+                            raw_qty = str(row.get(qty_c, 0)).replace(',', '')
+                            qty_val = float(pd.to_numeric(raw_qty, errors='coerce') or 0)
 
-                            if qty_val > 0 and item_code and item_code != 'nan':
+                            if qty_val > 0 and item_code and item_code != 'nan' and item_code != '':
                                 if item_code in existing_codes:
                                     # صنف موجود - خصم المنصرف
                                     existing_codes[item_code]['المنصرف'] = float(existing_codes[item_code].get('المنصرف', 0)) + qty_val
