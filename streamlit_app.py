@@ -1592,7 +1592,7 @@ else:
                 if st.button("🔍 جرد الخزينة", use_container_width=True, key="q_btn_audit_acc"):
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
-                    # 📦 5. موديول إدارة المستودع والمخزون المطور المباشر والمتكامل 100%
+                 # 📦 5. موديول إدارة المستودع والمخزون المطور المباشر والمتكامل 100%
     elif selected_option == 'جرد وحركة المخزون':
         st.subheader('📦 موديول إدارة المستودع وجرد المخزون التلقائي')
         st.caption('إدارة التوريدات، سندات الإدخال والصرف متعددة الأصناف، الخصم الآلي، وسندات الفروع الرسمية')
@@ -1777,7 +1777,7 @@ else:
 
         st.divider()
 
-        # 📋 3. جدول الجرد وسندات استلام الوارد وتصفية المخزون
+        # 📋 3. جدول الجرد المعكوس بالكامل لمنع إخفاء أو اقتصاص الكود والاسم
         st.markdown("### 📋 3. جدول الرصيد وسندات استلام الوارد وتصفية المخزون:")
         
         tab_inv1, tab_inv2, tab_inv3, tab_inv4 = st.tabs(["📋 جدول الرصيد الشامل", "➕ سند إدخال بضاعة (وارد المصنع)", "📆 سجل اليومية وسندات الصرف", "🧹 تصفية وتصفير المستودع"])
@@ -1786,7 +1786,7 @@ else:
             search_inv_kw = st.text_input("🔍 استعلام سريع عن صنف (بالكود أو الاسم):", placeholder="اكتب اسم الصنف أو كوده لفلترة النتائج...")
             
             if inv_data:
-                # تجهيز DataFrame مخصص بأسماء ومواقع صريحة للأعمدة
+                # ترتيب الأعمدة معكوساً (من الأرقام إلى الاسم والباركود) لضمان ظهور الاسم والباركود بوضوح تام باليسار
                 table_rows = []
                 for item in inv_data:
                     c_init = float(item.get('المخزون_الافتتاحي', 0))
@@ -1800,40 +1800,24 @@ else:
                         except: pass
 
                     table_rows.append({
-                        "اسم الصنف": item['اسم_الصنف'],
-                        "كود الصنف / الباركود": display_code,
-                        "الوحدة": item.get('الوحدة', 'حبة/كرتونة'),
-                        "الافتتاحي": c_init,
-                        "الوارد (+)": c_in,
-                        "المنصرف (-)": c_out,
                         "الرصيد المتبقي": c_rem,
-                        "الحد الأدنى": float(item.get('الحد_الأدنى', 10))
+                        "المنصرف (-)": c_out,
+                        "الوارد (+)": c_in,
+                        "الافتتاحي": c_init,
+                        "الوحدة": item.get('الوحدة', 'حبة/كرتونة'),
+                        "كود الصنف / الباركود": display_code,
+                        "اسم الصنف بالكامل": item['اسم_الصنف']
                     })
 
                 df_show = pd.DataFrame(table_rows)
 
                 if search_inv_kw:
                     df_show = df_show[
-                        df_show['اسم الصنف'].astype(str).str.contains(search_inv_kw, case=False, na=False) |
+                        df_show['اسم الصنف بالكامل'].astype(str).str.contains(search_inv_kw, case=False, na=False) |
                         df_show['كود الصنف / الباركود'].astype(str).str.contains(search_inv_kw, case=False, na=False)
                     ]
 
-                # عرض جدول مريح ومقروء 100% مع ترتيب الحقول النصية في البداية لمنع الاقتصاص
-                st.dataframe(
-                    df_show, 
-                    use_container_width=True, 
-                    hide_index=True,
-                    column_config={
-                        "اسم الصنف": st.column_config.TextColumn("اسم الصنف بالكامل", width="large"),
-                        "كود الصنف / الباركود": st.column_config.TextColumn("كود الصنف / الباركود", width="large"),
-                        "الوحدة": st.column_config.TextColumn("الوحدة", width="small"),
-                        "الافتتاحي": st.column_config.NumberColumn("الافتتاحي", format="%.0f"),
-                        "الوارد (+)": st.column_config.NumberColumn("الوارد (+)", format="%.0f"),
-                        "المنصرف (-)": st.column_config.NumberColumn("المنصرف (-)", format="%.0f"),
-                        "الرصيد المتبقي": st.column_config.NumberColumn("الرصيد المتبقي", format="%.0f"),
-                        "الحد الأدنى": st.column_config.NumberColumn("الحد الأدنى", format="%.0f")
-                    }
-                )
+                st.table(df_show)
             else:
                 st.info("المستودع فارغ حالياً (0 أصناف). ارفع تقرير الوعلان أو أضف سند إدخال بضاعة للبدء.")
 
