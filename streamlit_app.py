@@ -1593,7 +1593,7 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-   # 📦 5. موديول إدارة المستودع والمخزون المطور والدقيق
+ # 📦 5. موديول إدارة المستودع والمخزون المطور المنظم والمنقح
     elif selected_option == 'جرد وحركة المخزون':
         st.subheader('📦 موديول إدارة المستودع وجرد المخزون التلقائي')
         st.write('يتيح هذا الموديول الجرد، التكويد الآلي، وخصم المبيعات المباشر من الحقول **AK (كود), AX (الاسم), AW (الكمية)** لتقرير الوعلان:')
@@ -1616,14 +1616,15 @@ else:
         low_stock_count = len(df_inv[df_inv['الرصيد_الحالي'] <= df_inv['الحد_الأدنى']])
         c_i3.metric("⚠️ أصناف عند الحد الأدنى", f"{low_stock_count} صنف")
         
-        if st.button("🖨️ طباعة تقرير الجرد التراكمي (A4)", key="btn_print_inv_report", use_container_width=True):
-            print_inventory_report_dialog(df_inv)
+        with c_i4:
+            if st.button("🖨️ طباعة تقرير الجرد التراكمي (A4)", key="btn_print_inv_report", use_container_width=True):
+                print_inventory_report_dialog(df_inv)
 
         st.divider()
 
-        # 📥 1. الخصم والتكويد الآلي المباشر الدقيق من الحقول AK (36), AW (48), AX (49)
+        # 📥 1. الخصم والتكويد الآلي المباشر الدقيق مع منع التكرار المطابق بالاسم أو الكود
         st.markdown("### 📥 1. الخصم والتكويد الآلي عبر تقرير الوعلان (.csv):")
-        st.write("ارفع تقرير الوعلان وسيتم القراءة المباشرة من حقول **`AK` (الكود)** و **`AX` (اسم الصنف)** و **`AW` (الكمية المبيعة)**:")
+        st.caption("ارفع تقرير الوعلان التفصيلي وسيتم مطابقة الأصناف بالاسم والكود فوراً وتفادي صيغ الإكسيل الأسية (E+12).")
 
         uploaded_csv = st.file_uploader("اختر تقرير الوعلان التفصيلي (.csv):", type=['csv'], key="oalan_csv_uploader_ak_ax_aw")
         
@@ -1645,35 +1646,39 @@ else:
                         added_new_items = 0
                         deducted_items = 0
                         items_summary = []
-                        existing_codes = {str(item['كود_الصنف']).strip(): item for item in inv_data}
 
                         for row in reader:
-                            if len(row) >= 40:
+                            # فحص الأسطر التي تحتوي على تفاصيل الأصناف بأدلة AK=36, AW=48, AX=49
+                            if len(row) >= 50:
                                 try:
-                                    # AK = الخانة 36 (الكود)
-                                    raw_code = str(row[36]).strip() if len(row) > 36 else ""
-                                    # AW = الخانة 48 (الكمية)
-                                    raw_qty_str = str(row[48]).strip() if len(row) > 48 else "0"
-                                    # AX = الخانة 49 (الاسم)
-                                    raw_name = str(row[49]).strip() if len(row) > 49 else ""
+                                    raw_code = str(row[36]).strip()
+                                    raw_qty_str = str(row[48]).strip().replace(',', '')
+                                    raw_name = str(row[49]).strip()
 
-                                    # تحويل الباركود المعروض بصيغة E+12 إلى رقم صريح
+                                    # تحويل الباركود الأسّي إن وجد
                                     if 'E+' in raw_code or 'e+' in raw_code:
                                         try:
                                             raw_code = str(int(float(raw_code)))
                                         except:
                                             pass
 
-                                    # تنظيف واستخراج رقم الكمية المبيعة
-                                    raw_qty_clean = raw_qty_str.replace(',', '')
-                                    qty_val = float(pd.to_numeric(raw_qty_clean, errors='coerce') or 0)
+                                    qty_val = float(pd.to_numeric(raw_qty_str, errors='coerce') or 0)
 
-                                    if qty_val > 0 and raw_code and raw_code != 'nan':
-                                        item_code = raw_code
+                                    if qty_val > 0 and (raw_code or raw_name):
+                                        item_code = raw_code if raw_code else raw_name
                                         item_name = raw_name if raw_name else f"صنف_{item_code}"
 
-                                        if item_code in existing_codes:
-                                            existing_codes[item_code]['المنصرف'] = float(existing_codes[item_code].get('المنصرف', 0)) + qty_val
+                                        # مطابقة الصنف بالاسم أو الكود لمنع التكرار تماماً
+                                        match_item = None
+                                        for item in inv_data:
+                                            ex_code = str(item['كود_الصنف']).strip()
+                                            ex_name = str(item['اسم_الصنف']).strip()
+                                            if (ex_code and ex_code == item_code) or (ex_name and ex_name.lower() == item_name.lower()):
+                                                match_item = item
+                                                break
+
+                                        if match_item:
+                                            match_item['المنصرف'] = float(match_item.get('المنصرف', 0)) + qty_val
                                             deducted_items += 1
                                         else:
                                             new_item_dict = {
@@ -1686,7 +1691,6 @@ else:
                                                 "الحد_الأدنى": 10.0
                                             }
                                             inv_data.append(new_item_dict)
-                                            existing_codes[item_code] = new_item_dict
                                             added_new_items += 1
                                             deducted_items += 1
 
@@ -1706,7 +1710,7 @@ else:
                             save_uploaded_sales_batches(uploaded_batches)
 
                         save_inventory_data(inv_data)
-                        st.success(f"تمت العملية بنجاح! تم خصم مبيعات ({deducted_items}) صنف من حقول AK/AX/AW، وتكويد ({added_new_items}) صنف جديد آلياً!")
+                        st.success(f"تمت العملية بنجاح! تم خصم كميات ({deducted_items}) حركة مبيعات، وتكويد ({added_new_items}) صنف جديد دون تكرار!")
                         st.rerun()
                     else:
                         st.error("تعذر فك ترميز الملف المرفق.")
@@ -1715,22 +1719,19 @@ else:
 
         st.divider()
 
-        # 📄 2. إصدار سند صرف بضاعة / عينات للفروع مع تحسين معالجة الباركود
+        # 📄 2. إصدار سند صرف بضاعة / عينات للفروع
         st.markdown("### 📑 2. إصدار سند صرف بضاعة / عينات للفروع:")
         
         with st.form("create_stock_out_form"):
             so_dest = st.selectbox("المستلم / الفرع وجهة البضاعة:", ["مصنع ميم الخماسية الخرج", "مستودع ميم الخماسية الخرج", "مستودع ميم الخماسية الرياض", "عينة تجارية / عينات مبيعات", "فرع جدة", "عميل مباشر"])
             so_type = st.selectbox("نوع الإجراء:", ["صرف بضاعة تحويل فروع", "صرف عينات تسويقية", "صرف تلفيات / استخدام داخلي"])
             
-            # معالجة عرض الباركود المعروض بالقائمة ليكون رقماً كاملاً صريحاً بدلاً من E+12
+            # عرض قائمة اختيار موحدة وغير مكررة
             item_options = []
             for item in inv_data:
                 c_code = str(item['كود_الصنف']).strip()
                 if 'E+' in c_code or 'e+' in c_code:
-                    try:
-                        c_code = str(int(float(c_code)))
-                    except:
-                        pass
+                    c_code = str(item['اسم_الصنف'])
                 item_options.append(f"{item['اسم_الصنف']} - ({c_code})")
 
             selected_item_str = st.selectbox("اختر الصنف المراد صرفه:", item_options if item_options else ["لا توجد أصناف"])
@@ -1741,7 +1742,7 @@ else:
             sub_so = st.form_submit_button("🚀 تأكيد الصرف وإنشاء السند")
             if sub_so and item_options:
                 target_code = selected_item_str.split(' - (')[1].replace(')', '').strip() if ' - (' in selected_item_str else selected_item_str
-                target_item = next((item for item in inv_data if str(item['كود_الصنف']).strip() == target_code or ('E+' in str(item['كود_الصنف']) and target_code in str(item['كود_الصنف']))), None)
+                target_item = next((item for item in inv_data if str(item['كود_الصنف']).strip() == target_code or str(item['اسم_الصنف']).strip() in selected_item_str), None)
 
                 if target_item:
                     target_item['المنصرف'] = float(target_item.get('المنصرف', 0)) + so_qty
@@ -1767,17 +1768,17 @@ else:
 
         st.divider()
 
-        # 📋 3. جدول الجرد مع توسيع عرض الأعمدة لمنع قص الأسماء والأكواد
+        # 📋 3. جدول الجرد الكامل بعرض واسع للأعمدة + أداة تصفير وبدء صفحة جديدة
         st.markdown("### 📋 3. جدول رصيد وشاشة اليومية والحذف والمطابقة:")
         
-        tab_inv1, tab_inv2, tab_inv3, tab_inv4 = st.tabs(["📋 جدول الرصيد التراكمي والبحث", "📆 الحركة اليومية (نظام الصفحات)", "🗑️ إلغاء وتقارير المبيعات Mapped", "➕ إضافة توريد/وارد جديد"])
+        tab_inv1, tab_inv2, tab_inv3, tab_inv4 = st.tabs(["📋 جدول الرصيد التراكمي والبحث", "📆 الحركة اليومية (نظام الصفحات)", "🗑️ إلغاء وتقارير المبيعات Mapped", "➕ إضافة توريد / تصفير المخزن"])
 
         with tab_inv1:
             search_inv_kw = st.text_input("🔍 استعلام سريع عن صنف (بالكود أو الاسم):", placeholder="اكتب اسم الصنف أو كوده لفلترة النتائج...")
             
             df_display_inv = df_inv[['كود_الصنف', 'اسم_الصنف', 'الوحدة', 'المخزون_الافتتاحي', 'الوارد', 'المنصرف', 'الرصيد_الحالي', 'الحد_الأدنى']].copy()
             
-            # إصلاح صيغة الباركود في عرض الجدول
+            # تنظيف الكود الأسّي من جدول العرض
             df_display_inv['كود_الصنف'] = df_display_inv['كود_الصنف'].apply(lambda x: f"{int(float(x))}" if 'E+' in str(x) or 'e+' in str(x) else str(x))
 
             if search_inv_kw:
@@ -1786,7 +1787,7 @@ else:
                     df_display_inv['اسم_الصنف'].astype(str).str.contains(search_inv_kw, case=False, na=False)
                 ]
 
-            # عرض الجدول بأعمدة واسعة تتسع لكافة النصوص والباركودات
+            # عرض الجدول مع تخصيص مساحة واسعة لخانة الاسم والكود لضمان عدم قص النص
             st.dataframe(
                 df_display_inv, 
                 use_container_width=True, 
@@ -1835,7 +1836,7 @@ else:
                         print_stock_out_dialog(sv_item)
 
                     if col_v5.button("🗑️ حذف", key=f"del_day_sv_{sv_idx}"):
-                        t_item = next((item for item in inv_data if str(item['كود_الصنف']).strip() == str(sv_item['item_code']).strip()), None)
+                        t_item = next((item for item in inv_data if str(item['كود_الصنف']).strip() == str(sv_item['item_code']).strip() or str(item['اسم_الصنف']).strip() == str(sv_item['item_name']).strip()), None)
                         if t_item:
                             t_item['المنصرف'] = max(0.0, float(t_item.get('المنصرف', 0)) - float(sv_item['qty']))
                             save_inventory_data(inv_data)
@@ -1858,8 +1859,9 @@ else:
                     if col_b4.button("🗑️ إلغاء التقرير وردّ الكميات", key=f"revert_batch_btn_{b_idx}"):
                         for d_sub in b_item.get('details', []):
                             t_code = str(d_sub['code']).strip()
+                            t_name = str(d_sub['name']).strip()
                             t_qty = float(d_sub['qty'])
-                            inv_match = next((item for item in inv_data if str(item['كود_الصنف']).strip() == t_code), None)
+                            inv_match = next((item for item in inv_data if str(item['كود_الصنف']).strip() == t_code or str(item['اسم_الصنف']).strip().lower() == t_name.lower()), None)
                             if inv_match:
                                 inv_match['المنصرف'] = max(0.0, float(inv_match.get('المنصرف', 0)) - t_qty)
 
@@ -1873,22 +1875,23 @@ else:
                 st.info("لا توجد تقارير مبيعات مرفوعة سابقة بانتظار التراجع.")
 
         with tab_inv4:
+            st.markdown("#### ➕ إضافة توريد صنف جديد:")
             with st.form("add_new_stock_item_form"):
                 n_code = st.text_input("كود الصنف:")
                 n_name = st.text_input("اسم الصنف:")
-                n_unit = st.selectbox("الوحدة:", ["كرتونة", "حبة", "كجم", "متر", "طقم"])
+                n_unit = st.selectbox("الوحدة:", ["حبة/كرتونة", "كرتونة", "حبة", "كجم", "متر"])
                 n_init = st.number_input("الرصيد الافتتاحي:", min_value=0.0, value=0.0)
                 n_in = st.number_input("إضافة كمية واردة جديدة:", min_value=0.0, value=0.0)
                 n_min = st.number_input("الحد الأدنى للتنبيه:", min_value=0.0, value=10.0)
 
-                sub_n_item = st.form_submit_button("💾 حفظ التوريد / البيانات")
+                sub_n_item = st.form_submit_button("💾 حفظ التوريد / الصنف")
                 if sub_n_item and (n_code or n_name):
-                    existing_item = next((item for item in inv_data if str(item['كود_الصنف']).strip() == n_code or item['اسم_الصنف'] == n_name), None)
+                    existing_item = next((item for item in inv_data if str(item['كود_الصنف']).strip() == n_code or str(item['اسم_الصنف']).strip().lower() == n_name.lower()), None)
                     if existing_item:
                         existing_item['الوارد'] = float(existing_item.get('الوارد', 0)) + n_in
                     else:
                         inv_data.append({
-                            "كود_الصنف": n_code if n_code else str(len(inv_data) + 101),
+                            "كود_الصنف": n_code if n_code else n_name,
                             "اسم_الصنف": n_name,
                             "الوحدة": n_unit,
                             "المخزون_الافتتاحي": n_init,
@@ -1899,6 +1902,16 @@ else:
                     save_inventory_data(inv_data)
                     st.success("تم تحديث وحفظ بيانات المخزون سحابياً!")
                     st.rerun()
+
+            st.divider()
+            st.markdown("#### 🧹 أداة تصفية وبداية صفحة جديدة للمخزون:")
+            st.caption("إذا أردت مسح حركات وسجلات التجارب القديمة والبدء برصيد نظيف تماماً:")
+            if st.button("🧹 مسح سجلات تجارب المخزون والبدء برصيد جديد", key="btn_reset_inventory"):
+                save_inventory_data([])
+                save_stock_out_vouchers([])
+                save_uploaded_sales_batches([])
+                st.success("تم تنظيف وتصفير سجلات المستودع بنجاح! يمكنك الآن تجربة رفع الملف الأصلي صافياً.")
+                st.rerun()
     # 6. موديول عُهدة السواقين
     elif selected_option == 'عُهدة السواقين':
         st.subheader(f'🚚 موديول إدارة عُهدة السواقين المباشر - ({month_selected})')
