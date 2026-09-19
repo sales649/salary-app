@@ -1512,7 +1512,7 @@ else:
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
 
-    # 📦 5. موديول إدارة المستودع والمخزون المحدث
+    # 📦 5. موديول إدارة المستودع والمخزون المحدث مع دعم الترميز وشريط البحث
     elif selected_option == 'جرد وحركة المخزون':
         st.subheader('📦 موديول إدارة المستودع وجرد المخزون التلقائي')
         st.write('يتيح هذا الموديول جرد الكميات والتكويد الآلي وخصم المبيعات المباشر **عبر رفع ملف تقرير الوعلان (.csv)**:')
@@ -1544,13 +1544,21 @@ else:
         
         if uploaded_csv is not None:
             if st.button("⚡ تطبيق التكويد الآلي وخصم المبيعات من المخزون", use_container_width=True):
-                try:
-                    df_csv = pd.read_csv(uploaded_csv)
-                    
-                    # التعرف التلقائي على الأعمدة
-                    code_c = next((c for c in df_csv.columns if any(k in str(c) for k in ['كود', 'رقم', 'Code', 'code', 'Item'])), None)
-                    name_c = next((c for c in df_csv.columns if any(k in str(c) for k in ['اسم', 'الصنف', 'Name', 'name'])), None)
-                    qty_c = next((c for c in df_csv.columns if any(k in str(c) for k in ['كمية', 'الكمية', 'Qty', 'qty'])), None)
+                # تجربة الترميزات المختلفة لحل مشكلة utf-8
+                bytes_data = uploaded_csv.read()
+                df_csv = None
+                for enc in ['windows-1256', 'utf-8', 'iso-8859-6', 'cp1256']:
+                    try:
+                        df_csv = pd.read_csv(io.BytesIO(bytes_data), encoding=enc)
+                        break
+                    except Exception:
+                        continue
+
+                if df_csv is not None:
+                    # التعرف التلقائي على الأعمدة في تقرير الوعلان
+                    code_c = next((c for c in df_csv.columns if any(k in str(c) for k in ['رمز المادة', 'كود', 'رقم', 'Code', 'code', 'Item'])), None)
+                    name_c = next((c for c in df_csv.columns if any(k in str(c) for k in ['تفاصيل الصنف', 'المادة', 'اسم', 'الصنف', 'Name', 'name'])), None)
+                    qty_c = next((c for c in df_csv.columns if any(k in str(c) for k in ['الكمية', 'كمية', 'Qty', 'qty'])), None)
 
                     if qty_c and (code_c or name_c):
                         added_new_items = 0
@@ -1563,7 +1571,7 @@ else:
                             item_name = str(row.get(name_c, f"صنف_{item_code}")).strip() if name_c else f"صنف_{item_code}"
                             qty_val = float(pd.to_numeric(row.get(qty_c, 0), errors='coerce') or 0)
 
-                            if qty_val > 0:
+                            if qty_val > 0 and item_code and item_code != 'nan':
                                 if item_code in existing_codes:
                                     # صنف موجود - خصم المنصرف
                                     existing_codes[item_code]['المنصرف'] = float(existing_codes[item_code].get('المنصرف', 0)) + qty_val
@@ -1588,9 +1596,9 @@ else:
                         st.success(f"تمت العملية بنجاح! تم خصم مبيعات ({deducted_items}) صنف، وتكويد ({added_new_items}) صنف جديد آلياً!")
                         st.rerun()
                     else:
-                        st.error("لم يتم العثور على أعمدة (الكمية/الكود) داخل الملف. يرجى التأكد من اختيار ملف الوعلان الصحيح.")
-                except Exception as e:
-                    st.error(f"حدث خطأ أثناء معالجة الملف: {e}")
+                        st.error("لم يتم العثور على أعمدة (الكمية/الكود) داخل الملف. يرجى التأكد من اختيار ملف الوعلان التفصيلي الصحيح.")
+                else:
+                    st.error("تعذر قراءة ملف .csv. يرجى التأكد من تصدير التقرير بشكل صحيح.")
 
         st.divider()
 
@@ -1601,7 +1609,6 @@ else:
             so_dest = st.selectbox("المستلم / الفرع وجهة البضاعة:", ["مصنع ميم الخماسية الخرج", "مستودع ميم الخماسية الخرج", "مستودع ميم الخماسية الرياض", "عينة تجارية / عينات مبيعات", "فرع جدة", "عميل مباشر"])
             so_type = st.selectbox("نوع الإجراء:", ["صرف بضاعة تحويل فروع", "صرف عينات تسويقية", "صرف تلفيات / استخدام داخلي"])
             
-            # قائمة اختيار الصنف من المخزون
             item_options = [f"{item['كود_الصنف']} - {item['اسم_الصنف']}" for item in inv_data]
             selected_item_str = st.selectbox("اختر الصنف المراد صرفه:", item_options if item_options else ["لا توجد أصناف"])
             
@@ -1637,13 +1644,24 @@ else:
 
         st.divider()
 
-        # 📋 3. جدول الجرد وشاشة إضافة وارد جديد
+        # 📋 3. جدول الجرد مع شريط البحث وشاشة إضافة وارد جديد
         st.markdown("### 📋 3. جدول رصيد وشاشة تعديل المخزون:")
         
-        tab_inv1, tab_inv2, tab_inv3 = st.tabs(["📋 جدول الرصيد التراكمي", "➕ إضافة توريد/وارد جديد", "📑 سجل سندات الصرف المخزني"])
+        tab_inv1, tab_inv2, tab_inv3 = st.tabs(["📋 جدول الرصيد التراكمي والبحث", "➕ إضافة توريد/وارد جديد", "📑 سجل سندات الصرف المخزني"])
 
         with tab_inv1:
-            st.dataframe(df_inv[['كود_الصنف', 'اسم_الصنف', 'الوحدة', 'المخزون_الافتتاحي', 'الوارد', 'المنصرف', 'الرصيد_الحالي', 'الحد_الأدنى']], use_container_width=True, hide_index=True)
+            # 🔍 شريط البحث عن الأصناف
+            search_inv_kw = st.text_input("🔍 استعلام وسريع عن صنف (بالكود أو الاسم):", placeholder="اكتب اسم الصنف أو كوده لفلترة النتائج...")
+            
+            df_display_inv = df_inv[['كود_الصنف', 'اسم_الصنف', 'الوحدة', 'المخزون_الافتتاحي', 'الوارد', 'المنصرف', 'الرصيد_الحالي', 'الحد_الأدنى']].copy()
+            
+            if search_inv_kw:
+                df_display_inv = df_display_inv[
+                    df_display_inv['كود_الصنف'].astype(str).str.contains(search_inv_kw, case=False, na=False) |
+                    df_display_inv['اسم_الصنف'].astype(str).str.contains(search_inv_kw, case=False, na=False)
+                ]
+
+            st.dataframe(df_display_inv, use_container_width=True, hide_index=True)
 
         with tab_inv2:
             with st.form("add_new_stock_item_form"):
