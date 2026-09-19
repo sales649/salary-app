@@ -73,7 +73,7 @@ if '🌙' in st.session_state['theme_mode']:
 else:
     bg_app = "#F8FAFC"
     bg_card = "#FFFFFF"
-    bg_sidebar = "#1C2541"
+    bg_sidebar = "#1A1D24"
     text_color = "#0F172A"
     border_color = "#D97706"
     btn_sidebar_bg = "linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)"
