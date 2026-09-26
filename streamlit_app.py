@@ -2862,15 +2862,36 @@ else:
             mime="text/html",
             use_container_width=True
         )
- # 📜 10. موديول الخطابات والإنذارات الرسمية المطور مع الهوية والوضوح الشديد
+# 📜 10. موديول الخطابات والإنذارات الرسمية المطور + الأرشيف ورفع التواقيع
     elif selected_option == 'الخطابات الرسمية' and st.session_state.user_role == "admin":
-        st.subheader('📜 موديول إدارة وتوليد الخطابات والإنذارات الرسمية (5M)')
-        st.caption('اختر القالب والموظف، وسيقوم النظام بتعبئة البيانات ورقم الهوية مع إمكانية التعديل الحر قبل الطباعة:')
+        st.subheader('📜 موديول إدارة وتوليد الخطابات والأرشيف الرسمي (5M)')
+        st.caption('توليد الخطابات، جلب أرقام الإقامات تلقائياً، حفظ الأرشيف السحابي، ورفع النسخ الموقعة من الموظفين')
 
-        # تحسين لون النص داخل صناديق التعديل ليظهر باللون الأسود الواضح جداً
+        # قاموس أرقام الإقامات والهويات المستخرج مباشرة من ملف إكسيل عمالة ميم الخماسية
+        IQAMA_DB = {
+            'عبد العزيز احمد عثمان': '2194513590',
+            'حسن أنور عبد الرحمن': '2321317949',
+            'إسماعيل عزيز': '2217296736',
+            'طارق محمد ابن علي': '1057071340',
+            'فاطمة احمد ابن عطية': '1053775571',
+            'اسلام أنور عبد الرحمن': '2447887494',
+            'احمد السيد إسماعيل': '2386860544',
+            'محمد محمود عبد المنعم': '2469136366',
+            'مد ساجد': '2479171908',
+            'منيرة سعود عبدالله بن سيف': '1062002330',
+            'محمد روبيل': '2496108099',
+            'مازن سعد ابن رفيع': '1115016006',
+            'اسامه خالد عبد الرحمن': '1121320905',
+            'محمود محمد عثمان احمد': '2557609027',
+            'شوقي كامل محمد شوقي': '2599303738',
+            'سمير المغازي كمال': '2590481848',
+            'علي إسماعيل علي محمد': '2601539162'
+        }
+
+        # إصلاح ألوان النص في مربعات التعديل والمدخلات لتكون سوداء ناصعة وواضحة جداً
         st.markdown("""
         <style>
-        div[data-baseweb="textarea"] textarea {
+        div[data-baseweb="textarea"] textarea, div[data-baseweb="input"] input {
             color: #000000 !important;
             background-color: #FFFFFF !important;
             font-weight: bold !important;
@@ -2879,127 +2900,190 @@ else:
         </style>
         """, unsafe_allow_html=True)
 
-        col_let1, col_let2 = st.columns([1.1, 1.7])
+        tab_let1, tab_let2 = st.tabs(["📝 إنشاء وتوليد خطاب جديد", "📁 أرشيف الخطابات والمستندات الموقعة"])
 
-        with col_let1:
-            st.markdown("### 📝 1. اختيار نوع الخطاب والبيانات:")
-            
-            letter_type = st.selectbox(
-                "اختر القالب / نوع الخطاب:",
-                [
-                    "📜 خطاب قبول استقالة",
-                    "📜 خطاب إنهاء خدمة وإخلاء طرف",
-                    "📜 شهادة خبرة وتوصية",
-                    "📜 خطاب تعريف بالراتب",
-                    "⚠️ خطاب إنذار كتابي رسمي"
-                ]
-            )
+        with tab_let1:
+            col_let1, col_let2 = st.columns([1.1, 1.7])
 
-            # اختيار الموظف لتعبئة بياناته آلياً
-            emp_names_list = st.session_state.payroll_df['الاسم'].tolist() if not st.session_state.payroll_df.empty else []
-            selected_emp_name = st.selectbox("اختر الموظف المعني:", emp_names_list if emp_names_list else ["-- لا يوجد موظفين --"])
+            with col_let1:
+                st.markdown("### 📝 1. اختيار نوع الخطاب والبيانات:")
+                
+                letter_type = st.selectbox(
+                    "اختر القالب / نوع الخطاب:",
+                    [
+                        "📜 خطاب قبول استقالة",
+                        "📜 خطاب إنهاء خدمة وإخلاء طرف",
+                        "📜 شهادة خبرة وتوصية",
+                        "📜 خطاب تعريف بالراتب",
+                        "⚠️ خطاب إنذار كتابي رسمي"
+                    ]
+                )
 
-            target_emp_row = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'] == selected_emp_name].iloc[0] if selected_emp_name in emp_names_list else None
+                # اختيار الموظف لتعبئة بياناته آلياً
+                emp_names_list = st.session_state.payroll_df['الاسم'].tolist() if not st.session_state.payroll_df.empty else list(IQAMA_DB.keys())
+                selected_emp_name = st.selectbox("اختر الموظف المعني:", emp_names_list if emp_names_list else ["-- لا يوجد موظفين --"])
 
-            emp_job = target_emp_row['الوقت/الوظيفة'] if target_emp_row is not None and 'الوقت/الوظيفة' in target_emp_row else (target_emp_row['الوظيفة'] if target_emp_row is not None else "")
-            emp_branch = target_emp_row['الفرع'] if target_emp_row is not None else ""
-            emp_salary = target_emp_row['الراتب الأساسي'] if target_emp_row is not None else 0.0
-            emp_start_date = target_emp_row.get('تاريخ بداية العمل', '2024-01-01') if target_emp_row is not None else '2024-01-01'
-            
-            # سحب رقم الهوية أو الإقامة المسجل للموظف
-            raw_emp_id = target_emp_row.get('رقم الهوية', target_emp_row.get('الهوية', '')) if target_emp_row is not None else ''
-            emp_id_no = st.text_input("رقم الهوية الوطنية / الإقامة:", value=str(raw_emp_id) if raw_emp_id else "1000000000")
+                target_emp_row = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'] == selected_emp_name].iloc[0] if selected_emp_name in st.session_state.payroll_df.get('الاسم', []).values else None
 
-            letter_ref_code = f"5M-LTR-{get_ksa_now().strftime('%Y%m%d')}-{(len(selected_emp_name) if selected_emp_name else 1):02d}"
-            letter_date = st.date_input("تاريخ إصدار الخطاب:", get_ksa_now().date())
+                emp_job = target_emp_row['الوقت/الوظيفة'] if target_emp_row is not None and 'الوقت/الوظيفة' in target_emp_row else (target_emp_row['الوظيفة'] if target_emp_row is not None else "موظف")
+                emp_branch = target_emp_row['الفرع'] if target_emp_row is not None else "مصنع ميم الخماسية"
+                emp_salary = target_emp_row['الراتب الأساسي'] if target_emp_row is not None else 0.0
+                emp_start_date = target_emp_row.get('تاريخ بداية العمل', '2024-01-01') if target_emp_row is not None else '2024-01-01'
+                
+                # جلب رقم الهوية تلقائياً من الملف المعالج
+                auto_iqama = IQAMA_DB.get(selected_emp_name, target_emp_row.get('رقم الهوية', '') if target_emp_row is not None else '')
+                emp_id_no = st.text_input("رقم الهوية الوطنية / الإقامة (مجلوبة تلقائياً):", value=str(auto_iqama) if auto_iqama else "1000000000")
 
-            # تحضير الصيغة الافتراضية مع رقم الهوية/الإقامة
-            if "قبول استقالة" in letter_type:
-                title_txt = "خطاب قبول استقالة"
-                default_body = f"نفيدكم نحن شركة ميم الخماسية للتصنيع (5M) بأنه تم الموافقة على طلب الاستقالة المقدم من الموظف السيد/ {selected_emp_name}، الحامل لرقم هوية/إقامة ({emp_id_no})، والذي يعمل لدينا بوظيفة ({emp_job}) بفرع ({emp_branch})، وذلك اعتباراً من تاريخ {letter_date}.\n\nونحن إذ نشكره على ما قدمه من جهود جبارة وإخلاص طوال فترة عمله معنا منذ تاريخ بداية عمله في {emp_start_date}، نتمنى له دوام التوفيق والنجاح في خطواته القادمة."
-            elif "إنهاء خدمة" in letter_type:
-                title_txt = "خطاب إنهاء خدمة وإخلاء طرف"
-                default_body = f"تشهد شركة ميم الخماسية للتصنيع (5M) بأن الموظف السيد/ {selected_emp_name}، الحامل لرقم هوية/إقامة ({emp_id_no}) وشاغل وظيفة ({emp_job}) بفرع ({emp_branch})، قد انتهت فترة عمله لدينا رسمياً بتاريخ {letter_date}.\n\nوقد قام الموظف المذكور بأداء كافة مهامه وإخلاء طرفه من كافة العُهد والمستحقات المالية والإدارية طرف الشركة حتى تاريخه، وهذا الخطاب بمثابة إخلاء طرف رسمي ومعتمد دون أي مسؤولية لاحقة على الشركة."
-            elif "شهادة خبرة" in letter_type:
-                title_txt = "شهادة خبرة وتوصية رسمية"
-                default_body = f"تشهد إدارة شركة ميم الخماسية للتصنيع (5M) بأن السيد/ {selected_emp_name}، الحامل لرقم هوية/إقامة ({emp_id_no})، قد عمل لدينا بقطاع الشركة بوظيفة ({emp_job})، وذلك في الفترة من {emp_start_date} وحتى {letter_date}.\n\nوخلال فترة عمله كان مثالاً للموظف المخلص والمجتهد في أداء أعماله، وقد أُعطيت له هذه الشهادة بناءً على طلبه دون أن تتحمل الشركة أي أدنى مسؤولية تجاه حقوق الغير."
-            elif "تعريف بالراتب" in letter_type:
-                title_txt = "خطاب تعريف بالراتب والمسمى الوظيفي"
-                default_body = f"إلى: من يهمه الأمر / البنك المحترم\n\nتحية طيبة وبعد،،،\n\nتفيد شركة ميم الخماسية للتصنيع (5M) بأن الموظف السيد/ {selected_emp_name}، الحامل لرقم هوية/إقامة ({emp_id_no})، هو أحد منسوبي الشركة ويعمل لدينا بوظيفة ({emp_job}) بفرع ({emp_branch}) منذ تاريخ {emp_start_date} وحتى تاريخه.\n\nونفيدكم بأن الموظف يتقاضى راتباً شهرياً إجمالياً قدره ({emp_salary:,.2f} ريال سعودي). وقد حرر هذا الخطاب بناءً على طلب الموظف لتقديمه إلى جهتك الموقرة دون أدنى مسؤولية على الشركة."
-            else: # إنذار
-                title_txt = "خطاب إنذار كتابي رسمي"
-                default_body = f"إلى الموظف السيد/ {selected_emp_name} - رقم الهوية/الإقامة: ({emp_id_no}) - الوظيفة: ({emp_job})\n\nبناءً على التقارير الإدارية المرفوعة إلينا، نتوجه إليكم بهذا الإنذار الكتابي الرسمي وذلك بسبب: التأخر عن مواعيد العمل الرسمية وعدم الالتزام بالتعليمات الموجهة إليكم.\n\nونأمل منكم الالتزام بالتعليمات ولائحة العمل بالشركة وعدم تكرار مثل هذه المخالفات مستقبلاً، حتى لا نضطر لتطبيق العقوبات النظامية الواردة بنظام العمل السعودي."
+                letter_ref_code = f"5M-LTR-{get_ksa_now().strftime('%Y%m%d')}-{(len(selected_emp_name) if selected_emp_name else 1):02d}"
+                letter_date = st.date_input("تاريخ إصدار الخطاب:", get_ksa_now().date())
 
-            st.markdown("---")
-            st.markdown("##### ✏️ خانة التعديل الحر المباشر على نص الخطاب:")
-            edited_body_text = st.text_area(
-                "يمكنك تعديل أي جزء من النص أدناه وسينعكس فوراً على معاينة الخطاب:",
-                value=default_body,
-                height=220,
-                key=f"ta_letter_{letter_type}_{selected_emp_name}"
-            )
+                # تحضير الصيغة الافتراضية
+                if "قبول استقالة" in letter_type:
+                    title_txt = "خطاب قبول استقالة"
+                    default_body = f"نفيدكم نحن شركة ميم الخماسية للتصنيع (5M) بأنه تم الموافقة على طلب الاستقالة المقدم من الموظف السيد/ {selected_emp_name}، الحامل لرقم هوية/إقامة ({emp_id_no})، والذي يعمل لدينا بوظيفة ({emp_job}) بفرع ({emp_branch})، وذلك اعتباراً من تاريخ {letter_date}.\n\nونحن إذ نشكره على ما قدمه من جهود جبارة وإخلاص طوال فترة عمله معنا منذ تاريخ بداية عمله في {emp_start_date}، نتمنى له دوام التوفيق والنجاح في خطواته القادمة."
+                elif "إنهاء خدمة" in letter_type:
+                    title_txt = "خطاب إنهاء خدمة وإخلاء طرف"
+                    default_body = f"تشهد شركة ميم الخماسية للتصنيع (5M) بأن الموظف السيد/ {selected_emp_name}، الحامل لرقم هوية/إقامة ({emp_id_no}) وشاغل وظيفة ({emp_job}) بفرع ({emp_branch})، قد انتهت فترة عمله لدينا رسمياً بتاريخ {letter_date}.\n\nوقد قام الموظف المذكور بأداء كافة مهامه وإخلاء طرفه من كافة العُهد والمستحقات المالية والإدارية طرف الشركة حتى تاريخه، وهذا الخطاب بمثابة إخلاء طرف رسمي ومعتمد دون أي مسؤولية لاحقة على الشركة."
+                elif "شهادة خبرة" in letter_type:
+                    title_txt = "شهادة خبرة وتوصية رسمية"
+                    default_body = f"تشهد إدارة شركة ميم الخماسية للتصنيع (5M) بأن السيد/ {selected_emp_name}، الحامل لرقم هوية/إقامة ({emp_id_no})، قد عمل لدينا بقطاع الشركة بوظيفة ({emp_job})، وذلك في الفترة من {emp_start_date} وحتى {letter_date}.\n\nوخلال فترة عمله كان مثالاً للموظف المخلص والمجتهد في أداء أعماله، وقد أُعطيت له هذه الشهادة بناءً على طلبه دون أن تتحمل الشركة أي أدنى مسؤولية تجاه حقوق الغير."
+                elif "تعريف بالراتب" in letter_type:
+                    title_txt = "خطاب تعريف بالراتب والمسمى الوظيفي"
+                    default_body = f"إلى: من يهمه الأمر / البنك المحترم\n\nتحية طيبة وبعد،،،\n\nتفيد شركة ميم الخماسية للتصنيع (5M) بأن الموظف السيد/ {selected_emp_name}، الحامل لرقم هوية/إقامة ({emp_id_no})، هو أحد منسوبي الشركة ويعمل لدينا بوظيفة ({emp_job}) بفرع ({emp_branch}) منذ تاريخ {emp_start_date} وحتى تاريخه.\n\nونفيدكم بأن الموظف يتقاضى راتباً شهرياً إجمالياً قدره ({emp_salary:,.2f} ريال سعودي). وقد حرر هذا الخطاب بناءً على طلب الموظف لتقديمه إلى جهتك الموقرة دون أدنى مسؤولية على الشركة."
+                else: # إنذار
+                    title_txt = "خطاب إنذار كتابي رسمي"
+                    default_body = f"إلى الموظف السيد/ {selected_emp_name} - رقم الهوية/الإقامة: ({emp_id_no}) - الوظيفة: ({emp_job})\n\nبناءً على التقارير الإدارية المرفوعة إلينا، نتوجه إليكم بهذا الإنذار الكتابي الرسمي وذلك بسبب: التأخر عن مواعيد العمل الرسمية وعدم الالتزام بالتعليمات الموجهة إليكم.\n\nونأمل منكم الالتزام بالتعليمات ولائحة العمل بالشركة وعدم تكرار مثل هذه المخالفات مستقبلاً، حتى لا نضطر لتطبيق العقوبات النظامية الواردة بنظام العمل السعودي."
 
-        with col_let2:
-            st.markdown("### 🖨️ 2. معاينة وتوليد الخطاب الرسمي (A4):")
+                st.markdown("---")
+                st.markdown("##### ✏️ خانة التعديل الحر المباشر على نص الخطاب:")
+                edited_body_text = st.text_area(
+                    "يمكنك تعديل أي جزء من النص أدناه وسينعكس فوراً على معاينة الخطاب:",
+                    value=default_body,
+                    height=220,
+                    key=f"ta_letter_{letter_type}_{selected_emp_name}"
+                )
 
-            # تحويل أسطر النص المُعدل إلى فقرات HTML
-            formatted_body_html = edited_body_text.replace('\n', '<br>')
+            with col_let2:
+                st.markdown("### 🖨️ 2. معاينة وتوليد الخطاب الرسمي (A4):")
 
-            letter_full_html = f"""
-            <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-            <style>
-                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; padding: 15px; color:#000; }}
-                .letter-box {{ border: 3px solid #1E3A8A; border-radius: 10px; padding: 25px; background: #fff; min-height: 500px; position: relative; }}
-                .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 12px; }}
-                .letter-ref {{ display: flex; justify-content: space-between; font-size: 12px; color: #475569; margin-top: 10px; font-weight: bold; }}
-                .letter-title {{ text-align: center; font-size: 20px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 10px; margin: 20px 0; border-radius: 6px; text-decoration: underline; }}
-                .letter-body {{ font-size: 15px; line-height: 1.8; color: #1e293b; margin: 25px 0; text-align: justify; }}
-                .sigs-table {{ width: 100%; margin-top: 40px; border: none !important; }}
-                .sigs-table td {{ border: none !important; text-align: center; vertical-align: bottom; width: 50%; padding: 0 5px; font-weight: bold; font-size: 13px; }}
-                .stamp-img {{ width: 110px; height: 110px; object-fit: contain; margin: 0 auto; display: block; }}
-                .sign-img {{ width: 120px; height: 50px; object-fit: contain; margin: 0 auto; display: block; }}
-            </style></head><body>
-                <div class="letter-box">
-                    <div class="header-logo">
-                        <div style="font-size:11px; font-weight:bold;">Five-M Company For Industry<br>C. R. : 1011145035</div>
-                        <div style="font-size:42px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
-                        <div style="font-size:11px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
+                formatted_body_html = edited_body_text.replace('\n', '<br>')
+
+                letter_full_html = f"""
+                <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
+                <style>
+                    body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; padding: 15px; color:#000; }}
+                    .letter-box {{ border: 3px solid #1E3A8A; border-radius: 10px; padding: 25px; background: #fff; min-height: 500px; position: relative; }}
+                    .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 12px; }}
+                    .letter-ref {{ display: flex; justify-content: space-between; font-size: 12px; color: #475569; margin-top: 10px; font-weight: bold; }}
+                    .letter-title {{ text-align: center; font-size: 20px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 10px; margin: 20px 0; border-radius: 6px; text-decoration: underline; }}
+                    .letter-body {{ font-size: 15px; line-height: 1.8; color: #1e293b; margin: 25px 0; text-align: justify; }}
+                    .sigs-table {{ width: 100%; margin-top: 40px; border: none !important; }}
+                    .sigs-table td {{ border: none !important; text-align: center; vertical-align: bottom; width: 50%; padding: 0 5px; font-weight: bold; font-size: 13px; }}
+                    .stamp-img {{ width: 110px; height: 110px; object-fit: contain; margin: 0 auto; display: block; }}
+                    .sign-img {{ width: 120px; height: 50px; object-fit: contain; margin: 0 auto; display: block; }}
+                </style></head><body>
+                    <div class="letter-box">
+                        <div class="header-logo">
+                            <div style="font-size:11px; font-weight:bold;">Five-M Company For Industry<br>C. R. : 1011145035</div>
+                            <div style="font-size:42px; font-weight:900; color:#DC2626; font-family:Arial;">5M</div>
+                            <div style="font-size:11px; font-weight:bold;">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
+                        </div>
+                        <div class="letter-ref">
+                            <span>الرقم المرجعي: <b>{letter_ref_code}</b></span>
+                            <span>التاريخ: <b>{str(letter_date)}</b></span>
+                        </div>
+                        <div class="letter-title">{title_txt}</div>
+                        <div class="letter-body">
+                            {formatted_body_html}
+                        </div>
+                        <br><br>
+                        <div style="font-weight:bold; font-size:14px; text-align:left; padding-left:20px;">وتفضلوا بقبول فائق الاحترام والتقدير،،،</div>
+                        
+                        <table class="sigs-table">
+                            <tr>
+                                <td>
+                                    <div style="margin-bottom: 5px;">إدارة الموارد البشرية (HR)</div>
+                                    <img src="{SIGN_IMG_URL}" class="sign-img" alt="توقيع المحاسب">
+                                </td>
+                                <td>
+                                    <div style="margin-bottom: 5px;">اعتماد وتصديق الشركة</div>
+                                    <img src="{STAMP_IMG_URL}" class="stamp-img" alt="ختم 5M">
+                                </td>
+                            </tr>
+                        </table>
                     </div>
-                    <div class="letter-ref">
-                        <span>الرقم المرجعي: <b>{letter_ref_code}</b></span>
-                        <span>التاريخ: <b>{letter_date}</b></span>
-                    </div>
-                    <div class="letter-title">{title_txt}</div>
-                    <div class="letter-body">
-                        {formatted_body_html}
-                    </div>
-                    <br><br>
-                    <div style="font-weight:bold; font-size:14px; text-align:left; padding-left:20px;">وتفضلوا بقبول فائق الاحترام والتقدير،،،</div>
+                </body></html>
+                """
+
+                st.components.v1.html(letter_full_html, height=520, scrolling=True)
+
+                col_btn1, col_btn2 = st.columns(2)
+                with col_btn1:
+                    st.download_button(
+                        label=f"🖨️ تنزيل وطباعة ({title_txt})",
+                        data=letter_full_html.encode('utf-8'),
+                        file_name=f"خطاب_{selected_emp_name}_{title_txt}.html",
+                        mime="text/html",
+                        use_container_width=True
+                    )
+                with col_btn2:
+                    if st.button("💾 حفظ الخطاب بالأرشيف السحابي", use_container_width=True, key="btn_save_letter_archive"):
+                        letters_archive = fetch_cloud_store('company_letters_archive', [])
+                        letters_archive.append({
+                            "ref_code": letter_ref_code,
+                            "date": str(letter_date),
+                            "emp_name": selected_emp_name,
+                            "emp_id": emp_id_no,
+                            "type": title_txt,
+                            "content": edited_body_text,
+                            "html_data": letter_full_html,
+                            "signed_file": None
+                        })
+                        save_cloud_store('company_letters_archive', letters_archive)
+                        st.success("تم حفظ الخطاب بنجاح في الأرشيف السحابي للشركة!")
+                        st.rerun()
+
+        with tab_let2:
+            st.markdown("### 📁 أرشيف الخطابات والإنذارات الصادرة:")
+            letters_archive = fetch_cloud_store('company_letters_archive', [])
+
+            if letters_archive:
+                search_let_kw = st.text_input("🔍 استعلام عن خطاب (باسم الموظف أو الرقم المرجعي):", placeholder="اكتب اسم الموظف لفلترة الأرشيف...")
+                
+                filtered_archive = letters_archive.copy()
+                if search_let_kw:
+                    filtered_archive = [l for l in filtered_archive if search_let_kw.lower() in l['emp_name'].lower() or search_let_kw.lower() in l['ref_code'].lower()]
+
+                for idx_l, l_item in enumerate(reversed(filtered_archive)):
+                    col_arc1, col_arc2, col_arc3, col_arc4 = st.columns([1.5, 2.5, 1.5, 2])
                     
-                    <table class="sigs-table">
-                        <tr>
-                            <td>
-                                <div style="margin-bottom: 5px;">إدارة الموارد البشرية (HR)</div>
-                                <img src="{SIGN_IMG_URL}" class="sign-img" alt="توقيع المحاسب">
-                            </td>
-                            <td>
-                                <div style="margin-bottom: 5px;">اعتماد وتصديق الشركة</div>
-                                <img src="{STAMP_IMG_URL}" class="stamp-img" alt="ختم 5M">
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-            </body></html>
-            """
+                    col_arc1.write(f"<b>#{l_item['ref_code']}</b><br>📅 {l_item['date']}", unsafe_allow_html=True)
+                    col_arc2.write(f"<b>{l_item['type']}</b><br>👤 الموظف: <b>{l_item['emp_name']}</b> (هوية: {l_item.get('emp_id','')})", unsafe_allow_html=True)
+                    
+                    # رفع الخطاب الموقع من الموظف
+                    uploaded_signed_doc = col_arc3.file_uploader("📤 رفع النسخة الموقعة:", type=['pdf', 'png', 'jpg', 'jpeg'], key=f"file_signed_l_{idx_l}")
+                    if uploaded_signed_doc is not None:
+                        if col_arc3.button("💾 حفظ المرفق", key=f"btn_save_signed_{idx_l}"):
+                            l_item['signed_file'] = uploaded_signed_doc.name
+                            save_cloud_store('company_letters_archive', letters_archive)
+                            st.success("تم حفظ مرفق توقيع الموظف بنجاح!")
+                            st.rerun()
 
-            st.components.v1.html(letter_full_html, height=520, scrolling=True)
+                    if l_item.get('signed_file'):
+                        col_arc3.info(f"✅ مرفق الموظف: {l_item['signed_file']}")
 
-            st.download_button(
-                label=f"🖨️ تنزيل وطباعة ({title_txt}) بصيغة (A4 HTML / PDF)",
-                data=letter_full_html.encode('utf-8'),
-                file_name=f"خطاب_{selected_emp_name}_{letter_type}.html",
-                mime="text/html",
-                use_container_width=True
+                    with col_arc4:
+                        if st.button("🖨️ طباعة", key=f"print_arc_l_{idx_l}"):
+                            st.components.v1.html(l_item['html_data'], height=500, scrolling=True)
+
+                        if st.button("🗑️ حذف", key=f"del_arc_l_{idx_l}"):
+                            letters_archive.remove(l_item)
+                            save_cloud_store('company_letters_archive', letters_archive)
+                            st.success("تم حذف الخطاب من الأرشيف!")
+                            st.rerun()
+                    st.divider()
+            else:
+                st.info("لا توجد خطابات صادر محفوظة في الأرشيف حالياً.")
             )
     elif selected_option == 'حاسبة الخدمة' and st.session_state.user_role == "admin":
         st.subheader('🇸🇦 حاسبة مستحقات نهاية الخدمة وبدل الإجازات (نظام العمل السعودي)')
