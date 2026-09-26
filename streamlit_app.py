@@ -2862,7 +2862,7 @@ else:
             mime="text/html",
             use_container_width=True
         )
-# 📜 10. موديول الخطابات والإنذارات الرسمية المطور + توقيع الموظف والأرشيف
+# 📜 10. موديول الخطابات والإنذارات الرسمية المطور مع حل مشكلة الألوان
     elif selected_option == 'الخطابات الرسمية' and st.session_state.user_role == "admin":
         st.subheader('📜 موديول إدارة وتوليد الخطابات والأرشيف الرسمي (5M)')
         st.caption('توليد الخطابات، جلب أرقام الإقامات تلقائياً، حفظ الأرشيف السحابي، وتواقيع الموظفين المعتمدة')
@@ -2888,18 +2888,28 @@ else:
             'علي إسماعيل علي محمد': '2601539162'
         }
 
-        # تنسيق CSS احترافي لضمان خط أبيض ناصع وواضح جداً بجميع الخانات والصناديق
+        # حقن CSS نافذ بخصوصية عالية جداً لإجبار المربع على إظهار النص باللون الأسود الداكن أو الخلفية الكحلية بالنص الأبيض الناصع
         st.markdown("""
         <style>
-        div[data-baseweb="textarea"] textarea, div[data-baseweb="input"] input {
+        /* إجبار لون النص والخلفية في جميع مربعات التعديل */
+        .stTextArea textarea, textarea, [data-baseweb="textarea"] textarea, div[class*="stTextArea"] textarea {
+            color: #000000 !important;
+            -webkit-text-fill-color: #000000 !important;
+            background-color: #FFFFFF !important;
+            font-weight: 800 !important;
+            font-size: 16px !important;
+            line-height: 1.6 !important;
+            border: 2px solid #2563EB !important;
+            border-radius: 8px !important;
+        }
+        /* للمدخلات العادية */
+        .stTextInput input, [data-baseweb="input"] input {
             color: #FFFFFF !important;
+            -webkit-text-fill-color: #FFFFFF !important;
             background-color: #1E293B !important;
-            font-weight: bold !important;
+            font-weight: 700 !important;
             font-size: 15px !important;
             border: 1px solid #3B82F6 !important;
-        }
-        div[data-baseweb="textarea"] textarea::placeholder, div[data-baseweb="input"] input::placeholder {
-            color: #94A3B8 !important;
         }
         </style>
         """, unsafe_allow_html=True)
