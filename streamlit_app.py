@@ -2862,12 +2862,12 @@ else:
             mime="text/html",
             use_container_width=True
         )
-        # 📜 10. موديول الخطابات والإنذارات الرسمية المطور
+ # 📜 10. موديول الخطابات والإنذارات الرسمية المطور مع إمكانية التعديل الحر
     elif selected_option == 'الخطابات الرسمية' and st.session_state.user_role == "admin":
         st.subheader('📜 موديول إدارة وتوليد الخطابات والإنذارات الرسمية (5M)')
-        st.caption('اختر نوع الخطاب والموظف، وسيقوم النظام بتعبئة البيانات وتوليد قالب جاهز للطباعة والتصدير A4 فوراً:')
+        st.caption('اختر القالب والموظف، وسيقوم النظام بتعبئة البيانات مع إمكانية التعديل الحر المباشر على النص قبل الطباعة:')
 
-        col_let1, col_let2 = st.columns([1, 1.8])
+        col_let1, col_let2 = st.columns([1.1, 1.7])
 
         with col_let1:
             st.markdown("### 📝 1. اختيار نوع الخطاب والبيانات:")
@@ -2895,58 +2895,39 @@ else:
             emp_start_date = target_emp_row.get('تاريخ بداية العمل', '2024-01-01') if target_emp_row is not None else '2024-01-01'
 
             letter_ref_code = f"5M-LTR-{get_ksa_now().strftime('%Y%m%d')}-{(len(selected_emp_name) if selected_emp_name else 1):02d}"
-            letter_date = st.date_input("تاريخ أصدار الخطاب:", get_ksa_now().date())
+            letter_date = st.date_input("تاريخ إصدار الخطاب:", get_ksa_now().date())
 
-            # حقول متغيرة بحسب نوع الخطاب
-            custom_directed_to = "من يهمه الأمر"
-            custom_reason = ""
-            custom_notes = ""
+            # تحضير الصيغة الافتراضية بناءً على نوع الخطاب
+            if "قبول استقالة" in letter_type:
+                title_txt = "خطاب قبول استقالة"
+                default_body = f"نفيدكم نحن شركة ميم الخماسية للتصنيع (5M) بأنه تم الموافقة على طلب الاستقالة المقدم من الموظف السيد/ {selected_emp_name}، والذي يعمل لدينا بوظيفة ({emp_job}) بفرع ({emp_branch})، وذلك اعتباراً من تاريخ {letter_date}.\n\nونحن إذ نشكره على ما قدمه من جهود جبارة وإخلاص طوال فترة عمله معنا منذ تاريخ بداية عمله في {emp_start_date}، نتمنى له دوام التوفيق والنجاح في خطواته القادمة."
+            elif "إنهاء خدمة" in letter_type:
+                title_txt = "خطاب إنهاء خدمة وإخلاء طرف"
+                default_body = f"تشهد شركة ميم الخماسية للتصنيع (5M) بأن الموظف السيد/ {selected_emp_name}، الحامل للوظيفة ({emp_job}) بفرع ({emp_branch})، قد انتهت فترة عمله لدينا رسمياً بتاريخ {letter_date}.\n\nوقد قام الموظف المذكور بأداء كافة مهامه وإخلاء طرفه من كافة العُهد والمستحقات المالية والإدارية طرف الشركة حتى تاريخه، وهذا الخطاب بمثابة إخلاء طرف رسمي ومعتمد دون أي مسؤولية لاحقة على الشركة."
+            elif "شهادة خبرة" in letter_type:
+                title_txt = "شهادة خبرة وتوصية رسمية"
+                default_body = f"تشهد إدارة شركة ميم الخماسية للتصنيع (5M) بأن السيد/ {selected_emp_name} قد عمل لدينا بقطاع الشركة بوظيفة ({emp_job})، وذلك في الفترة من {emp_start_date} وحتى {letter_date}.\n\nوخلال فترة عمله كان مثالاً للموظف المخلص والمجتهد في أداء أعماله، وقد أُعطيت له هذه الشهادة بناءً على طلبه دون أن تتحمل الشركة أي أدنى مسؤولية تجاه حقوق الغير."
+            elif "تعريف بالراتب" in letter_type:
+                title_txt = "خطاب تعريف بالراتب والمسمى الوظيفي"
+                default_body = f"إلى: من يهمه الأمر / البنك المحترم\n\nتحية طيبة وبعد،،،\n\ntتفيد شركة ميم الخماسية للتصنيع (5M) بأن الموظف السيد/ {selected_emp_name} هو أحد منسوبي الشركة ويعمل لدينا بوظيفة ({emp_job}) بفرع ({emp_branch}) منذ تاريخ {emp_start_date} وحتى تاريخه.\n\nونفيدكم بأن الموظف يتقاضى راتباً شهرياً إجمالياً قدره ({emp_salary:,.2f} ريال سعودي). وقد حرر هذا الخطاب بناءً على طلب الموظف لتقديمه إلى جهتك الموقرة دون أدنى مسؤولية على الشركة."
+            else: # إنذار
+                title_txt = "خطاب إنذار كتابي رسمي"
+                default_body = f"إلى الموظف السيد/ {selected_emp_name} - الوظيفة: ({emp_job})\n\nبناءً على التقارير الإدارية المرفوعة إلينا، نتوجه إليكم بهذا الإنذار الكتابي الرسمي وذلك بسبب: التأخر عن مواعيد العمل الرسمية وعدم الالتزام بالتعليمات الموجهة إليكم.\n\nونأمل منكم الالتزام بالتعليمات ولائحة العمل بالشركة وعدم تكرار مثل هذه المخالفات مستقبلاً، حتى لا نضطر لتطبيق العقوبات النظامية الواردة بنظام العمل السعودي."
 
-            if "تعريف بالراتب" in letter_type:
-                custom_directed_to = st.text_input("جهة تقديم الخطاب (الموجه إليها):", "إلى من يهمه الأمر / البنك السعودي للاستثمار")
-            elif "إنذار" in letter_type:
-                custom_reason = st.text_area("سبب الإنذار والغياب/المخالفة:", "نظراً لتكرار التأخر عن مواعيد العمل الرسمية وعدم الالتزام بالتعليمات الموجهة إليكم...")
-            elif "استقالة" in letter_type:
-                custom_notes = st.text_input("تاريخ سريان الاستقالة وتاريخ آخر يوم عمل:", str(get_ksa_now().date()))
+            st.markdown("---")
+            st.markdown("##### ✏️ خانة التعديل الحر المباشر على نص الخطاب:")
+            edited_body_text = st.text_area(
+                "يمكنك تعديل أي جزء من النص أدناه وسينعكس فوراً على معاينة الخطاب:",
+                value=default_body,
+                height=220,
+                key=f"ta_letter_{letter_type}_{selected_emp_name}"
+            )
 
         with col_let2:
             st.markdown("### 🖨️ 2. معاينة وتوليد الخطاب الرسمي (A4):")
 
-            # صياغة محتوى النصوص بحسب النوع
-            if "قبول استقالة" in letter_type:
-                title_txt = "خطاب قبول استقالة"
-                body_content = f"""
-                نفيدكم نحن شركة <b>ميم الخماسية للتصنيع (5M)</b> بأنه تم الموافقة على طلب الاستقالة المقدم من الموظف السيد/ <b>{selected_emp_name}</b>، والذي يعمل لدينا بوظيفة (<b>{emp_job}</b>) بفرع (<b>{emp_branch}</b>)، وذلك اعتباراً من تاريخ <b>{custom_notes if custom_notes else letter_date}</b>.<br><br>
-                ونحن إذ نشكره على ما قدمه من جهود جبارة وإخلاص طوال فترة عمله معنا منذ تاريخ تخرجه وبداية عمله في <b>{emp_start_date}</b>، نتمنى له دوام التوفيق والنجاح في خطواته القادمة.
-                """
-            elif "إنهاء خدمة" in letter_type:
-                title_txt = "خطاب إنهاء خدمة وإخلاء طرف"
-                body_content = f"""
-                تشهد شركة <b>ميم الخماسية للتصنيع (5M)</b> بأن الموظف السيد/ <b>{selected_emp_name}</b>، الحامل للوظيفة (<b>{emp_job}</b>)، قد انتهت فترة عمله لدينا رسمياً بتاريخ <b>{letter_date}</b>.<br><br>
-                وقد قام الموظف المذكور بأداء كافة مهامه وإخلاء طرفه من كافة العُهد والمستحقات المالية والإدارية طرف الشركة حتى تاريخه، وهذا الخطاب بمثابة إخلاء طرف رسمي ومعتمد دون أي مسؤولية لاحقة.
-                """
-            elif "شهادة خبرة" in letter_type:
-                title_txt = "شهادة خبرة وتوصية رسمية"
-                body_content = f"""
-                تشهد إدارة شركة <b>ميم الخماسية للتصنيع (5M)</b> بأن السيد/ <b>{selected_emp_name}</b> قد عمل لدينا بقطاع الشركة بوظيفة (<b>{emp_job}</b>)، وذلك في الفترة من <b>{emp_start_date}</b> وحتى <b>{letter_date}</b>.<br><br>
-                وخلال فترة عمله كان مثالاً للموظف المخلص والمجتهد في أداء أعماله، وقد أُعطيت له هذه الشهادة بناءً على طلبه دون أن تتحمل الشركة أي أدنى مسؤولية تجاه حقوق الغير.
-                """
-            elif "تعريف بالراتب" in letter_type:
-                title_txt = "خطاب تعريف بالراتب والمسمى الوظيفي"
-                body_content = f"""
-                إلى: <b>{custom_directed_to}</b><br><br>
-                تحية طيبة وبعد،،،<br><br>
-                تفيد شركة <b>ميم الخماسية للتصنيع (5M)</b> بأن الموظف السيد/ <b>{selected_emp_name}</b> هو أحد منسوبي الشركة ويعمل لدينا بوظيفة (<b>{emp_job}</b>) بفرع (<b>{emp_branch}</b>) منذ تاريخ <b>{emp_start_date}</b> وحتى تاريخه.<br><br>
-                ونفيدكم بأن الموظف يتقاضى راتباً شهرياً إجمالياً قدره (<b>{emp_salary:,.2f} ريال سعودي</b>). وقد حرر هذا الخطاب بناءً على طلب الموظف لتقديمه إلى جهتك الموقرة دون أدنى مسؤولية على الشركة.
-                """
-            else: # إنذار
-                title_txt = "خطاب إنذار كتابي رسمي"
-                body_content = f"""
-                إلى الموظف السيد/ <b>{selected_emp_name}</b> - الوظيفة: (<b>{emp_job}</b>)<br><br>
-                بناءً على التقارير الإدارية المرفوعة إلينا، نتوجه إليكم بهذا الإنذار الكتابي الرسمي وذلك بسبب:<br>
-                <div style="background:#fef2f2; border:1px solid #ef4444; padding:10px; border-radius:5px; margin:10px 0; color:#b91c1c;"><b>{custom_reason}</b></div><br>
-                ونأمل منكم الالتزام بالتعليمات ولائحة العمل بالشركة وعدم تكرار مثل هذه المخالفات مستقبلاً، حتى لا نضطر لتطبيق العقوبات النظامية الواردة بنظام العمل السعودي.
-                """
+            # تحويل أسطر النص المُعدل إلى فقرات HTML
+            formatted_body_html = edited_body_text.replace('\n', '<br>')
 
             letter_full_html = f"""
             <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
@@ -2957,7 +2938,7 @@ else:
                 .letter-ref {{ display: flex; justify-content: space-between; font-size: 12px; color: #475569; margin-top: 10px; font-weight: bold; }}
                 .letter-title {{ text-align: center; font-size: 20px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 10px; margin: 20px 0; border-radius: 6px; text-decoration: underline; }}
                 .letter-body {{ font-size: 15px; line-height: 1.8; color: #1e293b; margin: 25px 0; text-align: justify; }}
-                .sigs-table {{ width: 100%; margin-top: 50px; border: none !important; }}
+                .sigs-table {{ width: 100%; margin-top: 40px; border: none !important; }}
                 .sigs-table td {{ border: none !important; text-align: center; vertical-align: bottom; width: 50%; padding: 0 5px; font-weight: bold; font-size: 13px; }}
                 .stamp-img {{ width: 110px; height: 110px; object-fit: contain; margin: 0 auto; display: block; }}
                 .sign-img {{ width: 120px; height: 50px; object-fit: contain; margin: 0 auto; display: block; }}
@@ -2974,7 +2955,7 @@ else:
                     </div>
                     <div class="letter-title">{title_txt}</div>
                     <div class="letter-body">
-                        {body_content}
+                        {formatted_body_html}
                     </div>
                     <br><br>
                     <div style="font-weight:bold; font-size:14px; text-align:left; padding-left:20px;">وتفضلوا بقبول فائق الاحترام والتقدير،،،</div>
@@ -2998,7 +2979,7 @@ else:
             st.components.v1.html(letter_full_html, height=520, scrolling=True)
 
             st.download_button(
-                label=f"🖨️ تنزيل وطباعة ({title_txt}) صيغة (A4 HTML / PDF)",
+                label=f"🖨️ تنزيل وطباعة ({title_txt}) بصيغة (A4 HTML / PDF)",
                 data=letter_full_html.encode('utf-8'),
                 file_name=f"خطاب_{selected_emp_name}_{letter_type}.html",
                 mime="text/html",
