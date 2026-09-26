@@ -3084,26 +3084,6 @@ else:
                     st.divider()
             else:
                 st.info("لا توجد خطابات صادر محفوظة في الأرشيف حالياً.")
-            )
-    elif selected_option == 'حاسبة الخدمة' and st.session_state.user_role == "admin":
-        st.subheader('🇸🇦 حاسبة مستحقات نهاية الخدمة وبدل الإجازات (نظام العمل السعودي)')
-        saudi_reports = []
-        for _, r in st.session_state.payroll_df.iterrows():
-            yrs, grat, leave_allow = calculate_saudi_gratuity_and_leave(r['الراتب الأساسي'], r.get('تاريخ بداية العمل', '2024-01-01'))
-            saudi_reports.append({
-                'مسلسل': r['م'],
-                'اسم الموظف': r['الاسم'],
-                'الفرع': r['الفرع'],
-                'تاريخ بداية العمل': r.get('تاريخ بداية العمل', '2024-01-01'),
-                'الخدمة (سنة)': yrs,
-                'مكافأة نهاية الخدمة': f"{grat:,.2f} ر.س",
-                'بدل الإجازة السنوية': f"{leave_allow:,.2f} ر.س",
-                'إجمالي المستحقات': f"{(grat + leave_allow):,.2f} ر.س"
-            })
-            
-        df_saudi = pd.DataFrame(saudi_reports)
-        st.dataframe(df_saudi, use_container_width=True, hide_index=True)
-
     elif selected_option == 'التنبيهات' and st.session_state.user_role == "admin":
         st.subheader('🔔 مركز تنبيهات انتهاء الإقامات وعقود العمل')
         today = datetime.now().date()
