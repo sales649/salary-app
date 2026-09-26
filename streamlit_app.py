@@ -2862,10 +2862,10 @@ else:
             mime="text/html",
             use_container_width=True
         )
-# 📜 10. موديول الخطابات والإنذارات الرسمية المطور + الأرشيف ورفع التواقيع
+# 📜 10. موديول الخطابات والإنذارات الرسمية المطور + توقيع الموظف والأرشيف
     elif selected_option == 'الخطابات الرسمية' and st.session_state.user_role == "admin":
         st.subheader('📜 موديول إدارة وتوليد الخطابات والأرشيف الرسمي (5M)')
-        st.caption('توليد الخطابات، جلب أرقام الإقامات تلقائياً، حفظ الأرشيف السحابي، ورفع النسخ الموقعة من الموظفين')
+        st.caption('توليد الخطابات، جلب أرقام الإقامات تلقائياً، حفظ الأرشيف السحابي، وتواقيع الموظفين المعتمدة')
 
         # قاموس أرقام الإقامات والهويات المستخرج مباشرة من ملف إكسيل عمالة ميم الخماسية
         IQAMA_DB = {
@@ -2888,14 +2888,18 @@ else:
             'علي إسماعيل علي محمد': '2601539162'
         }
 
-        # إصلاح ألوان النص في مربعات التعديل والمدخلات لتكون سوداء ناصعة وواضحة جداً
+        # تنسيق CSS احترافي لضمان خط أبيض ناصع وواضح جداً بجميع الخانات والصناديق
         st.markdown("""
         <style>
         div[data-baseweb="textarea"] textarea, div[data-baseweb="input"] input {
-            color: #000000 !important;
-            background-color: #FFFFFF !important;
+            color: #FFFFFF !important;
+            background-color: #1E293B !important;
             font-weight: bold !important;
             font-size: 15px !important;
+            border: 1px solid #3B82F6 !important;
+        }
+        div[data-baseweb="textarea"] textarea::placeholder, div[data-baseweb="input"] input::placeholder {
+            color: #94A3B8 !important;
         }
         </style>
         """, unsafe_allow_html=True)
@@ -2972,15 +2976,16 @@ else:
                 <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
                 <style>
                     body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fff; padding: 15px; color:#000; }}
-                    .letter-box {{ border: 3px solid #1E3A8A; border-radius: 10px; padding: 25px; background: #fff; min-height: 500px; position: relative; }}
+                    .letter-box {{ border: 3px solid #1E3A8A; border-radius: 10px; padding: 25px; background: #fff; min-height: 520px; position: relative; }}
                     .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 12px; }}
                     .letter-ref {{ display: flex; justify-content: space-between; font-size: 12px; color: #475569; margin-top: 10px; font-weight: bold; }}
                     .letter-title {{ text-align: center; font-size: 20px; font-weight: bold; color: #1E3A8A; background: #f1f5f9; padding: 10px; margin: 20px 0; border-radius: 6px; text-decoration: underline; }}
                     .letter-body {{ font-size: 15px; line-height: 1.8; color: #1e293b; margin: 25px 0; text-align: justify; }}
-                    .sigs-table {{ width: 100%; margin-top: 40px; border: none !important; }}
-                    .sigs-table td {{ border: none !important; text-align: center; vertical-align: bottom; width: 50%; padding: 0 5px; font-weight: bold; font-size: 13px; }}
-                    .stamp-img {{ width: 110px; height: 110px; object-fit: contain; margin: 0 auto; display: block; }}
-                    .sign-img {{ width: 120px; height: 50px; object-fit: contain; margin: 0 auto; display: block; }}
+                    .sigs-table {{ width: 100%; margin-top: 35px; border: none !important; }}
+                    .sigs-table td {{ border: none !important; text-align: center; vertical-align: bottom; width: 33%; padding: 0 5px; font-weight: bold; font-size: 12px; }}
+                    .stamp-img {{ width: 100px; height: 100px; object-fit: contain; margin: 0 auto; display: block; }}
+                    .sign-img {{ width: 110px; height: 45px; object-fit: contain; margin: 0 auto; display: block; }}
+                    .sign-line {{ border-bottom: 1px dashed #000; height: 40px; margin-top: 10px; }}
                 </style></head><body>
                     <div class="letter-box">
                         <div class="header-logo">
@@ -2996,11 +3001,16 @@ else:
                         <div class="letter-body">
                             {formatted_body_html}
                         </div>
-                        <br><br>
+                        <br>
                         <div style="font-weight:bold; font-size:14px; text-align:left; padding-left:20px;">وتفضلوا بقبول فائق الاحترام والتقدير،،،</div>
                         
                         <table class="sigs-table">
                             <tr>
+                                <td>
+                                    <div style="margin-bottom: 5px;">توقيع واستلام الموظف</div>
+                                    <div style="font-size:11px; color:#475569;">الاسم: {selected_emp_name}</div>
+                                    <div class="sign-line"></div>
+                                </td>
                                 <td>
                                     <div style="margin-bottom: 5px;">إدارة الموارد البشرية (HR)</div>
                                     <img src="{SIGN_IMG_URL}" class="sign-img" alt="توقيع المحاسب">
@@ -3015,7 +3025,7 @@ else:
                 </body></html>
                 """
 
-                st.components.v1.html(letter_full_html, height=520, scrolling=True)
+                st.components.v1.html(letter_full_html, height=540, scrolling=True)
 
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
@@ -3044,7 +3054,7 @@ else:
                         st.rerun()
 
         with tab_let2:
-            st.markdown("### 📁 أرشيف الخطابات والإنذارات الصادرة:")
+            st.markdown("### 📁 أرشيف الخطابات والإنذارات والمستندات الموقعة:")
             letters_archive = fetch_cloud_store('company_letters_archive', [])
 
             if letters_archive:
@@ -3055,25 +3065,25 @@ else:
                     filtered_archive = [l for l in filtered_archive if search_let_kw.lower() in l['emp_name'].lower() or search_let_kw.lower() in l['ref_code'].lower()]
 
                 for idx_l, l_item in enumerate(reversed(filtered_archive)):
-                    col_arc1, col_arc2, col_arc3, col_arc4 = st.columns([1.5, 2.5, 1.5, 2])
+                    col_arc1, col_arc2, col_arc3, col_arc4 = st.columns([1.5, 2.5, 2, 1.5])
                     
                     col_arc1.write(f"<b>#{l_item['ref_code']}</b><br>📅 {l_item['date']}", unsafe_allow_html=True)
                     col_arc2.write(f"<b>{l_item['type']}</b><br>👤 الموظف: <b>{l_item['emp_name']}</b> (هوية: {l_item.get('emp_id','')})", unsafe_allow_html=True)
                     
-                    # رفع الخطاب الموقع من الموظف
-                    uploaded_signed_doc = col_arc3.file_uploader("📤 رفع النسخة الموقعة:", type=['pdf', 'png', 'jpg', 'jpeg'], key=f"file_signed_l_{idx_l}")
+                    # رفع النسخة الموقعة PDF
+                    uploaded_signed_doc = col_arc3.file_uploader("📤 رفع الخطاب المُوقّع (PDF/صورة):", type=['pdf', 'png', 'jpg', 'jpeg'], key=f"file_signed_pdf_{idx_l}")
                     if uploaded_signed_doc is not None:
-                        if col_arc3.button("💾 حفظ المرفق", key=f"btn_save_signed_{idx_l}"):
+                        if col_arc3.button("💾 حفظ ملف الـ PDF الموقّع", key=f"btn_save_signed_pdf_{idx_l}"):
                             l_item['signed_file'] = uploaded_signed_doc.name
                             save_cloud_store('company_letters_archive', letters_archive)
-                            st.success("تم حفظ مرفق توقيع الموظف بنجاح!")
+                            st.success("تم حفظ نسخة الخطاب الموقعة PDF بنجاح!")
                             st.rerun()
 
                     if l_item.get('signed_file'):
-                        col_arc3.info(f"✅ مرفق الموظف: {l_item['signed_file']}")
+                        col_arc3.info(f"✅ النسخة الموقعة المحفوظة: {l_item['signed_file']}")
 
                     with col_arc4:
-                        if st.button("🖨️ طباعة", key=f"print_arc_l_{idx_l}"):
+                        if st.button("🖨️ طباعة الخطاب", key=f"print_arc_l_{idx_l}"):
                             st.components.v1.html(l_item['html_data'], height=500, scrolling=True)
 
                         if st.button("🗑️ حذف", key=f"del_arc_l_{idx_l}"):
