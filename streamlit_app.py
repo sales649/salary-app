@@ -94,7 +94,31 @@ def save_uploaded_sales_batches(data):
         cash_data = load_cash_data()
         drivers_data = load_drivers_data()
 
-        # استخراج كافة حركات العُهد المصروفة من الصندوق والخزينة
+       # استخراج قائمة أسماء السواقين والموظفين من كافة السجلات السحابية المعتمدة
+        driver_names_set = set()
+        
+        # 1. جلب الأسماء المعتمدة المسجلة في السحابة لجدول العُهد المباشر
+        if isinstance(drivers_data, list):
+            for d in drivers_data:
+                if isinstance(d, dict):
+                    if d.get('driver_name'): driver_names_set.add(d.get('driver_name'))
+                    if d.get('driver'): driver_names_set.add(d.get('driver'))
+
+        # 2. جلب أسماء الموظفين من مسير الرواتب
+        if 'payroll_df' in st.session_state and isinstance(st.session_state.payroll_df, pd.DataFrame) and not st.session_state.payroll_df.empty:
+            if 'الاسم' in st.session_state.payroll_df.columns:
+                driver_names_set.update(st.session_state.payroll_df['الاسم'].dropna().tolist())
+
+        # 3. جلب الأسماء المذكورة بحركات الصندوق
+        for tx in all_cash_tx:
+            if isinstance(tx, dict):
+                desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
+                for name_item in ['عثمان', 'عمر', 'علي', 'محمود', 'إسماعيل', 'محمد', 'سمان']:
+                    if name_item in desc:
+                        driver_names_set.add(name_item)
+
+        if not driver_names_set:
+            driver_names_set = {'عثمان', 'عمر', 'علي', 'سمان السواق'}
         all_cash_tx = []
         if isinstance(cash_data, dict):
             for month_k, month_v in cash_data.items():
