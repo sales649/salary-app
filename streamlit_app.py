@@ -9,15 +9,27 @@ import base64
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 
-# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL مع PWA Metas
-st.set_page_config(page_title='5M', layout='wide', page_icon='🏢', initial_sidebar_state="auto")
+# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
+st.set_page_config(page_title='5M', layout='wide', page_icon='📱', initial_sidebar_state="auto")
 
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
 
-# روابط استدعاء الصور المباشرة من مستودع GitHub الخاص بك
-STAMP_IMG_URL = "https://raw.githubusercontent.com/sales649/salary-app/main/stamp.png.png"
-SIGN_IMG_URL = "https://raw.githubusercontent.com/sales649/salary-app/main/sign.png.png"
+# روابط الصور المباشرة من مستودع GitHub
+STAMP_IMG_URL = "https://raw.githubusercontent.com/sales649/salary-app/main/stamp.png"
+SIGN_IMG_URL = "https://raw.githubusercontent.com/sales649/salary-app/main/sign.png"
+
+# إعدادات الربط السحابي بـ Supabase
+SUPABASE_URL = "https://ohoqprtvmhyjomaavwct.supabase.co"
+SUPABASE_KEY = "sb_publishable_T6YFCaos1EexLgGG9KtwCw_nNMRHjJ_"
+
+# 💡 تعريف دالة init_supabase أصلية وأولية قبل استدعائها
+@st.cache_resource
+def init_supabase() -> Client:
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# استدعاء الدالة بعد تعريفها مباشرة لمنع خطأ NameError
+supabase = init_supabase()
 
 # =========================================================
 # ☁️ دالة الحفظ والجلب السحابي الموحد (Supabase Cloud Store)
@@ -80,14 +92,6 @@ def load_audit_data():
 
 def save_audit_data(data):
     save_cloud_store('company_audit_data', data)
-
-supabase = init_supabase()
-
-# دالة الحصول على التوقيت المباشر (GMT+3)
-def get_ksa_now():
-    return datetime.utcnow() + timedelta(hours=3)
-
-def get_ksa_now_str():
     return get_ksa_now().strftime('%Y-%m-%d %H:%M')
 
 if 'theme_mode' not in st.session_state:
