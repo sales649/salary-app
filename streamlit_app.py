@@ -86,8 +86,8 @@ def load_uploaded_sales_batches():
 def save_uploaded_sales_batches(data):
     save_cloud_store('company_sales_batches', data)
 
-# 🚚 4. موديول عُهد السواقين والموظفين المطور (تصفية جزئية وتتبع كل عُهدة)
-    elif selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين'] or st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
+# 🚚 موديول عُهد السواقين والموظفين
+    if selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين'] or st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
         st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
         st.caption('إمكانية التصفية الجزئية لكل عُهدة على حدة، وتتبع المتبقي لكل عُهدة حتى إغلاقها بالكامل')
 
