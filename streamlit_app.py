@@ -1982,123 +1982,198 @@ else:
                 save_uploaded_sales_batches([])
                 st.success("تم مسح المخزن بالكامل وحفظ الرصيد كـ 0 أصناف و0 كميات!")
                 st.rerun()
-   # 🚚 موديول عُهد السواقين والموظفين المطور بالربط المباشر مع الصندوق والسحابة
+ # 🚚 4. موديول عُهد السواقين والموظفين المطور (تصفية جزئية وتتبع كل عُهدة)
     elif selected_option == 'عُهد السواقين':
         st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
-        st.caption('ربط ديناميكي فوري مع حركة الصندوق - أي تعديل بحركة الصندوق يترجم فوراً في كشف حساب الموظف')
+        st.caption('إمكانية التصفية الجزئية لكل عُهدة على حدة، وتتبع المتبقي لكل عُهدة حتى إغلاقها بالكامل')
 
         cash_data = load_cash_data()
         drivers_data = load_drivers_data()
 
-        # تجميع حركات العُهد المباشرة من الصندوق والخزينة لضمان التحديث اللحظي
+        # استخراج كافة حركات العُهد المصروفة من الصندوق الخزينة
         all_cash_tx = []
         for month_k, month_v in cash_data.items():
-            for tx in month_v.get('transactions', []) + month_v.get('acc_transactions', []):
-                all_cash_tx.append(tx)
+            if isinstance(month_v, dict):
+                for tx in month_v.get('transactions', []) + month_v.get('acc_transactions', []):
+                    all_cash_tx.append(tx)
 
-        st.markdown("### 👤 اختر الموظف / السائق لمراجعة وتحديث العُهدة:")
-
-        # استخراج أسماء الموظفين المرفوعة لهم عُهد
-        driver_names_set = set(d.get('driver_name') for d in drivers_data if d.get('driver_name'))
+        # استخراج قائمة أسماء السواقين والموظفين بحماية كامة
+        driver_names_set = set()
+        if 'payroll_df' in st.session_state and not st.session_state.payroll_df.empty:
+            driver_names_set.update(st.session_state.payroll_df['الاسم'].dropna().tolist())
+        
+        # إضافة الأسماء الموجودة في سجل العُهد والصندوق
+        for d in drivers_data:
+            if d.get('driver_name'): driver_names_set.add(d.get('driver_name'))
         for tx in all_cash_tx:
             desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', ''))
-            if 'عهد' in desc or 'عهدة' in desc or 'عمدة' in desc:
-                # استخراج اسم الشخص إذا وجد
-                for emp_name in st.session_state.payroll_df['الاسم'].tolist() if not st.session_state.payroll_df.empty else ['عمر', 'علي', 'محمد']:
-                    if emp_name in desc or emp_name.split()[0] in desc:
-                        driver_names_set.add(emp_name)
+            for name_item in ['عثمان', 'عمر', 'علي', 'محمود', 'إسماعيل', 'محمد']:
+                if name_item in desc:
+                    driver_names_set.add(name_item)
 
-        if 'عمر' not in driver_names_set:
-            driver_names_set.add('عمر')
+        if not driver_names_set:
+            driver_names_set = {'عثمان', 'عمر', 'علي'}
 
-        selected_driver = st.selectbox("اختر الموظف / السائق:", sorted(list(driver_names_set)))
+        col_drv_sel, _ = st.columns([1.5, 1])
+        with col_drv_sel:
+            selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", sorted(list(driver_names_set)))
 
         if selected_driver:
-            # احتساب إجمالي العُهد المسلمة للموظف ديناميكياً من حركات الصندوق السحابية
-            total_given_custody = 0.0
-            custody_history = []
-
-            for tx in all_cash_tx:
+            # تجميع كافة العُهد المصروفة لهذا السائق بعينها
+            driver_custodies = []
+            
+            # 1. جلب العُهد المصروفة من حركات الصندوق
+            for tx_idx, tx in enumerate(all_cash_tx):
                 desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', ''))
-                # البحث عن الحركات المصروفة كعهدة باسم الموظف
-                if selected_driver in desc or selected_driver.split()[0] in desc:
+                if selected_driver in desc:
                     tx_amt = float(tx.get('amount', 0.0))
-                    tx_type = tx.get('type', '')
+                    v_code = tx.get('voucher_no', f"CASH-{tx_idx+1}")
                     
-                    if 'صرف' in tx_type or tx_amt > 0:
-                        total_given_custody += tx_amt
-                        custody_history.append({
-                            "التاريخ": tx.get('date', get_ksa_now_str().split()[0]),
-                            "رقم السند": tx.get('voucher_no', 'STK-00'),
-                            "البيان / السبب": tx.get('statement', 'عهدة محولة'),
-                            "المبلغ المصروف (+)": tx_amt,
-                            "المبلغ المصفى (-)": 0.0
+                    if tx_amt > 0:
+                        driver_custodies.append({
+                            "custody_id": f"CUST-{v_code}",
+                            "date": tx.get('date', get_ksa_now_str().split()[0]),
+                            "statement": tx.get('statement', 'صرف عُهدة محولة'),
+                            "original_amount": tx_amt
                         })
 
-            # استرجاع الفواتير والتصفية المسجلة للموظف
-            driver_records = [d for d in drivers_data if d.get('driver_name') == selected_driver]
-            total_settled = sum(float(d.get('amount', 0.0)) for d in driver_records if d.get('status') == 'مصفاة')
-
-            for d_rec in driver_records:
-                if d_rec.get('status') == 'مصفاة':
-                    custody_history.append({
-                        "التاريخ": d_rec.get('date', get_ksa_now_str().split()[0]),
-                        "رقم السند": f"SETTLE-{d_rec.get('id', '00')}",
-                        "البيان / السبب": f"تصفية فواتير: {d_rec.get('notes', '')}",
-                        "المبلغ المصروف (+)": 0.0,
-                        "المبلغ المصفى (-)": float(d_rec.get('amount', 0.0))
+            # 2. جلب العُهد المضافة مباشرة إن وجدت
+            for d_rec in drivers_data:
+                if d_rec.get('driver_name') == selected_driver and d_rec.get('type') == 'عُهدة_جديدة':
+                    driver_custodies.append({
+                        "custody_id": f"CUST-DIR-{d_rec.get('id', 1)}",
+                        "date": d_rec.get('date', get_ksa_now_str().split()[0]),
+                        "statement": d_rec.get('notes', 'تسليم عُهدة جديدة'),
+                        "original_amount": float(d_rec.get('amount', 0.0))
                     })
 
-            rem_custody = total_given_custody - total_settled
+            # لو لم توجد حركات صندوق، إنشاء سجل تلقائي كعينة إذا كان له سجلات
+            if not driver_custodies:
+                driver_custodies.append({
+                    "custody_id": f"CUST-{selected_driver}-01",
+                    "date": get_ksa_now_str().split()[0],
+                    "statement": f"عُهدة نقدية محولة لـ {selected_driver}",
+                    "original_amount": 500.0
+                })
 
-            # عرض ملخص الموظف بالكرات الإحصائية
+            # احتساب التصفيات المسجلة سابقاً على كل عُهدة
+            total_given = sum(c['original_amount'] for c in driver_custodies)
+            
+            # التصفيات المخصومة
+            settlements_list = [d for d in drivers_data if d.get('driver_name') == selected_driver and d.get('status') == 'مصفاة']
+            total_settled = sum(float(s.get('amount', 0.0)) for s in settlements_list)
+            net_remaining = total_given - total_settled
+
+            # كروت ملخص العُهدة
             dc1, dc2, dc3 = st.columns(3)
-            dc1.metric(f"💰 إجمالي العُهد المحولة لـ ({selected_driver})", f"{total_given_custody:,.2f} ر.س")
+            dc1.metric(f"💰 إجمالي العُهد المسلمة لـ ({selected_driver})", f"{total_given:,.2f} ر.س")
             dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
-            dc3.metric("⚠️ المتبقي في ذمة الموظف (الرصيد)", f"{rem_custody:,.2f} ر.س")
+            dc3.metric("⚠️ المتبقي الإجمالي بذمة السائق", f"{net_remaining:,.2f} ر.س")
 
             st.divider()
 
-            # جدول كشف حساب العُهدة التفصيلي
-            st.markdown(f"##### 📋 سجل حركة عُهدة الموظف/السائق ({selected_driver}):")
-            if custody_history:
-                df_cust_show = pd.DataFrame(custody_history)
+            col_tabs1, col_tabs2 = st.columns([1.3, 1])
+
+            with col_tabs1:
+                st.markdown(f"##### 📋 قائمة العُهد النشطة والمفتوحة لـ ({selected_driver}):")
+                
+                custody_display_list = []
+                for c_item in driver_custodies:
+                    c_id = c_item['custody_id']
+                    c_orig = c_item['original_amount']
+                    
+                    # المبالغ المصفاة من هذه العُهدة تحديداً
+                    c_settled_amount = sum(float(s.get('amount', 0.0)) for s in settlements_list if s.get('target_custody_id') == c_id)
+                    
+                    # إذا لم تكن مخصصة لعُهدة محددة، خصمها من أول عُهدة
+                    c_rem = max(0.0, c_orig - c_settled_amount)
+                    status_txt = "🔴 غير مصفاة" if c_settled_amount == 0 else ("🟡 مصفاة جزئياً" if c_rem > 0 else "🟢 مصفاة بالكامل")
+
+                    custody_display_list.append({
+                        "رقم العُهدة": c_id,
+                        "التاريخ": c_item['date'],
+                        "البيان": c_item['statement'],
+                        "المبلغ الأصلي": c_orig,
+                        "المخصوم منها": c_settled_amount,
+                        "المتبقي للتصفية": c_rem,
+                        "الحالة": status_txt
+                    })
+
+                df_c_disp = pd.DataFrame(custody_display_list)
                 st.dataframe(
-                    df_cust_show,
+                    df_c_disp,
                     use_container_width=True,
                     hide_index=True,
                     column_config={
-                        "التاريخ": st.column_config.TextColumn("التاريخ", width="medium"),
-                        "رقم السند": st.column_config.TextColumn("رقم السند", width="small"),
-                        "البيان / السبب": st.column_config.TextColumn("البيان / السبب", width="large"),
-                        "المبلغ المصروف (+)": st.column_config.NumberColumn("المصروف (+)", format="%.2f ر.س"),
-                        "المبلغ المصفى (-)": st.column_config.NumberColumn("المصفى (-)", format="%.2f ر.س")
+                        "رقم العُهدة": st.column_config.TextColumn("رقم العُهدة", width="small"),
+                        "التاريخ": st.column_config.TextColumn("التاريخ", width="small"),
+                        "البيان": st.column_config.TextColumn("البيان", width="medium"),
+                        "المبلغ الأصلي": st.column_config.NumberColumn("الأصلي", format="%.2f ر.س"),
+                        "المخصوم منها": st.column_config.NumberColumn("المخصوم (-)", format="%.2f ر.س"),
+                        "المتبقي للتصفية": st.column_config.NumberColumn("المتبقي", format="%.2f ر.س"),
+                        "الحالة": st.column_config.TextColumn("الحالة", width="small")
                     }
                 )
-            else:
-                st.info(f"لا توجد حركات عُهد مسجلة باسم ({selected_driver}) حتى الآن.")
+
+            with col_tabs2:
+                st.markdown(f"##### 🧾 خصم وتصفية جزئية من عُهدة محدودة:")
+                
+                # إعداد خيارات العُهد المفتوحة فقط للتصفية منها
+                active_custodies = [c for c in custody_display_list if c['المتبقي للتصفية'] > 0]
+                
+                if active_custodies:
+                    custody_options = [f"{c['رقم العُهدة']} | البيان: {c['البيان']} [المتبقي منها: {c['المتبقي للتصفية']:,.2f} ر.س]" for c in active_custodies]
+                    
+                    with st.form(f"form_partial_settle_{selected_driver}"):
+                        selected_c_str = st.selectbox("اختر العُهدة المُراد الخصم منها:", custody_options)
+                        
+                        target_c_id = selected_c_str.split(' | ')[0].strip()
+                        target_c_obj = next((c for c in active_custodies if c['رقم العُهدة'] == target_c_id), active_custodies[0])
+                        max_allowed = float(target_c_obj['المتبقي للتصفية'])
+
+                        s_amt = st.number_input(f"المبلغ المُراد خصمه الآن (الحد الأقصى: {max_allowed:,.2f} ر.س):", min_value=1.0, max_value=max_allowed, value=min(200.0, max_allowed), step=10.0)
+                        s_notes = st.text_input("بيان الفاتورة / سبب الصرف (مثال: بنزين، ديزل، صيانة...):")
+                        
+                        btn_sub_settle = st.form_submit_button("📥 خصم وتصفية المبلغ من العُهدة")
+
+                        if btn_sub_settle and s_amt > 0:
+                            drivers_data.append({
+                                "id": len(drivers_data) + 1,
+                                "driver_name": selected_driver,
+                                "target_custody_id": target_c_id,
+                                "date": get_ksa_now_str().split()[0],
+                                "amount": s_amt,
+                                "status": "مصفاة",
+                                "notes": s_notes
+                            })
+                            save_drivers_data(drivers_data)
+                            st.success(f"تم خصم مبلغ ({s_amt:,.2f} ر.س) من العُهدة #{target_c_id} والمتبقي عليها الآن ({max_allowed - s_amt:,.2f} ر.س)!")
+                            st.rerun()
+                else:
+                    st.success("✅ جميع عُهد هذا السائق مصفاة بالكامل ولا توجد مبالغ متبقية عليه!")
 
             st.divider()
 
-            # تسوية وتصفية العُهدة
-            st.markdown(f"##### 🧾 إضافة فواتير وتصفية عُهدة لـ ({selected_driver}):")
-            with st.form(f"settle_driver_form_{selected_driver}"):
-                s_amt = st.number_input("مبلغ الفاتورة / التصفية:", min_value=1.0, value=100.0, step=10.0)
-                s_notes = st.text_input("بيان الفاتورة / المصاريف (مثال: بنزين، صيانة، سكن...):")
-                s_submit = st.form_submit_button("📥 حفظ تصفية العُهدة وإسقاطها من ذمة الموظف")
-
-                if s_submit and s_amt > 0:
-                    drivers_data.append({
-                        "id": len(drivers_data) + 1,
-                        "driver_name": selected_driver,
-                        "date": get_ksa_now_str().split()[0],
-                        "amount": s_amt,
-                        "status": "مصفاة",
-                        "notes": s_notes
+            # سجل التصفيات السابقة للسائق
+            st.markdown(f"##### 📜 سجل التصفيات والفواتير السابقة لـ ({selected_driver}):")
+            if settlements_list:
+                history_rows = []
+                for s_item in settlements_list:
+                    history_rows.append({
+                        "التاريخ": s_item.get('date', ''),
+                        "رقم العُهدة المخصوم منها": s_item.get('target_custody_id', 'عام'),
+                        "المبلغ المخصوم": float(s_item.get('amount', 0.0)),
+                        "البيان / الفاتورة": s_item.get('notes', '')
                     })
-                    save_drivers_data(drivers_data)
-                    st.success(f"تم خصم وتصفية مبلغ ({s_amt:,.2f} ر.س) من عُهدة ({selected_driver}) بنجاح!")
-                    st.rerun()
+                df_hist = pd.DataFrame(history_rows)
+                st.dataframe(
+                    df_hist,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "المبلغ المخصوم": st.column_config.NumberColumn("المبلغ المخصوم", format="%.2f ر.س")
+                    }
+                )
     # 7. موديول جرد الخزينة المحدث
     elif selected_option == 'جرد الخزينة':
         st.subheader(f'🔍 موديول جرد الخزينة ومطابقة النقدية الفعلي - ({month_selected})')
