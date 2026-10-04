@@ -19,13 +19,67 @@ USER_PASSWORD = "user5m"
 STAMP_IMG_URL = "https://raw.githubusercontent.com/sales649/salary-app/main/stamp.png.png"
 SIGN_IMG_URL = "https://raw.githubusercontent.com/sales649/salary-app/main/sign.png.png"
 
-# إعدادات الربط السحابي بـ Supabase
-SUPABASE_URL = "https://ohoqprtvmhyjomaavwct.supabase.co"
-SUPABASE_KEY = "sb_publishable_T6YFCaos1EexLgGG9KtwCw_nNMRHjJ_"
+# =========================================================
+# ☁️ دالة الحفظ والجلب السحابي الموحد (Supabase Cloud Store)
+# =========================================================
+def save_cloud_store(store_key, data):
+    try:
+        data_json = json.dumps(data, ensure_ascii=False)
+        supabase.table("app_state").upsert({"key": store_key, "data": data_json}).execute()
+    except Exception as e:
+        st.error(f"خطأ في الحفظ السحابي: {e}")
 
-@st.cache_resource
-def init_supabase() -> Client:
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+def fetch_cloud_store(store_key, default_val):
+    try:
+        res = supabase.table("app_state").select("data").eq("key", store_key).execute()
+        if res.data and len(res.data) > 0:
+            return json.loads(res.data[0]['data'])
+    except Exception:
+        pass
+    return default_val
+
+# 💰 1. دوال الصندوق والخزينة المربوطة بالسحابة مباشرة 100%
+def load_cash_data():
+    default_cash = {
+        "سبتمبر 2026": {"opening": 0.0, "transactions": [], "acc_opening": 0.0, "acc_transactions": []},
+        "أكتوبر 2026": {"opening": 0.0, "transactions": [], "acc_opening": 0.0, "acc_transactions": []}
+    }
+    return fetch_cloud_store('company_cash_data', default_cash)
+
+def save_cash_data(data):
+    save_cloud_store('company_cash_data', data)
+
+# 📦 2. دوال المخزون المربوطة بالسحابة
+def load_inventory_data():
+    return fetch_cloud_store('company_inventory_data', [])
+
+def save_inventory_data(data):
+    save_cloud_store('company_inventory_data', data)
+
+def load_stock_out_vouchers():
+    return fetch_cloud_store('company_stock_out_vouchers', [])
+
+def save_stock_out_vouchers(data):
+    save_cloud_store('company_stock_out_vouchers', data)
+
+def load_uploaded_sales_batches():
+    return fetch_cloud_store('company_sales_batches', [])
+
+def save_uploaded_sales_batches(data):
+    save_cloud_store('company_sales_batches', data)
+
+# 🚚 3. دوال عُهد السائقين والجرد المربوطة بالسحابة
+def load_drivers_data():
+    return fetch_cloud_store('company_drivers_data', [])
+
+def save_drivers_data(data):
+    save_cloud_store('company_drivers_data', data)
+
+def load_audit_data():
+    return fetch_cloud_store('company_audit_data', [])
+
+def save_audit_data(data):
+    save_cloud_store('company_audit_data', data)
 
 supabase = init_supabase()
 
