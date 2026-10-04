@@ -87,14 +87,14 @@ def save_uploaded_sales_batches(data):
     save_cloud_store('company_sales_batches', data)
 
 # 🚚 4. موديول عُهد السواقين والموظفين المطور (تصفية جزئية وتتبع كل عُهدة)
-    elif selected_option in ['عُهد السواقين', 'عهدة السواقين', 'عهدة_السواقين'] or st.session_state.get('current_view') in ['عُهد السواقين', 'عهدة السواقين']:
+    if selected_option in ['عُهد السواقين', 'عهدة السواقين', 'عهدة_السواقين'] or st.session_state.get('current_view') in ['عُهد السواقين', 'عهدة السواقين']:
         st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
         st.caption('إمكانية التصفية الجزئية لكل عُهدة على حدة، وتتبع المتبقي لكل عُهدة حتى إغلاقها بالكامل')
 
         cash_data = load_cash_data()
         drivers_data = load_drivers_data()
 
-        # استخراج كافة حركات العُهد المصروفة من الصندوق الخزينة
+        # استخراج كافة حركات العُهد المصروفة من الصندوق والخزينة
         all_cash_tx = []
         if isinstance(cash_data, dict):
             for month_k, month_v in cash_data.items():
