@@ -1545,7 +1545,8 @@ else:
             st.query_params.clear()
             st.rerun()
 
-      selected_option = st.session_state.get('current_view', 'الرئيسية')
+      # نهاية القائمة الجانبية
+        selected_option = st.session_state.get('current_view', 'الرئيسية')
 
     st.session_state.payroll_df = get_payroll_for_month(month_selected)
     st.session_state.current_active_month = month_selected
