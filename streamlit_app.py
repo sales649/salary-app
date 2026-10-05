@@ -82,7 +82,8 @@ def load_uploaded_sales_batches():
 
 def save_uploaded_sales_batches(data):
     save_cloud_store('company_sales_batches', data)
-
+    
+# 🚚 2. موديول عُهد السواقين والموظفين الشامل والمربوط بالسحابة
 if st.button("عُهدة السواقين", use_container_width=True):
             st.session_state['current_view'] = 'عهدة السواقين'
             st.rerun()
