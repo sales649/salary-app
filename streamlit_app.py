@@ -8,8 +8,29 @@ import csv
 import base64
 import requests
 
+# بيانات التليجرام
 TELEGRAM_BOT_TOKEN = "8826053948:AAEktJAhqt4QzMCQFYyByoDwCV7DdLiPgeE"
 TELEGRAM_CHAT_ID = "1899126592"
+
+# بيانات UltraMsg (الواتساب)
+ULTRAMSG_INSTANCE_ID = "instance193501"
+ULTRAMSG_TOKEN = "50l4oslbz40gf04f"
+MANAGER_PHONE_NUMBER = "966544933233"
+
+def send_whatsapp_summary_report(msg_plain):
+    try:
+        url = f"https://api.ultramsg.com/{ULTRAMSG_INSTANCE_ID}/messages/chat"
+        payload = {
+            "token": ULTRAMSG_TOKEN,
+            "to": MANAGER_PHONE_NUMBER,
+            "body": msg_plain,
+            "priority": "10"
+        }
+        headers = {'content-type': 'application/x-www-form-urlencoded'}
+        res = requests.post(url, data=payload, headers=headers, timeout=10)
+        return res.status_code == 200
+    except Exception:
+        return False
 
 def send_telegram_summary_report():
     try:
@@ -35,7 +56,8 @@ def send_telegram_summary_report():
 
         total_company_cash = net_main_now + net_acc_now
 
-        msg = f"""<b>📊 التقرير المالي اليومي - شركة ميم الخماسية</b>
+        # نص الرسالة للتليجرام (HTML)
+        msg_html = f"""<b>📊 التقرير المالي اليومي - شركة ميم الخماسية</b>
 🗓 <b>التاريخ:</b> <code>{get_ksa_now_str().split()[0]}</code>
 
 ───────────────
@@ -54,14 +76,35 @@ def send_telegram_summary_report():
 
 🟢 <i>نظام الإدارة المالي والمدفوعات الموحد</i>"""
 
-        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        payload = {
-            "chat_id": TELEGRAM_CHAT_ID,
-            "text": msg,
-            "parse_mode": "HTML"
-        }
-        res = requests.post(url, json=payload, timeout=10)
-        return res.status_code == 200
+        # نص الرسالة للواتساب (تنسيق الواتساب)
+        msg_wa = f"""📊 *التقرير المالي اليومي - شركة ميم الخماسية*
+🗓 *التاريخ:* {get_ksa_now_str().split()[0]}
+
+───────────────
+🏦 *الخزينة الرئيسية (Wahbi):*
+💵 {net_main_now:,.2f} ر.س
+
+💼 *عُهدة المحاسب (Omar):*
+💵 {net_acc_now:,.2f} ر.س
+
+🚚 *المتبقي بذمة (سمان السواق):*
+💵 {saman_bal:,.2f} ر.س
+───────────────
+💰 *إجمالي نقدية الشركة:*
+💎 {total_company_cash:,.2f} ر.س
+───────────────
+
+🟢 _نظام الإدارة المالي والمدفوعات الموحد_"""
+
+        # إرسال تليجرام
+        url_tg = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        payload_tg = {"chat_id": TELEGRAM_CHAT_ID, "text": msg_html, "parse_mode": "HTML"}
+        res_tg = requests.post(url_tg, json=payload_tg, timeout=10)
+
+        # إرسال واتساب للمدير
+        send_whatsapp_summary_report(msg_wa)
+
+        return res_tg.status_code == 200
     except Exception:
         return False
 
@@ -69,7 +112,7 @@ def send_telegram_summary_report():
 if st.query_params.get("action") == "send_daily_summary":
     success = send_telegram_summary_report()
     if success:
-        st.success("تم إرسال التقرير التلقائي المجدول بنجاح! 🚀")
+        st.success("تم إرسال التقرير التلقائي المجدول عبر Telegram و WhatsApp بنجاح! 🚀")
     else:
         st.error("فشل إرسال التقرير المجدول.")
     st.stop()
