@@ -1929,22 +1929,7 @@ else:
         audit_history = load_audit_data()
         last_audit = audit_history[-1] if audit_history else None
 
-        st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
-        if st.session_state.user_role == "admin":
-            c_box1, c_box2, c_box3, c_box4 = st.columns(4)
-            with c_box1:
-                st.markdown("#### الخزينة الرئيسية (wahby):")
-                st.metric("رصيد الخزينة الرئيسية", f"{net_main_now:,.2f} ر.س")
-            with c_box2:
-                st.markdown("#### عُهدة المحاسب (omar):")
-                st.metric("رصيد عُهدة omar", f"{net_acc_now:,.2f} ر.س")
-            with c_box3:
-                st.markdown("#### 🚚 عُهد السواقين المترصدة:")
-                st.metric("إجمالي المتبقي باليد", f"{open_driver_custody_sum:,.2f} ر.س")
-            with c_box4:
-                st.markdown("#### 💳 إجمالي نقدية الشركة:")
-                st.metric("مجموع الصناديق", f"{total_company_cash:,.2f} ر.س")
-                # زر إرسال تقرير ملخص الصناديق عبر التليجرام
+        # زر إرسال تقرير ملخص الصناديق عبر التليجرام
         col_tg1, col_tg2 = st.columns([3, 1])
         with col_tg2:
             if st.button("📲 إرسال ملخص اليوم عبر Telegram", use_container_width=True):
@@ -1953,6 +1938,22 @@ else:
                 else:
                     st.error("حدث خطأ أثناء إرسال التقرير.")
 
+        st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
+
+        if st.session_state.user_role == "admin":
+            c_box1, c_box2, c_box3, c_box4 = st.columns(4)
+            with c_box1:
+                st.markdown("#### الخزينة الرئيسية (wahbi):")
+                st.metric("رصيد الخزينة الرئيسية", f"{net_main_now:,.2f} ر.س")
+            with c_box2:
+                st.markdown("#### عُهدة المحاسب (omar):")
+                st.metric("رصيد عُهدة omar", f"{net_acc_now:,.2f} ر.س")
+            with c_box3:
+                st.markdown("#### 🚚 عُهد السواقين المترصدة:")
+                st.metric("إجمالي المتبقي باليد", f"{open_driver_custody_sum:,.2f} ر.س")
+            with c_box4:
+                st.markdown("#### = إجمالي نقدية الشركة:")
+                st.metric("مجموع الصناديق", f"{total_company_cash:,.2f} ر.س")
             if last_audit:
                 a_diff = last_audit['diff']
                 diff_tag = "🟢 مطابقة تامة" if a_diff == 0 else (f"🔴 عجز بقيمة ({abs(a_diff):,.2f} ر.س)" if a_diff < 0 else f"🔵 زيادة بقيمة ({a_diff:,.2f} ر.س)")
