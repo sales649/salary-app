@@ -1893,7 +1893,7 @@ else:
                 st.markdown("#### عُهدة المحاسب (omar):")
                 st.metric("رصيد عُهدة omar", f"{net_acc_now:,.2f} ر.س")
             with c_box3:
-                st.markdown("#### 🚚 عُهد السائقين المترصدة:")
+                st.markdown("#### 🚚 عُهد السواقين المترصدة:")
                 st.metric("إجمالي المتبقي باليد", f"{open_driver_custody_sum:,.2f} ر.س")
             with c_box4:
                 st.markdown("#### 💳 إجمالي نقدية الشركة:")
