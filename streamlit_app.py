@@ -87,13 +87,16 @@ def load_uploaded_sales_batches():
 def save_uploaded_sales_batches(data):
     save_cloud_store('company_sales_batches', data)
     
-# 🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين
-    if st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
+# 🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين (عرض مباشر ومستقل)
+    if st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين'] or ( 'selected_option' in locals() and selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين'] ):
         st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
-        st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصفيات المباشرة والجزئية لكل موظف وسائق')
+        st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصفيات المباشرة والجزئية لـ سمان السواق وكافة الموظفين')
+
+        # جلب البيانات السحابية
         cash_data = load_cash_data()
         drivers_data = load_drivers_data()
 
+        # تجميع حركات الخزائن والصناديق
         all_cash_tx = []
         if isinstance(cash_data, dict):
             for month_k, month_v in cash_data.items():
@@ -101,7 +104,7 @@ def save_uploaded_sales_batches(data):
                     all_cash_tx.extend(month_v.get('transactions', []))
                     all_cash_tx.extend(month_v.get('acc_transactions', []))
 
-        # جلب كافة الأسماء مع التركيز على سمان السواق
+        # تجميع القائمة الموحدة لأسماء السواقين مع الضبط على سمان السواق
         driver_names_set = {'سمان السواق', 'عثمان عبدالله', 'عمر', 'علي'}
         if isinstance(drivers_data, list):
             for d in drivers_data:
@@ -127,7 +130,7 @@ def save_uploaded_sales_batches(data):
         if selected_driver:
             driver_custodies = []
             
-            # استخراج العُهد التاريخية لـ سمان من جميع حركات الصندوق
+            # جلب العُهد السابقة من الصندوق الرئيسي وعُهدة المحاسب
             for tx_idx, tx in enumerate(all_cash_tx):
                 if isinstance(tx, dict):
                     desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
@@ -142,6 +145,7 @@ def save_uploaded_sales_batches(data):
                                 "original_amount": tx_amt
                             })
 
+            # جلب العُهد السحابية المباشرة
             if isinstance(drivers_data, list):
                 for d_rec in drivers_data:
                     if isinstance(d_rec, dict):
@@ -166,6 +170,7 @@ def save_uploaded_sales_batches(data):
                     "original_amount": init_val
                 })
 
+            # جلب التصفيات السابقة
             settlements_list = []
             if isinstance(drivers_data, list):
                 for d in drivers_data:
@@ -178,6 +183,7 @@ def save_uploaded_sales_batches(data):
             total_settled = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list)
             net_remaining = total_given - total_settled
 
+            # كروت ملخص العُهدة
             dc1, dc2, dc3 = st.columns(3)
             dc1.metric(f"💰 إجمالي العُهد لـ ({selected_driver})", f"{total_given:,.2f} ر.س")
             dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
