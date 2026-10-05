@@ -83,10 +83,9 @@ def load_uploaded_sales_batches():
 def save_uploaded_sales_batches(data):
     save_cloud_store('company_sales_batches', data)
 
-# 🚚 2. موديول عُهد السواقين والموظفين الشامل والمربوط بالسحابة
-    if selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين'] or st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
-        st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
-        st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصفيات المباشرة والجزئية لكل موظف وسائق')
+if st.button("عُهدة السواقين", use_container_width=True):
+            st.session_state['current_view'] = 'عهدة السواقين'
+            st.rerun()
 
         # جلب البيانات السحابية الحالية
         cash_data = load_cash_data()
