@@ -1874,12 +1874,12 @@ else:
 
         drivers_db = load_drivers_data()
         # حساب المتبقي الحقيقي بجراب السواق للتسميع في كارت الشاشة الرئيسية
-drivers_db_list = load_drivers_data()
-if isinstance(drivers_db_list, list):
-    tot_g_main = sum(float(pd.to_numeric(d.get('given_amt', 0) or d.get('amount', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
-    tot_s_main = sum(float(pd.to_numeric(d.get('spent_amt', 0) or d.get('spent', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
-    open_driver_custody_sum = max(0.0, tot_g_main - tot_s_main)
-else:
+  drivers_db_list = load_drivers_data()
+    if isinstance(drivers_db_list, list):
+        tot_g_main = sum(float(pd.to_numeric(d.get('given_amt', 0) or d.get('amount', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
+        tot_s_main = sum(float(pd.to_numeric(d.get('spent_amt', 0) or d.get('spent', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
+        open_driver_custody_sum = max(0.0, tot_g_main - tot_s_main)
+    else:
         open_driver_custody_sum = 0.0
 
     audit_history = load_audit_data()
