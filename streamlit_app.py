@@ -17,14 +17,17 @@ def send_telegram_summary_report():
         month_selected = st.session_state.get('month_selected', 'سبتمبر 2026')
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
 
+        # حساب رصيد الخزينة الرئيسية (Wahbi)
         tot_in_main = sum(t['amount'] for t in current_m_cash.get('transactions', []) if 'قبض' in t['type'])
         tot_out_main = sum(t['amount'] for t in current_m_cash.get('transactions', []) if 'صرف' in t['type'])
         net_main_now = current_m_cash.get('opening', 0.0) + tot_in_main - tot_out_main
 
+        # حساب عُهدة المحاسب (Omar)
         tot_in_acc = sum(t['amount'] for t in current_m_cash.get('acc_transactions', []) if 'قبض' in t['type'])
         tot_out_acc = sum(t['amount'] for t in current_m_cash.get('acc_transactions', []) if 'صرف' in t['type'])
         net_acc_now = current_m_cash.get('acc_opening', 0.0) + tot_in_acc - tot_out_acc
 
+        # حساب عُهدة سمان السواق
         drivers_db_list = load_drivers_data()
         if isinstance(drivers_db_list, list):
             tot_g_main = sum(float(pd.to_numeric(d.get('given_amt', 0) or d.get('amount', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
@@ -33,12 +36,26 @@ def send_telegram_summary_report():
         else:
             saman_bal = 0.0
 
-        msg = f"""<b>📊 تقرير ملخص الصناديق والعُهد - شركة ميم الخماسية</b>
-📅 <b>التاريخ:</b> {get_ksa_now_str().split()[0]}
+        # إجمالي نقدية الشركة
+        total_company_cash = net_main_now + net_acc_now
 
-🏦 <b>الخزينة الرئيسية (Wahbi):</b> {net_main_now:,.2f} ر.س
-💼 <b>عُهدة المحاسب (Omar):</b> {net_acc_now:,.2f} ر.س
-🚚 <b>المتبقي بذمة (سمان السواق):</b> {saman_bal:,.2f} ر.س
+        # نص الرسالة المنسق والأنيق
+        msg = f"""<b>📊 التقرير المالي اليومي - شركة ميم الخماسية</b>
+🗓 <b>التاريخ:</b> <code>{get_ksa_now_str().split()[0]}</code>
+
+───────────────
+🏦 <b>الخزينة الرئيسية (Wahbi):</b>
+💵 <code>{net_main_now:,.2f} ر.س</code>
+
+💼 <b>عُهدة المحاسب (Omar):</b>
+💵 <code>{net_acc_now:,.2f} ر.س</code>
+
+🚚 <b>المتبقي بذمة (سمان السواق):</b>
+💵 <code>{saman_bal:,.2f} ر.س</code>
+───────────────
+💰 <b>إجمالي نقدية الشركة:</b>
+💎 <code>{total_company_cash:,.2f} ر.س</code>
+───────────────
 
 🟢 <i>نظام الإدارة المالي والمدفوعات الموحد</i>"""
 
