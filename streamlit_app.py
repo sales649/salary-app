@@ -17,17 +17,14 @@ def send_telegram_summary_report():
         month_selected = st.session_state.get('month_selected', 'سبتمبر 2026')
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
 
-        # حساب رصيد الخزينة الرئيسية (Wahbi)
         tot_in_main = sum(t['amount'] for t in current_m_cash.get('transactions', []) if 'قبض' in t['type'])
         tot_out_main = sum(t['amount'] for t in current_m_cash.get('transactions', []) if 'صرف' in t['type'])
         net_main_now = current_m_cash.get('opening', 0.0) + tot_in_main - tot_out_main
 
-        # حساب عُهدة المحاسب (Omar)
         tot_in_acc = sum(t['amount'] for t in current_m_cash.get('acc_transactions', []) if 'قبض' in t['type'])
         tot_out_acc = sum(t['amount'] for t in current_m_cash.get('acc_transactions', []) if 'صرف' in t['type'])
         net_acc_now = current_m_cash.get('acc_opening', 0.0) + tot_in_acc - tot_out_acc
 
-        # حساب عُهدة سمان السواق
         drivers_db_list = load_drivers_data()
         if isinstance(drivers_db_list, list):
             tot_g_main = sum(float(pd.to_numeric(d.get('given_amt', 0) or d.get('amount', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
@@ -36,21 +33,31 @@ def send_telegram_summary_report():
         else:
             saman_bal = 0.0
 
-        # نص الرسالة
-        msg = f"""📊 *تقرير ملخص الصناديق والعُهد - شركة ميم الخماسية*
-📅 *التاريخ:* {get_ksa_now_str().split()[0]}
+        # نص الرسالة بتنسيق HTML لتفادي مشاكل الرمز
+        msg = f"""<b>📊 تقرير ملخص الصناديق والعُهد - شركة ميم الخماسية</b>
+📅 <b>التاريخ:</b> {get_ksa_now_str().split()[0]}
 
-🏦 *الخزينة الرئيسية (Wahbi):* {net_main_now:,.2f} ر.س
-💼 *عُهدة المحاسب (Omar):* {net_acc_now:,.2f} ر.س
-🚚 *المتبقي بذمة (سمان السواق):* {saman_bal:,.2f} ر.س
+🏦 <b>الخزينة الرئيسية (Wahbi):</b> {net_main_now:,.2f} ر.س
+💼 <b>عُهدة المحاسب (Omar):</b> {net_acc_now:,.2f} ر.س
+🚚 <b>المتبقي بذمة (سمان السواق):</b> {saman_bal:,.2f} ر.س
 
-🟢 *نظام الإدارة المالي والمدفوعات الموحد*"""
+🟢 <i>نظام الإدارة المالي والمدفوعات الموحد</i>"""
 
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-        payload = {"chat_id": TELEGRAM_CHAT_ID, "text": msg, "parse_mode": "Markdown"}
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": msg,
+            "parse_mode": "HTML"
+        }
         res = requests.post(url, json=payload, timeout=10)
-        return res.status_code == 200
+        
+        if res.status_code != 200:
+            st.error(f"خطأ تليجرام: {res.text}")
+            return False
+            
+        return True
     except Exception as e:
+        st.error(f"استثناء: {str(e)}")
         return False
 from datetime import datetime, timedelta
 from supabase import create_client, Client
