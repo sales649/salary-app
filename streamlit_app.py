@@ -9,7 +9,7 @@ import base64
 import requests
 
 TELEGRAM_BOT_TOKEN = "8826053948:AAEktJAhqt4QzMCQFYyByoDwCV7DdLiPgeE"
-TELEGRAM_CHAT_ID = "852121997"
+TELEGRAM_CHAT_ID = "1899126592"
 
 def send_telegram_summary_report():
     try:
@@ -33,7 +33,6 @@ def send_telegram_summary_report():
         else:
             saman_bal = 0.0
 
-        # نص الرسالة بتنسيق HTML لتفادي مشاكل الرمز
         msg = f"""<b>📊 تقرير ملخص الصناديق والعُهد - شركة ميم الخماسية</b>
 📅 <b>التاريخ:</b> {get_ksa_now_str().split()[0]}
 
@@ -50,10 +49,9 @@ def send_telegram_summary_report():
             "parse_mode": "HTML"
         }
         res = requests.post(url, json=payload, timeout=10)
-        
-        if res.status_code != 200:
-            st.error(f"خطأ تليجرام: {res.text}")
-            return False
+        return res.status_code == 200
+    except Exception:
+        return False
             
         return True
     except Exception as e:
