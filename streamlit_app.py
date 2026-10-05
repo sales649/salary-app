@@ -87,16 +87,14 @@ def load_uploaded_sales_batches():
 def save_uploaded_sales_batches(data):
     save_cloud_store('company_sales_batches', data)
     
-# 🚚 2. موديول إدارة ومتابعة عُهد الموظفين والسواقين (مطور لاسترجاع البيانات القديمة)
+# 🚚 2. موديول إدارة ومتابعة عُهد الموظفين والسواقين
     if st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين'] or selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
         st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
-        st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصفيات المباشرة والجزئية لـ سمان السواق وكافة الموظفين')
+        st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصفيات المباشرة والجزئية لكل موظف وسائق')
 
-        # جلب البيانات السحابية
         cash_data = load_cash_data()
         drivers_data = load_drivers_data()
 
-        # تجميع كافة حركات الخزينة والصناديق
         all_cash_tx = []
         if isinstance(cash_data, dict):
             for month_k, month_v in cash_data.items():
@@ -104,9 +102,7 @@ def save_uploaded_sales_batches(data):
                     all_cash_tx.extend(month_v.get('transactions', []))
                     all_cash_tx.extend(month_v.get('acc_transactions', []))
 
-        # 1. تجميع القائمة الموحدة لجميع أسماء السواقين المعتمدين
         driver_names_set = {'سمان السواق', 'عثمان عبدالله', 'عمر', 'علي'}
-        
         if isinstance(drivers_data, list):
             for d in drivers_data:
                 if isinstance(d, dict):
@@ -118,26 +114,21 @@ def save_uploaded_sales_batches(data):
                 driver_names_set.update(st.session_state.payroll_df['الاسم'].dropna().tolist())
 
         driver_list = sorted(list(driver_names_set))
-        
-        # ضبط الخيار الافتراضي ليكون "سمان السواق" أو عثمان
         default_idx = 0
         for i, name in enumerate(driver_list):
             if 'سمان' in name:
                 default_idx = i
                 break
 
-        col_drv_sel, col_add_btn = st.columns([1.5, 1])
+        col_drv_sel, _ = st.columns([1.5, 1])
         with col_drv_sel:
             selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", driver_list, index=default_idx)
 
         if selected_driver:
             driver_custodies = []
-            
-            # أ. استخراج العُهد السابقة من حركات الخزينة للصندوق الرئيسي وعُهدة المحاسب
             for tx_idx, tx in enumerate(all_cash_tx):
                 if isinstance(tx, dict):
                     desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
-                    # الفحص باسم السائق أو العبارات المرتبطة به
                     if selected_driver in desc or ('سمان' in selected_driver and 'سمان' in desc):
                         tx_amt = float(pd.to_numeric(tx.get('amount', 0), errors='coerce') or 0)
                         v_code = tx.get('code', f"CASH-{tx_idx+1}")
@@ -149,7 +140,6 @@ def save_uploaded_sales_batches(data):
                                 "original_amount": tx_amt
                             })
 
-            # ب. استخراج العُهد السحابية المباشرة من الجدول driver_custody
             if isinstance(drivers_data, list):
                 for d_rec in drivers_data:
                     if isinstance(d_rec, dict):
@@ -165,7 +155,6 @@ def save_uploaded_sales_batches(data):
                                         "original_amount": g_amt
                                     })
 
-            # في حال عدم وجود عُهد مسجلة، إنشاء عُهدة سابقة افتراضية لـ سمان
             if not driver_custodies:
                 init_val = 3500.0 if 'سمان' in selected_driver else 1000.0
                 driver_custodies.append({
@@ -175,7 +164,6 @@ def save_uploaded_sales_batches(data):
                     "original_amount": init_val
                 })
 
-            # جـ. استخراج قائمة التصفيات المسجلة سابقاً
             settlements_list = []
             if isinstance(drivers_data, list):
                 for d in drivers_data:
@@ -188,7 +176,6 @@ def save_uploaded_sales_batches(data):
             total_settled = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list)
             net_remaining = total_given - total_settled
 
-            # عرض ملخص المبالغ
             dc1, dc2, dc3 = st.columns(3)
             dc1.metric(f"💰 إجمالي العُهد لـ ({selected_driver})", f"{total_given:,.2f} ر.س")
             dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
@@ -203,7 +190,6 @@ def save_uploaded_sales_batches(data):
                 for c_item in driver_custodies:
                     c_id = c_item['custody_id']
                     c_orig = c_item['original_amount']
-                    
                     c_settled_amount = sum(
                         float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) 
                         for s in settlements_list if s.get('target_custody_id') == c_id
@@ -226,10 +212,8 @@ def save_uploaded_sales_batches(data):
             with col_tabs2:
                 st.markdown(f"##### 🧾 خصم وتصفية جزئية لـ ({selected_driver}):")
                 active_custodies = [c for c in custody_display_list if c['المتبقي للتصفية'] > 0]
-                
                 if active_custodies:
                     custody_options = [f"{c['رقم العُهدة']} | [المتبقي: {c['المتبقي للتصفية']:,.2f} ر.س]" for c in active_custodies]
-                    
                     with st.form(f"form_partial_settle_{selected_driver}"):
                         selected_c_str = st.selectbox("اختر العُهدة الخصم منها:", custody_options)
                         target_c_id = selected_c_str.split(' | ')[0].strip()
@@ -258,7 +242,6 @@ def save_uploaded_sales_batches(data):
 
             st.divider()
 
-            # سجل التصفيات السابقة
             st.markdown(f"##### 📜 سجل التصفيات والفواتير السابقة لـ ({selected_driver}):")
             if settlements_list:
                 history_rows = []
