@@ -92,11 +92,9 @@ def save_uploaded_sales_batches(data):
         st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
         st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصفيات المباشرة والجزئية لكل موظف وسائق')
 
-        # جلب البيانات من السحابة
         cash_data = load_cash_data()
         drivers_data = load_drivers_data()
 
-        # تجميع حركات الصناديق والخزينة
         all_cash_tx = []
         if isinstance(cash_data, dict):
             for month_k, month_v in cash_data.items():
@@ -104,7 +102,7 @@ def save_uploaded_sales_batches(data):
                     all_cash_tx.extend(month_v.get('transactions', []))
                     all_cash_tx.extend(month_v.get('acc_transactions', []))
 
-        # 1. قائمة السواقين والموظفين
+        # جلب كافة الأسماء مع التركيز على سمان السواق
         driver_names_set = {'سمان السواق', 'عثمان عبدالله', 'عمر', 'علي'}
         if isinstance(drivers_data, list):
             for d in drivers_data:
@@ -130,7 +128,7 @@ def save_uploaded_sales_batches(data):
         if selected_driver:
             driver_custodies = []
             
-            # أ. جلب العُهد التاريخية من الصندوق الرئيسي وعُهدة المحاسب
+            # استخراج العُهد التاريخية لـ سمان من جميع حركات الصندوق
             for tx_idx, tx in enumerate(all_cash_tx):
                 if isinstance(tx, dict):
                     desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
@@ -145,7 +143,6 @@ def save_uploaded_sales_batches(data):
                                 "original_amount": tx_amt
                             })
 
-            # ب. جلب العُهد السحابية من جدول العُهد المباشر
             if isinstance(drivers_data, list):
                 for d_rec in drivers_data:
                     if isinstance(d_rec, dict):
@@ -161,17 +158,15 @@ def save_uploaded_sales_batches(data):
                                         "original_amount": g_amt
                                     })
 
-            # إذا لم توجد عُهد سابقة، إنشاء رصيد العُهدة لـ سمان السواق تلقائياً
             if not driver_custodies:
                 init_val = 3500.0 if 'سمان' in selected_driver else 1000.0
                 driver_custodies.append({
                     "custody_id": f"CUST-{selected_driver}-01",
                     "date": "2026-08-01",
-                    "statement": f"رصيد عُهدة نقدية سابقة لـ {selected_driver}",
+                    "statement": f"رصيد عُهدة سابقة بذمة {selected_driver}",
                     "original_amount": init_val
                 })
 
-            # جـ. جلب قائمة التصفيات السابقة
             settlements_list = []
             if isinstance(drivers_data, list):
                 for d in drivers_data:
@@ -184,7 +179,6 @@ def save_uploaded_sales_batches(data):
             total_settled = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list)
             net_remaining = total_given - total_settled
 
-            # كروت الملخص المالي
             dc1, dc2, dc3 = st.columns(3)
             dc1.metric(f"💰 إجمالي العُهد لـ ({selected_driver})", f"{total_given:,.2f} ر.س")
             dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
@@ -1545,9 +1539,7 @@ else:
             st.query_params.clear()
             st.rerun()
 
-      # نهاية القائمة الجانبية
-        selected_option = st.session_state.get('current_view', 'الرئيسية')
-
+ 
     st.session_state.payroll_df = get_payroll_for_month(month_selected)
     st.session_state.current_active_month = month_selected
 
