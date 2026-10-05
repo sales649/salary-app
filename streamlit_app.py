@@ -11,7 +11,6 @@ from supabase import create_client, Client
 
 # 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL (تم تصحيح القوس والفاصلة)
 st.set_page_config(page_title='5M Accounting ERP', layout='wide', page_icon='📱', initial_sidebar_state="auto")
-
 def get_ksa_now():
     return datetime.utcnow() + timedelta(hours=3)
 
@@ -85,7 +84,7 @@ def save_uploaded_sales_batches(data):
     save_cloud_store('company_sales_batches', data)
 
 # 2. عُهدة السواقين الشاملة مع قراءة جميع البيانات
-    elif selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
+   if selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
         st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
         st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصفيات المباشرة والجزئية لكل موظف وسائق')
 
