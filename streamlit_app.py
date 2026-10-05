@@ -1855,11 +1855,11 @@ else:
                             save_drivers_data(drivers_data)
                             st.rerun()
                     st.divider()
-    # 🏠 2. الشاشة الرئيسية النظام
-    elif selected_option == 'الرئيسية':
+# 🏠 2. الشاشة الرئيسية للنظام
+    elif selected_option == 'الرئيسية' or st.session_state.get('current_view') == 'الرئيسية':
         all_cash_db = load_cash_data()
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
-        
+
         curr_trans_main = current_m_cash.get('transactions', [])
         tot_in_main = sum(t['amount'] for t in curr_trans_main if 'قبض' in t['type'])
         tot_out_main = sum(t['amount'] for t in curr_trans_main if 'صرف' in t['type'])
@@ -1872,20 +1872,18 @@ else:
 
         total_company_cash = net_main_now + net_acc_now
 
-        drivers_db = load_drivers_data()
-        # حساب المتبقي الحقيقي بجراب السواق للتسميع في كارت الشاشة الرئيسية
-drivers_db_list = load_drivers_data()
-    if isinstance(drivers_db_list, list):
-        tot_g_main = sum(float(pd.to_numeric(d.get('given_amt', 0) or d.get('amount', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
-        tot_s_main = sum(float(pd.to_numeric(d.get('spent_amt', 0) or d.get('spent', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
-        open_driver_custody_sum = max(0.0, tot_g_main - tot_s_main)
-    else:
-        open_driver_custody_sum = 0.0
+        drivers_db_list = load_drivers_data()
+        if isinstance(drivers_db_list, list):
+            tot_g_main = sum(float(pd.to_numeric(d.get('given_amt', 0) or d.get('amount', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
+            tot_s_main = sum(float(pd.to_numeric(d.get('spent_amt', 0) or d.get('spent', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
+            open_driver_custody_sum = max(0.0, tot_g_main - tot_s_main)
+        else:
+            open_driver_custody_sum = 0.0
 
-    audit_history = load_audit_data()
-    last_audit = audit_history[-1] if audit_history else None
+        audit_history = load_audit_data()
+        last_audit = audit_history[-1] if audit_history else None
 
-    st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
+        st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
         if st.session_state.user_role == "admin":
             c_box1, c_box2, c_box3, c_box4 = st.columns(4)
             with c_box1:
