@@ -91,7 +91,6 @@ def save_uploaded_sales_batches(data):
     if st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
         st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
         st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصفيات المباشرة والجزئية لكل موظف وسائق')
-
         cash_data = load_cash_data()
         drivers_data = load_drivers_data()
 
