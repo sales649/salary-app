@@ -84,11 +84,10 @@ def save_uploaded_sales_batches(data):
     save_cloud_store('company_sales_batches', data)
     
 # 🚚 2. موديول عُهد السواقين والموظفين الشامل والمربوط بالسحابة
-if st.button("عُهدة السواقين", use_container_width=True):
-            st.session_state['current_view'] = 'عهدة السواقين'
-            st.rerun()
+    if st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين', 'عهدة_السواقين'] or selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
+        st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
+        st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصفيات المباشرة والجزئية لكل موظف وسائق')
 
-        # جلب البيانات السحابية الحالية
         cash_data = load_cash_data()
         drivers_data = load_drivers_data()
 
@@ -162,7 +161,6 @@ if st.button("عُهدة السواقين", use_container_width=True):
                                     "original_amount": g_amt
                                 })
 
-            # في حال عدم وجود عُهد سابقة، إنشاء سجلاً أولياً للتجربة والربط
             if not driver_custodies:
                 driver_custodies.append({
                     "custody_id": f"CUST-{selected_driver}-01",
@@ -185,7 +183,7 @@ if st.button("عُهدة السواقين", use_container_width=True):
             dc1, dc2, dc3 = st.columns(3)
             dc1.metric(f"💰 إجمالي العُهد لـ ({selected_driver})", f"{total_given:,.2f} ر.س")
             dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
-            dc3.metric("⚠️️ المتبقي بذمة السائق", f"{net_remaining:,.2f} ر.س")
+            dc3.metric("⚠️ المتبقي بذمة السائق", f"{net_remaining:,.2f} ر.س")
 
             st.divider()
             col_tabs1, col_tabs2 = st.columns([1.3, 1])
@@ -197,7 +195,6 @@ if st.button("عُهدة السواقين", use_container_width=True):
                     c_id = c_item['custody_id']
                     c_orig = c_item['original_amount']
                     
-                    # حساب المخصوم من هذه العُهدة تحديداً
                     c_settled_amount = sum(
                         float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) 
                         for s in settlements_list if s.get('target_custody_id') == c_id
