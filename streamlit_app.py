@@ -65,15 +65,19 @@ def send_telegram_summary_report():
             "text": msg,
             "parse_mode": "HTML"
         }
-        res = requests.post(url, json=payload, timeout=10)
+       res = requests.post(url, json=payload, timeout=10)
         return res.status_code == 200
     except Exception:
         return False
-            
-        return True
-    except Exception as e:
-        st.error(f"استثناء: {str(e)}")
-        return False
+
+# 🤖 تنفيذ الجدولة التلقائية فور استدعاء الرابط من cron-job (الساعة 9:00 مساءً)
+if st.query_params.get("action") == "send_daily_summary":
+    success = send_telegram_summary_report()
+    if success:
+        st.success("تم إرسال التقرير التلقائي المجدول بنجاح! 🚀")
+    else:
+        st.error("فشل إرسال التقرير المجدول.")
+    st.stop()
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 
