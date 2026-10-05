@@ -87,7 +87,7 @@ def load_uploaded_sales_batches():
 def save_uploaded_sales_batches(data):
     save_cloud_store('company_sales_batches', data)
     
-# 🚚 2. موديول إدارة ومتابعة عُهد الموظفين والسواقين (استرجاع بيانات سمان السواق)
+# 🚚 2. موديول إدارة ومتابعة عُهد الموظفين والسواقين
     if st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين'] or selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
         st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
         st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصفيات المباشرة والجزئية لكل موظف وسائق')
@@ -1545,7 +1545,7 @@ else:
             st.query_params.clear()
             st.rerun()
 
-        selected_option = st.session_state.get('current_view', 'الرئيسية')
+      selected_option = st.session_state.get('current_view', 'الرئيسية')
 
     st.session_state.payroll_df = get_payroll_for_month(month_selected)
     st.session_state.current_active_month = month_selected
