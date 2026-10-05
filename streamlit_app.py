@@ -1880,13 +1880,12 @@ if isinstance(drivers_db_list, list):
     tot_s_main = sum(float(pd.to_numeric(d.get('spent_amt', 0) or d.get('spent', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
     open_driver_custody_sum = max(0.0, tot_g_main - tot_s_main)
 else:
-    open_driver_custody_sum = 0.0
+        open_driver_custody_sum = 0.0
 
-        audit_history = load_audit_data()
-        last_audit = audit_history[-1] if audit_history else None
+    audit_history = load_audit_data()
+    last_audit = audit_history[-1] if audit_history else None
 
-        st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
-        
+    st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
         if st.session_state.user_role == "admin":
             c_box1, c_box2, c_box3, c_box4 = st.columns(4)
             with c_box1:
