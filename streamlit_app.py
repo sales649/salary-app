@@ -63,7 +63,11 @@ def load_cash_data():
 
 def save_cash_data(data):
     save_cloud_store('company_cash_data', data)
+def load_drivers_data():
+    return fetch_cloud_store('driver_custody', [])
 
+def save_drivers_data(data):
+    save_cloud_store('driver_custody', data)
 # 📦 2. دوال المخزون المربوطة بالسحابة
 def load_inventory_data():
     return fetch_cloud_store('company_inventory_data', [])
