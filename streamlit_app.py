@@ -1866,7 +1866,6 @@ else:
                 st.info(f"لا توجد تصفيات سابقة مسجلة لـ ({selected_driver}).")
 
     # 🏠 2. الشاشة الرئيسية النظام
-    elif st.session_state.get('current_view', 'الرئيسية') == 'الرئيسية':
     elif selected_option == 'الرئيسية':
         all_cash_db = load_cash_data()
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
