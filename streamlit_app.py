@@ -1696,7 +1696,7 @@ else:
 
     # 4. الواجهة الرئيسية الشاملة
     selected_option = st.session_state.get('current_view', 'الرئيسية')
-# 🚚 موديول إدارة عُهدة السواقين المباشر (التصفية المتعددة لنفس العُهدة)
+# 🚚 موديول إدارة عُهدة السواقين المباشر (دعم الفواتير الزائدة وترحيل الفرق لصالح/على السائق)
     if st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
         drivers_data = load_drivers_data()
         if not isinstance(drivers_data, list):
@@ -1710,7 +1710,6 @@ else:
         for r in saman_records:
             r_id = r.get('id')
             g_amt = float(pd.to_numeric(r.get('given_amt', 0) or r.get('amount', 0), errors='coerce') or 0)
-            # إذا كان الكارت هو تسليم عُهدة جديدة أو له مبلغ مسلم
             if g_amt > 0 and r.get('type') != 'تصفية_جزئية':
                 custodies_dict[f"#{r_id}"] = {
                     "id": r_id,
@@ -1727,14 +1726,14 @@ else:
             if target_id and target_id in custodies_dict and s_amt > 0:
                 custodies_dict[target_id]["spent_total"] += s_amt
 
-        # حساب المبالغ الإجمالية والمتبقي بذمة سمان
+        # حساب المبالغ الإجمالية والمتبقي بذمة سمان (أو له)
         tot_given = sum(c["given_amt"] for c in custodies_dict.values())
-        tot_spent = sum(c["spent_total"] for c in custodies_dict.values())
-        current_balance = tot_given - tot_spent
+        tot_spent = sum(float(pd.to_numeric(r.get('spent_amt', 0) or r.get('spent', 0), errors='coerce') or 0) for r in saman_records)
+        current_balance = tot_given - tot_spent  # إذا كان موجباً فهو بذمته، وإذا كان سالباً فهو مستحق له
 
         # 1. الهيدر والأزرار العلوية
         st.markdown("<h2 style='text-align: center;'>🚚 موديول إدارة عُهدة السواقين المباشر - (سبتمبر 2026)</h2>", unsafe_allow_html=True)
-        st.caption("تراكمي سحابي: تصفية العُهدة الواحدة على عدة مرات متتالية حتى استيفاء كامل قيمتها")
+        st.caption("تراكمي سحابي: قبول الفواتير الزائدة عن قيمة العُهدة وترحيل الفرق تلقائياً (له / عليه)")
         
         b1, b2, b3 = st.columns(3)
         with b1:
@@ -1750,7 +1749,10 @@ else:
         m1, m2, m3 = st.columns(3)
         m1.metric("إجمالي العُهد المسلمة لـ سمان السواق", f"{tot_given:,.2f} ر.س")
         m2.metric("إجمالي المصروفات المصفاة بالفواتير", f"{tot_spent:,.2f} ر.س")
-        m3.metric("🔴 المتبقي بذمته حالياً (المُرحّل)", f"{current_balance:,.2f} ر.س")
+        if current_balance >= 0:
+            m3.metric("🔴 المتبقي بذمته حالياً (المُرحّل)", f"{current_balance:,.2f} ر.س")
+        else:
+            m3.metric("🟢 مستحق لـ سمان (مُرحّل له)", f"{abs(current_balance):,.2f} ر.س")
 
         st.divider()
 
@@ -1760,7 +1762,7 @@ else:
         with col_left:
             st.markdown("### ⚙️ 2. تصفية عُهدة (سمان السواق) بالعهدة:")
             
-            # فلترة العُهد التي لا يزال فيها متبقي حقيقي أكبر من صفر
+            # فلترة العُهد المفتوحة أو القابلة للتصفية
             open_custodies_list = []
             for c_key, c_val in custodies_dict.items():
                 rem_amt = c_val["given_amt"] - c_val["spent_total"]
@@ -1772,27 +1774,27 @@ else:
                         "spent": c_val["spent_total"],
                         "rem": rem_amt,
                         "notes": c_val["notes"],
-                        "label": f"{c_key} | [المتبقي المباشر: {rem_amt:,.2f} ر.س] | {c_val['notes']}"
+                        "label": f"{c_key} | [المتبقي بها: {rem_amt:,.2f} ر.س] | {c_val['notes']}"
                     })
 
             if open_custodies_list:
-                with st.form("form_multi_settle_saman"):
-                    sel_custody_str = st.selectbox("اختر العُهدة المُراد الخصم منها (تصفية جزئية/كاملة):", [c["label"] for c in open_custodies_list])
+                with st.form("form_flexible_settle_saman"):
+                    sel_custody_str = st.selectbox("اختر العُهدة المراد تصفية فواتير منها:", [c["label"] for c in open_custodies_list])
                     
-                    # استخراج العُهدة المختارة بدقة
                     target_key = sel_custody_str.split(' | ')[0].strip()
                     target_obj = next((c for c in open_custodies_list if c["key"] == target_key), open_custodies_list[0])
-                    max_allowed = float(target_obj["rem"])
+                    c_rem_val = float(target_obj["rem"])
 
-                    spent_val = st.number_input(f"المبلغ المُراد خصمه الآن (الحد الأقصى المتبقي {max_allowed:,.2f} ر.س):", min_value=1.0, max_value=max_allowed, value=min(100.0, max_allowed), step=10.0)
+                    # إتاحة إدخال قيمة الفاتورة بدون حد أقصى للقبول بالمبالغ الزائدة
+                    spent_val = st.number_input("مبلغ الفاتورة / المصاريف المصفاة بالكامل (ر.س):", min_value=1.0, value=float(c_rem_val), step=10.0)
                     notes_val = st.text_input("ملاحظات / مصاريف الفاتورة (بنزين، ديزل، صيانة...):")
-                    btn_confirm_settle = st.form_submit_button("تأكيد خصم الفاتورة من العُهدة", use_container_width=True)
+                    btn_confirm_settle = st.form_submit_button("تأكيد خصم الفاتورة وتعديل الرصيد التراكمي", use_container_width=True)
 
                     if btn_confirm_settle and spent_val > 0:
                         new_id = len(drivers_data) + 1
-                        rem_after = max_allowed - spent_val
+                        diff_val = c_rem_val - spent_val
                         
-                        # تسجيل حركة التصفية الجزئية المربوطة بالعُهدة
+                        # تسجيل حركة التصفية
                         drivers_data.append({
                             "id": new_id,
                             "target_custody_id": target_key,
@@ -1801,20 +1803,28 @@ else:
                             "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
                             "given_amt": 0.0,
                             "spent_amt": spent_val,
-                            "rem_amt": rem_after,
+                            "rem_amt": current_balance - spent_val,
                             "notes": f"تصفية من {target_key}: {notes_val}",
-                            "status": "مصفاة_بالكامل" if rem_after == 0 else "مصفاة_جزئياً"
+                            "status": "مصفاة_بالكامل"
                         })
                         save_drivers_data(drivers_data)
-                        st.success(f"تم خصم مبلغ ({spent_val:,.2f} ر.س) بنجاح من العُهدة {target_key}! المتبقي في هذه العُهدة للرات القادمة: ({rem_after:,.2f} ر.س).")
+
+                        if diff_val < 0:
+                            st.success(f"تم إغلاق العُهدة {target_key} بنجاح! الفاتورة زائدة بمبلغ ({abs(diff_val):,.2f} ر.س) وتم ترحيل الفرق آلياً لصالح سمان.")
+                        else:
+                            st.success(f"تم خصم مبلغ ({spent_val:,.2f} ر.س) بنجاح! المتبقي بالعُهدة {target_key}: ({diff_val:,.2f} ر.س).")
                         st.rerun()
             else:
                 st.info("لا توجد عُهد مفتوحة حالياً لـ سمان السواق بانتظار التصفية.")
 
         with col_right:
             st.markdown("### 🚚 1. تسليم عُهدة جديدة لـ (سمان السواق):")
-            st.warning(f"💡 بجِراب السائق متبقي سابق عليه بـ ({current_balance:,.2f} ر.س).")
-            with st.form("form_give_saman_multi"):
+            if current_balance >= 0:
+                st.warning(f"💡 بجِراب السائق متبقي سابق عليه بـ ({current_balance:,.2f} ر.س).")
+            else:
+                st.success(f"💡 لـ سمان مستحق سابق بـ ({abs(current_balance):,.2f} ر.س) سيتم خصمها من العُهدة القادمة.")
+
+            with st.form("form_give_saman_flex"):
                 st.text_input("اسم السائق:", value="سمان السواق", disabled=True)
                 new_amt = st.number_input("المبلغ النقدي المسلم باليد (يُخصم من الصندوق):", min_value=0.0, value=0.0, step=50.0)
                 new_notes = st.text_input("بيان / ملاحظات العُهدة:", value="مصاريف نقل وبنزين")
@@ -1828,12 +1838,12 @@ else:
                         "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
                         "given_amt": new_amt,
                         "spent_amt": 0.0,
-                        "rem_amt": new_amt,
+                        "rem_amt": current_balance + new_amt,
                         "notes": new_notes,
                         "status": "مفتوحة"
                     })
                     save_drivers_data(drivers_data)
-                    st.success(f"تم تسليم عُهدة جديدة بـ ({new_amt:,.2f} ر.س) بنجاح!")
+                    st.success(f"تم تسليم عُهدة جديدة بـ ({new_amt:,.2f} ر.س) وتعديل الرصيد التراكمي لـ سمان بنجاح!")
                     st.rerun()
 
         st.divider()
@@ -1853,8 +1863,15 @@ else:
                 if rec_given > 0:
                     c_info = custodies_dict.get(f"#{rec_id}", {})
                     c_rem = c_info.get("given_amt", rec_given) - c_info.get("spent_total", 0.0)
-                    status_color = "🔴" if c_rem > 0 else "🟢"
-                    status_label = f"عُهدة مفتوحة [متبقي بها: {c_rem:,.2f} ر.س]" if c_rem > 0 else "🟢 مصفاة بالكامل"
+                    if c_rem > 0:
+                        status_color = "🔴"
+                        status_label = f"عُهدة مفتوحة [متبقي بها: {c_rem:,.2f} ر.س]"
+                    elif c_rem == 0:
+                        status_color = "🟢"
+                        status_label = "🟢 مصفاة بالكامل"
+                    else:
+                        status_color = "🟢"
+                        status_label = f"🟢 مصفاة بالكامل [فواتير زائدة: {abs(c_rem):,.2f} ر.س لصالح سمان]"
                 else:
                     status_color = "🟡"
                     status_label = f"فاتورة مصفاة من العُهدة {rec_target}"
@@ -1870,10 +1887,10 @@ else:
                         st.markdown(f"الحالة: {status_color} **{status_label}**")
                         st.caption(f"الملاحظات: {rec_notes}")
                     with ck4:
-                        if st.button("✏️ تعديل", key=f"edit_m_{rec_id}"):
+                        if st.button("✏️ تعديل", key=f"edit_f_{rec_id}"):
                             pass
                     with ck5:
-                        if st.button("🗑️ حذف", key=f"del_m_{rec_id}"):
+                        if st.button("🗑️ حذف", key=f"del_f_{rec_id}"):
                             drivers_data = [d for d in drivers_data if d.get('id') != rec_id]
                             save_drivers_data(drivers_data)
                             st.rerun()
