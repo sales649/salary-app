@@ -1980,7 +1980,7 @@ with col_right:
 
                 cash_tx_code = f"CASH-OUT-{len(all_cash_db[month_selected]['acc_transactions'])+1}"
 
-                # القيد المعتمد والمتوافق مع شاشة الخزينة لمنع KeyError: 'type'
+                # القيد المعتمد المتوافق مع شاشة الخزينة لمنع KeyError: 'type'
                 all_cash_db[month_selected]['acc_transactions'].append({
                     "code": cash_tx_code,
                     "date": today_date,
@@ -2012,34 +2012,10 @@ with col_right:
                 st.cache_data.clear()
                 st.success(f"تم خصم {new_amt:,.2f} ر.س من صندوق عمر وتسليم العُهدة لـ سمان بنجاح! 🚀")
                 st.rerun()
-        st.divider()
 
-        # 4. سجل كشف حساب وتصفية عُهد (سمان السواق)
-        st.markdown("### 📄 سجل كشف حساب وتصفية عُهد (سمان السواق):")
-        if saman_records:
-            for rec in reversed(saman_records):
-                rec_id = rec.get('id', 1)
-                rec_date = rec.get('date', '')
-                rec_given = float(pd.to_numeric(rec.get('given_amt', 0) or rec.get('amount', 0), errors='coerce') or 0)
-                rec_spent = float(pd.to_numeric(rec.get('spent_amt', 0) or rec.get('spent', 0), errors='coerce') or 0)
-                rec_notes = rec.get('notes', 'مصاريف نقل وبنزين')
+    st.divider()
 
-                with st.container():
-                    ck1, ck2, ck3, ck4, ck5 = st.columns([1, 3, 3, 1, 1])
-                    with ck1: st.markdown(f"#### #{rec_id}")
-                    with ck2:
-                        st.markdown(f"🚚 **سمان السواق**  📅 {rec_date}")
-                        st.caption(f"المسلم: **{rec_given:,.2f} ر.س**  | المصروف: **{rec_spent:,.2f} ر.س**")
-                    with ck3:
-                        st.markdown(f"ملاحظات: {rec_notes}")
-                    with ck4:
-                        if st.button("✏️ تعديل", key=f"edit_fx_{rec_id}"): pass
-                    with ck5:
-                        if st.button("🗑️ حذف", key=f"del_fx_{rec_id}"):
-                            drivers_data = [d for d in drivers_data if d.get('id') != rec_id]
-                            save_drivers_data(drivers_data)
-                            st.rerun()
-                    st.divider()
+elif selected_option == 'الرئيسية' or st.session_state.get('current_view') == 'الرئيسية':
 # 🏠 2. الشاشة الرئيسية للنظام
     elif selected_option == 'الرئيسية' or st.session_state.get('current_view') == 'الرئيسية':
         all_cash_db = load_cash_data()
