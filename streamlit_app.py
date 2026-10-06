@@ -215,7 +215,7 @@ def save_uploaded_sales_batches(data):
                 all_cash_tx.extend(month_v.get('transactions', []))
                 all_cash_tx.extend(month_v.get('acc_transactions', []))
 
-    # تجهيز قائمة السائقين والموظفين
+    # 1. تجهيز قائمة السائقين والموظفين
     driver_list = []
     for d in drivers_data:
         if isinstance(d, dict):
@@ -226,38 +226,17 @@ def save_uploaded_sales_batches(data):
     if "سمان" not in driver_list:
         driver_list.append("سمان")
 
-# 2. تحديد العنصر الافتراضي لقائمة الاختيار
-default_idx = 0
-for i, name in enumerate(driver_list):
-    if 'سمان' in name:
-        default_idx = i
-        break
+    # 2. تحديد العنصر الافتراضي لقائمة الاختيار
+    default_idx = 0
+    for i, name in enumerate(driver_list):
+        if 'سمان' in name:
+            default_idx = i
+            break
 
-# 3. عرض صندوق اختيار السائق
-col_drv_sel, _ = st.columns([1.5, 1])
-with col_drv_sel:
-    selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", driver_list, index=default_idx)
-
-if selected_driver:
-        driver_custodies = []
-
-        # تجميع حركات الصندوق الرئيسي وحركات المحاسب عمر معاً
-        combined_tx = all_cash_tx + current_m_cash.get('acc_transactions', [])
-
-        for tx_idx, tx in enumerate(combined_tx):
-            if isinstance(tx, dict):
-                desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
-                if selected_driver in desc or ('سمان' in selected_driver and 'سمان' in desc):
-                    tx_amt = float(pd.to_numeric(tx.get('amount', 0), errors='coerce') or 0)
-                    v_code = tx.get('code', f"CASH-{tx_idx+1}")
-                    if tx_amt > 0:
-                        driver_custodies.append({
-                            "custody_id": f"CUST-{v_code}",
-                            "date": tx.get('date', get_ksa_now_str().split()[0]),
-                            "statement": tx.get('party') or tx.get('statement') or 'صرف عُهدة نقدية',
-                            "original_amount": tx_amt
-                        })
-
+    # 3. عرض صندوق اختيار السائق
+    col_drv_sel, _ = st.columns([1.5, 1])
+    with col_drv_sel:
+        selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", driver_list, index=default_idx)
         # جلب العُهد السحابية المباشرة
         if isinstance(drivers_data, list):
             for d_rec in drivers_data:
