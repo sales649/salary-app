@@ -1955,7 +1955,7 @@ else:
             st.markdown("### 🚚 1. تسليم عُهدة جديدة لـ (سمان السواق):")
             st.warning(f"💡 بجِراب السائق متبقي سابق عليه بـ ({tot_open_rem:,.2f} ر.س).")
 
-           with st.form("form_give_saman_fixed"):
+        with st.form("form_give_saman_fixed"):
             st.text_input("اسم السائق:", value="سمان السواق", disabled=True)
             new_amt = st.number_input("المبلغ النقدي المسلم باليد (يُخصم من الصندوق):", min_value=0.0, value=0.0, step=50.0)
             new_notes = st.text_input("بيان / ملاحظات العُهدة:", value="مصاريف نقل وبنزين")
