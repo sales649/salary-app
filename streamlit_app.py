@@ -237,9 +237,10 @@ def save_uploaded_sales_batches(data):
         with col_drv_sel:
             selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", driver_list, index=default_idx)
 
-        if selected_driver:
-            driver_custodies = []
-        # تجميع حركات الصندوق الرئيسي وحركات المحاسب عمر معا
+if selected_driver:
+    driver_custodies = []
+
+    # تجميع حركات الصندوق الرئيسي وحركات المحاسب عمر معاً
     combined_tx = all_cash_tx + current_m_cash.get('acc_transactions', [])
 
     for tx_idx, tx in enumerate(combined_tx):
@@ -255,46 +256,24 @@ def save_uploaded_sales_batches(data):
                         "statement": tx.get('party') or tx.get('statement') or 'صرف عُهدة نقدية',
                         "original_amount": tx_amt
                     })
-   
-                if isinstance(tx, dict):
-                    desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
-                    if selected_driver in desc or ('سمان' in selected_driver and 'سمان' in desc):
-                        tx_amt = float(pd.to_numeric(tx.get('amount', 0), errors='coerce') or 0)
-                        v_code = tx.get('code', f"CASH-{tx_idx+1}")
-                        if tx_amt > 0:
+
+    # جلب العُهد السحابية المباشرة
+    if isinstance(drivers_data, list):
+        for d_rec in drivers_data:
+            if isinstance(d_rec, dict):
+                d_name = str(d_rec.get('driver_name') or d_rec.get('driver') or '')
+                if selected_driver in d_name or ('سمان' in selected_driver and 'سمان' in d_name):
+                    if d_rec.get('type') == 'عهدة_جديدة' or d_rec.get('given_amt', 0) > 0 or d_rec.get('amount', 0) > 0:
+                        g_amt = float(d_rec.get('amount') or d_rec.get('given_amt') or 0.0)
+                        if g_amt > 0 and d_rec.get('status') != 'مصفاة':
                             driver_custodies.append({
-                                "custody_id": f"CUST-{v_code}",
-                                "date": tx.get('date', get_ksa_now_str().split()[0]),
-                                "statement": tx.get('party') or tx.get('statement') or 'صرف عُهدة نقدية',
-                                "original_amount": tx_amt
+                                "custody_id": f"CUST-DIR-{d_rec.get('id', 1)}",
+                                "date": d_rec.get('date', get_ksa_now_str().split()[0]),
+                                "statement": d_rec.get('notes') or d_rec.get('purpose') or 'تسليم عُهدة سابقة',
+                                "original_amount": g_amt
                             })
 
-            # جلب العُهد السحابية المباشرة
-            if isinstance(drivers_data, list):
-                for d_rec in drivers_data:
-                    if isinstance(d_rec, dict):
-                        d_name = str(d_rec.get('driver_name') or d_rec.get('driver') or '')
-                        if selected_driver in d_name or ('سمان' in selected_driver and 'سمان' in d_name):
-                            if d_rec.get('type') == 'عُهدة_جديدة' or d_rec.get('given_amt', 0) > 0 or d_rec.get('amount', 0) > 0:
-                                g_amt = float(d_rec.get('amount') or d_rec.get('given_amt') or 0.0)
-                                if g_amt > 0 and d_rec.get('status') != 'مصفاة':
-                                    driver_custodies.append({
-                                        "custody_id": f"CUST-DIR-{d_rec.get('id', 1)}",
-                                        "date": d_rec.get('date', get_ksa_now_str().split()[0]),
-                                        "statement": d_rec.get('notes') or d_rec.get('purpose') or 'تسليم عُهدة سابقة',
-                                        "original_amount": g_amt
-                                    })
-
-            if not driver_custodies:
-                init_val = 3500.0 if 'سمان' in selected_driver else 1000.0
-                driver_custodies.append({
-                    "custody_id": f"CUST-{selected_driver}-01",
-                    "date": "2026-08-01",
-                    "statement": f"رصيد عُهدة سابقة بذمة {selected_driver}",
-                    "original_amount": init_val
-                })
-
-# جلب التصفيات السابقة
+    # جلب التصفيات السابقة
     settlements_list = []
     if isinstance(drivers_data, list):
         for d in drivers_data:
@@ -325,7 +304,7 @@ def save_uploaded_sales_batches(data):
     dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
     dc3.metric(lbl_status, val_status)
 
-st.divider()
+    st.divider()
     col_tabs1, col_tabs2 = st.columns([1.3, 1])
 
     with col_tabs1:
