@@ -385,21 +385,21 @@ with col_tabs2:
                 st.success("تم تسجيل الفاتورة وخصمها من العُهدة بنجاح! 🚀")
                 st.rerun()
     else:
-        st.info("لا توجد عُهد مفتوحة بانتظار التصفية حالياً لهذا السائق.")
+st.divider()
+st.markdown(f"##### 📜 سجل التصفيات والفواتير السابقة لـ ({selected_driver}):")
 
-            st.markdown(f"##### 📜 سجل التصفيات والفواتير السابقة لـ ({selected_driver}):")
-            if settlements_list:
-                history_rows = []
-                for s_item in settlements_list:
-                    history_rows.append({
-                        "التاريخ": s_item.get('date', ''),
-                        "رقم العُهدة المخصوم منها": s_item.get('target_custody_id', 'عام'),
-                        "المبلغ المخصوم": float(pd.to_numeric(s_item.get('amount') or s_item.get('spent_amt') or 0, errors='coerce') or 0),
-                        "البيان / الفاتورة": s_item.get('notes') or s_item.get('purpose') or ''
-                    })
-                st.dataframe(pd.DataFrame(history_rows), use_container_width=True, hide_index=True)
-            else:
-                st.info(f"لا توجد تصفيات سابقة مسجلة لـ ({selected_driver}).")
+if settlements_list:
+    settle_display = []
+    for s_item in settlements_list:
+        settle_display.append({
+            "تاريخ الفاتورة": s_item.get('date', ''),
+            "رقم العُهدة المستهدفة": s_item.get('target_custody_id', 'عُهدة عامة'),
+            "المبلغ المصروف (ر.س)": float(s_item.get('spent_amt') or s_item.get('amount') or 0),
+            "البيان / ملاحظات": s_item.get('purpose') or s_item.get('notes') or '-'
+        })
+    st.dataframe(pd.DataFrame(settle_display), use_container_width=True, hide_index=True)
+else:
+    st.info("لا توجد فواتير تصفيات مسجلة سابقاً لهذا السائق.")
                 
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = '🌙 وضع ليلي'
