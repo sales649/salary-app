@@ -384,7 +384,7 @@ with col_tabs2:
                 save_drivers_data(drivers_data)
                 st.success("تم تسجيل الفاتورة وخصمها من العُهدة بنجاح! 🚀")
                 st.rerun()
-else:
+    else:
         st.info("لا توجد عُهد مفتوحة بانتظار التصفية حالياً لهذا السائق.")
 
 st.divider()
