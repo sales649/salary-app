@@ -325,7 +325,7 @@ dc1.metric(f"💰 إجمالي العُهد لـ {selected_driver}", f"{total_gi
 dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
 dc3.metric(lbl_status, val_status)
 
-            st.divider()
+st.divider()
             col_tabs1, col_tabs2 = st.columns([1.3, 1])
 
             with col_tabs1:
