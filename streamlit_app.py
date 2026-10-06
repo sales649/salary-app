@@ -2013,7 +2013,7 @@ with col_right:
                 st.success(f"تم خصم {new_amt:,.2f} ر.س من صندوق عمر وتسليم العُهدة لـ سمان بنجاح! 🚀")
                 st.rerun()
 
-    st.divider()
+st.divider()
 
 elif selected_option == 'الرئيسية' or st.session_state.get('current_view') == 'الرئيسية':
 # 🏠 2. الشاشة الرئيسية للنظام
