@@ -1957,59 +1957,59 @@ else:
 
             with st.form("form_give_saman_fixed"):
                 st.text_input("اسم السائق:", value="سمان السواق", disabled=True)
-                new_amt = st.number_input("المبلغ النقدي المسلم باليد (يُخصم من الصندوق):", min_value=0.0, value=0.0, step=50.0)
-                new_notes = st.text_input("بيان / ملاحظات العُهدة:", value="مصاريف نقل وبنزين")
-                btn_give = st.form_submit_button("تسليم وتأكيد العُهدة", use_container_width=True)
-                
-               if btn_give and new_amt > 0:
-        today_date = get_ksa_now_str().split()[0]
-        month_selected = st.session_state.get('month_selected', '')
+new_amt = st.number_input("المبلغ النقدي المسلم باليد (يُخصم من الصندوق):", min_value=0.0, value=0.0, step=50.0)
+        new_notes = st.text_input("بيان / ملاحظات العُهدة:", value="مصاريف نقل وبنزين")
+        btn_give = st.form_submit_button("تسليم وتأكيد العُهدة", use_container_width=True)
 
-        # 1. الخصم المباشر من صندوق عمر المحاسب (حركة نقدية سالبة)
-        all_cash_db = load_cash_data()
+        if btn_give and new_amt > 0:
+            today_date = get_ksa_now_str().split()[0]
+            month_selected = st.session_state.get('month_selected', '')
 
-        if not month_selected or month_selected not in all_cash_db:
-            if all_cash_db:
-                month_selected = list(all_cash_db.keys())[-1]
-            else:
-                month_selected = 'سبتمبر 2026'
-                all_cash_db[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+            # 1. الخصم المباشر من صندوق عمر المحاسب (حركة نقدية سالبة)
+            all_cash_db = load_cash_data()
 
-        if 'acc_transactions' not in all_cash_db[month_selected]:
-            all_cash_db[month_selected]['acc_transactions'] = []
+            if not month_selected or month_selected not in all_cash_db:
+                if all_cash_db:
+                    month_selected = list(all_cash_db.keys())[-1]
+                else:
+                    month_selected = 'سبتمبر 2026'
+                    all_cash_db[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
 
-        cash_tx_code = f"CASH-OUT-{len(all_cash_db[month_selected]['acc_transactions'])+1}"
+            if 'acc_transactions' not in all_cash_db[month_selected]:
+                all_cash_db[month_selected]['acc_transactions'] = []
 
-        # إضافة حركة السحب/الخصم النقدية المباشرة في صندوق عمر
-        all_cash_db[month_selected]['acc_transactions'].append({
-            "code": cash_tx_code,
-            "date": today_date,
-            "statement": "صرف عُهدة نقدية لـ سمان السواق",
-            "party": "سمان السواق",
-            "amount": -float(new_amt),  # قيمة سالبة للخصم المباشر من الصندوق
-            "notes": new_notes or "تسليم عُهدة جديدة"
-        })
-        save_cash_data(all_cash_db)
+            cash_tx_code = f"CASH-OUT-{len(all_cash_db[month_selected]['acc_transactions'])+1}"
 
-        # 2. حفظ العُهدة في سجل السائقين
-        new_id = len(drivers_data) + 1
-        drivers_data.append({
-            "id": new_id,
-            "driver_name": "سمان السواق",
-            "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
-            "given_amt": float(new_amt),
-            "spent_amt": 0.0,
-            "rem_amt": float(tot_open_rem) + float(new_amt),
-            "notes": new_notes,
-            "status": "مفتوحة",
-            "cash_code": cash_tx_code
-        })
-        save_drivers_data(drivers_data)
+            # إضافة حركة السحب/الخصم النقدية المباشرة في صندوق عمر
+            all_cash_db[month_selected]['acc_transactions'].append({
+                "code": cash_tx_code,
+                "date": today_date,
+                "statement": "صرف عُهدة نقدية لـ سمان السواق",
+                "party": "سمان السواق",
+                "amount": -float(new_amt),  # قيمة سالبة للخصم المباشر من الصندوق
+                "notes": new_notes or "تسليم عُهدة جديدة"
+            })
+            save_cash_data(all_cash_db)
 
-        # 3. إجبار Streamlit على مسح الكاش وتحديث شاشة الخزينة فوراً
-        st.cache_data.clear()
-        st.success(f"تم خصم {new_amt:,.2f} ر.س من صندوق عمر وتسليم العُهدة لـ سمان بنجاح! 🚀")
-        st.rerun()
+            # 2. حفظ العُهدة في سجل السائقين
+            new_id = len(drivers_data) + 1
+            drivers_data.append({
+                "id": new_id,
+                "driver_name": "سمان السواق",
+                "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
+                "given_amt": float(new_amt),
+                "spent_amt": 0.0,
+                "rem_amt": float(tot_open_rem) + float(new_amt),
+                "notes": new_notes,
+                "status": "مفتوحة",
+                "cash_code": cash_tx_code
+            })
+            save_drivers_data(drivers_data)
+
+            # 3. إجبار Streamlit على مسح الكاش وتحديث شاشة الخزينة فوراً
+            st.cache_data.clear()
+            st.success(f"تم خصم {new_amt:,.2f} ر.س من صندوق عمر وتسليم العُهدة لـ سمان بنجاح! 🚀")
+            st.rerun()
 
         st.divider()
 
