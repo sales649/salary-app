@@ -1855,26 +1855,26 @@ else:
         # تصفية حركات سمان السواق
         saman_records = [d for d in drivers_data if isinstance(d, dict) and ('سمان' in str(d.get('driver_name') or d.get('driver') or '') or d.get('driver_name') is None)]
 
-        # 1. تجميع العُهد وتحديد المتبقي الحقيقي لكل حركة
-        custodies_dict = {}
-        for r in saman_records:
-            r_id = r.get('id')
-            g_amt = float(pd.to_numeric(r.get('given_amt', 0) or r.get('amount', 0), errors='coerce') or 0)
-            if g_amt > 0 and r.get('type') != 'تصفية_جزئية':
-        custodies_dict[f"#{r_id}"] = {
-                    "id": r_id,
-                    "date": r.get('date', ''),
-                    "given_amt": g_amt,
-                    "spent_total": 0.0,
-                    "notes": r.get('notes', 'تسليم عُهدة نقدية')
-                }
+      # 1. تجميع العُهد وتحديد المتبقي الحقيقي لكل حركة
+    custodies_dict = {}
+    for r in saman_records:
+        r_id = r.get('id')
+        g_amt = float(pd.to_numeric(r.get('given_amt', 0) or r.get('amount', 0), errors='coerce') or 0)
+        if g_amt > 0 and r.get('type') != 'تصفية_جزئية':
+            custodies_dict[f"#{r_id}"] = {
+                "id": r_id,
+                "date": r.get('date', ''),
+                "given_amt": g_amt,
+                "spent_total": 0.0,
+                "notes": r.get('notes') or 'تسليم عُهدة نقدية'
+            }
 
-        # خصم الفواتير المربوطة بالعُهد
-        for r in saman_records:
-            target_id = r.get('target_custody_id')
-            s_amt = float(pd.to_numeric(r.get('spent_amt', 0) or r.get('spent', 0), errors='coerce') or 0)
-            if target_id and target_id in custodies_dict and s_amt > 0:
-                custodies_dict[target_id]["spent_total"] += s_amt
+    # 2. خصم الفواتير المربوطة بالعُهد
+    for r in saman_records:
+        target_id = r.get('target_custody_id')
+        s_amt = float(pd.to_numeric(r.get('spent_amt', 0) or r.get('spent', 0), errors='coerce') or 0)
+        if target_id and target_id in custodies_dict and s_amt > 0:
+            custodies_dict[target_id]["spent_total"] += s_amt
 
         # حساب المتبقي الصافي الفعلي من العُهد المفتوحة بدقة
         open_custodies_list = []
