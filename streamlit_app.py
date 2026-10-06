@@ -197,46 +197,34 @@ def load_uploaded_sales_batches():
 def save_uploaded_sales_batches(data):
     save_cloud_store('company_sales_batches', data)
     
-# 🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين (عرض مباشر ومستقل)
-    if st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين'] or ( 'selected_option' in locals() and selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين'] ):
-        st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
-        st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصفيات المباشرة والجزئية لـ سمان السواق وكافة الموظفين')
-
-        # جلب البيانات السحابية
-        cash_data = load_cash_data()
+# موديل إدارة ومتابعة عُهد الموظفين والسائقين
+    cash_data = load_cash_data()
+    try:
         drivers_data = load_drivers_data()
+    except Exception:
+        drivers_data = []
 
-        # تجميع حركات الخزائن والصناديق
-        all_cash_tx = []
-        if isinstance(cash_data, dict):
-            for month_k, month_v in cash_data.items():
-                if isinstance(month_v, dict):
-                    all_cash_tx.extend(month_v.get('transactions', []))
-                    all_cash_tx.extend(month_v.get('acc_transactions', []))
+    if not isinstance(drivers_data, list):
+        drivers_data = []
 
-        # تجميع القائمة الموحدة لأسماء السواقين مع الضبط على سمان السواق
-        driver_names_set = {'سمان السواق', 'عثمان عبدالله', 'عمر', 'علي'}
-        if isinstance(drivers_data, list):
-            for d in drivers_data:
-                if isinstance(d, dict):
-                    if d.get('driver_name'): driver_names_set.add(d.get('driver_name'))
-                    if d.get('driver'): driver_names_set.add(d.get('driver'))
+    # تجميع حركات الخزائن والصناديق
+    all_cash_tx = []
+    if isinstance(cash_data, dict):
+        for month_k, month_v in cash_data.items():
+            if isinstance(month_v, dict):
+                all_cash_tx.extend(month_v.get('transactions', []))
+                all_cash_tx.extend(month_v.get('acc_transactions', []))
 
-        if 'payroll_df' in st.session_state and isinstance(st.session_state.payroll_df, pd.DataFrame) and not st.session_state.payroll_df.empty:
-            if 'الاسم' in st.session_state.payroll_df.columns:
-                driver_names_set.update(st.session_state.payroll_df['الاسم'].dropna().tolist())
-
-# 1. تجهيز قائمة السائقين والموظفين
-driver_list = []
-if isinstance(drivers_data, list):
+    # تجهيز قائمة السائقين والموظفين
+    driver_list = []
     for d in drivers_data:
         if isinstance(d, dict):
             name = d.get('driver_name') or d.get('driver')
-            if name and name not in driver_list:
+            if name and str(name) not in driver_list:
                 driver_list.append(str(name))
 
-if "سمان" not in driver_list:
-    driver_list.append("سمان")
+    if "سمان" not in driver_list:
+        driver_list.append("سمان")
 
 # 2. تحديد العنصر الافتراضي لقائمة الاختيار
 default_idx = 0
