@@ -237,7 +237,7 @@ def save_uploaded_sales_batches(data):
     col_drv_sel, _ = st.columns([1.5, 1])
     with col_drv_sel:
         selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", driver_list, index=default_idx)
-        # جلب العُهد السحابية المباشرة
+# 2. جلب العُهد المباشرة المسجلة في قاعدة بيانات السائقين
         if isinstance(drivers_data, list):
             for d_rec in drivers_data:
                 if isinstance(d_rec, dict):
@@ -253,7 +253,7 @@ def save_uploaded_sales_batches(data):
                                     "original_amount": g_amt
                                 })
 
-        # جلب التصفيات السابقة
+        # 3. جلب التصفيات والفواتير
         settlements_list = []
         if isinstance(drivers_data, list):
             for d in drivers_data:
@@ -262,26 +262,28 @@ def save_uploaded_sales_batches(data):
                     if (selected_driver in d_name or ('سمان' in selected_driver and 'سمان' in d_name)) and d.get('status') == 'مصفاة':
                         settlements_list.append(d)
 
-        # حساب إجمالي العُهد والتصفيات
+        # 4. حساب إجمالي المسلّم والمصروف والصافي التراكمي المرحّل
         total_given = sum(c.get('original_amount', 0) for c in driver_custodies)
         total_settled = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list)
+        
+        # net_remaining يحفظ الصافي التراكمي (موجب = بذمة السائق / سالب = مستحق له ويُرحّل)
         net_remaining = total_given - total_settled
 
-        # تحديد نص العنوان والقيمة بناءً على الصافي
+        # تحديد الحالة والترحيل الآلي
         if net_remaining > 0:
-            lbl_status = "⚠️ المتبقي بذمة السائق"
+            lbl_status = "⚠️ المتبقي بذمة السائق (عُهدة متبقية)"
             val_status = f"{net_remaining:,.2f} ر.س"
         elif net_remaining < 0:
-            lbl_status = "💚 مستحق للسائق (له)"
+            lbl_status = "💚 مستحق للسائق (له/مرحّل للحركة القادمة)"
             val_status = f"{abs(net_remaining):,.2f} ر.س"
         else:
             lbl_status = "✅ حالة العُهدة"
-            val_status = "مصفاة (0.00 ر.س)"
+            val_status = "مصفاة بالكامل (0.00 ر.س)"
 
-        # كروت ملخص العُهدة
+        # عرض الكروت
         dc1, dc2, dc3 = st.columns(3)
-        dc1.metric(f"💰 إجمالي العُهد لـ {selected_driver}", f"{total_given:,.2f} ر.س")
-        dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
+        dc1.metric(f"💰 إجمالي العُهد النقدية لـ {selected_driver}", f"{total_given:,.2f} ر.س")
+        dc2.metric("🧾 إجمالي التصفيات والفواتير", f"{total_settled:,.2f} ر.س")
         dc3.metric(lbl_status, val_status)
 
         st.divider()
