@@ -294,35 +294,36 @@ def save_uploaded_sales_batches(data):
                     "original_amount": init_val
                 })
 
-            # جلب التصفيات السابقة
-            settlements_list = []
-            if isinstance(drivers_data, list):
-                for d in drivers_data:
-                    if isinstance(d, dict):
-                        d_name = str(d.get('driver_name') or d.get('driver') or '')
-                        if (selected_driver in d_name or ('سمان' in selected_driver and 'سمان' in d_name)) and d.get('status') == 'مصفاة':
-                            settlements_list.append(d)
+# جلب التصفيات السابقة
+    settlements_list = []
+    if isinstance(drivers_data, list):
+        for d in drivers_data:
+            if isinstance(d, dict):
+                d_name = str(d.get('driver_name') or d.get('driver') or '')
+                if (selected_driver in d_name or ('سمان' in selected_driver and 'سمان' in d_name)) and d.get('status') == 'مصفاة':
+                    settlements_list.append(d)
 
-total_given = sum(c['original_amount'] for c in driver_custodies)
-total_settled = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list)
-net_remaining = total_given - total_settled
+    # حساب إجمالي العُهد والتصفيات
+    total_given = sum(c.get('original_amount', 0) for c in driver_custodies)
+    total_settled = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list)
+    net_remaining = total_given - total_settled
 
-# تحديد نص العنوان والقيمة بناءً على الصافي
-if net_remaining > 0:
-    lbl_status = "⚠️ المتبقي بذمة السائق"
-    val_status = f"{net_remaining:,.2f} ر.س"
-elif net_remaining < 0:
-    lbl_status = "💚 مستحق للسائق (له)"
-    val_status = f"{abs(net_remaining):,.2f} ر.س"
-else:
-    lbl_status = "✅ حالة العُهدة"
-    val_status = "مصفاة (0.00 ر.س)"
+    # تحديد نص العنوان والقيمة بناءً على الصافي
+    if net_remaining > 0:
+        lbl_status = "⚠️ المتبقي بذمة السائق"
+        val_status = f"{net_remaining:,.2f} ر.س"
+    elif net_remaining < 0:
+        lbl_status = "💚 مستحق للسائق (له)"
+        val_status = f"{abs(net_remaining):,.2f} ر.س"
+    else:
+        lbl_status = "✅ حالة العُهدة"
+        val_status = "مصفاة (0.00 ر.س)"
 
-# كروت ملخص العُهدة
-dc1, dc2, dc3 = st.columns(3)
-dc1.metric(f"💰 إجمالي العُهد لـ {selected_driver}", f"{total_given:,.2f} ر.س")
-dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
-dc3.metric(lbl_status, val_status)
+    # كروت ملخص العُهدة
+    dc1, dc2, dc3 = st.columns(3)
+    dc1.metric(f"💰 إجمالي العُهد لـ {selected_driver}", f"{total_given:,.2f} ر.س")
+    dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
+    dc3.metric(lbl_status, val_status)
 
 st.divider()
 col_tabs1, col_tabs2 = st.columns([1.3, 1])
