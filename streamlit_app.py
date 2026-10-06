@@ -1951,9 +1951,9 @@ else:
             else:
                 st.info("لا توجد عُهد مفتوحة حالياً لـ سمان السواق بانتظار التصفية.")
 
-        with col_right:
-            st.markdown("### 🚚 1. تسليم عُهدة جديدة لـ (سمان السواق):")
-            st.warning(f"💡 بجِراب السائق متبقي سابق عليه بـ ({tot_open_rem:,.2f} ر.س).")
+with col_right:
+        st.markdown(f"### 🚚 1. تسليم عُهدة جديدة لـ (سمان السواق)")
+        st.warning(f"💡 بجراب السائق متبقي سابق عليه بـ ({tot_open_rem:,.2f} ر.س).")
 
         with st.form("form_give_saman_fixed"):
             st.text_input("اسم السائق:", value="سمان السواق", disabled=True)
@@ -1961,7 +1961,7 @@ else:
             new_notes = st.text_input("بيان / ملاحظات العُهدة:", value="مصاريف نقل وبنزين")
             btn_give = st.form_submit_button("تسليم وتأكيد العُهدة", use_container_width=True)
 
-           if btn_give and new_amt > 0:
+            if btn_give and new_amt > 0:
                 today_date = get_ksa_now_str().split()[0]
                 month_selected = st.session_state.get('month_selected', '')
 
@@ -1980,15 +1980,15 @@ else:
 
                 cash_tx_code = f"CASH-OUT-{len(all_cash_db[month_selected]['acc_transactions'])+1}"
 
-                # القيد الصحيح المتوافق مع هيكل شاشة الخزينة لمنع KeyError: 'type'
+                # القيد المعتمد والمتوافق مع شاشة الخزينة لمنع KeyError: 'type'
                 all_cash_db[month_selected]['acc_transactions'].append({
                     "code": cash_tx_code,
                     "date": today_date,
                     "statement": "صرف عُهدة نقدية لـ سمان السواق",
                     "party": "سمان السواق",
-                    "type": "صرف",               # خيار متوافق مع السطر 3001 لمنع KeyError
-                    "type_tx": "صرف",            # توثيق نوع الحركة
-                    "amount": -float(new_amt),   # خصم مباشر بالسالب
+                    "type": "صرف",
+                    "type_tx": "صرف",
+                    "amount": -float(new_amt),  # خصم مباشر بالسالب من صندوق عمر
                     "notes": new_notes or "تسليم عُهدة جديدة"
                 })
                 save_cash_data(all_cash_db)
@@ -2008,7 +2008,7 @@ else:
                 })
                 save_drivers_data(drivers_data)
 
-                # 3. تحديث الكاش وتحديث شاشة الخزينة والعُهد فوراً
+                # 3. إجبار Streamlit على مسح الكاش وتحديث الخزينة فوراً
                 st.cache_data.clear()
                 st.success(f"تم خصم {new_amt:,.2f} ر.س من صندوق عمر وتسليم العُهدة لـ سمان بنجاح! 🚀")
                 st.rerun()
