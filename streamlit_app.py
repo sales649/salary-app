@@ -251,150 +251,150 @@ with col_drv_sel:
     selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", driver_list, index=default_idx)
 
 if selected_driver:
-    driver_custodies = []
+        driver_custodies = []
 
-    # تجميع حركات الصندوق الرئيسي وحركات المحاسب عمر معاً
-    combined_tx = all_cash_tx + current_m_cash.get('acc_transactions', [])
+        # تجميع حركات الصندوق الرئيسي وحركات المحاسب عمر معاً
+        combined_tx = all_cash_tx + current_m_cash.get('acc_transactions', [])
 
-    for tx_idx, tx in enumerate(combined_tx):
-        if isinstance(tx, dict):
-            desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
-            if selected_driver in desc or ('سمان' in selected_driver and 'سمان' in desc):
-                tx_amt = float(pd.to_numeric(tx.get('amount', 0), errors='coerce') or 0)
-                v_code = tx.get('code', f"CASH-{tx_idx+1}")
-                if tx_amt > 0:
-                    driver_custodies.append({
-                        "custody_id": f"CUST-{v_code}",
-                        "date": tx.get('date', get_ksa_now_str().split()[0]),
-                        "statement": tx.get('party') or tx.get('statement') or 'صرف عُهدة نقدية',
-                        "original_amount": tx_amt
-                    })
+        for tx_idx, tx in enumerate(combined_tx):
+            if isinstance(tx, dict):
+                desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
+                if selected_driver in desc or ('سمان' in selected_driver and 'سمان' in desc):
+                    tx_amt = float(pd.to_numeric(tx.get('amount', 0), errors='coerce') or 0)
+                    v_code = tx.get('code', f"CASH-{tx_idx+1}")
+                    if tx_amt > 0:
+                        driver_custodies.append({
+                            "custody_id": f"CUST-{v_code}",
+                            "date": tx.get('date', get_ksa_now_str().split()[0]),
+                            "statement": tx.get('party') or tx.get('statement') or 'صرف عُهدة نقدية',
+                            "original_amount": tx_amt
+                        })
 
-    # جلب العُهد السحابية المباشرة
-    if isinstance(drivers_data, list):
-        for d_rec in drivers_data:
-            if isinstance(d_rec, dict):
-                d_name = str(d_rec.get('driver_name') or d_rec.get('driver') or '')
-                if selected_driver in d_name or ('سمان' in selected_driver and 'سمان' in d_name):
-                    if d_rec.get('type') == 'عهدة_جديدة' or d_rec.get('given_amt', 0) > 0 or d_rec.get('amount', 0) > 0:
-                        g_amt = float(d_rec.get('amount') or d_rec.get('given_amt') or 0.0)
-                        if g_amt > 0 and d_rec.get('status') != 'مصفاة':
-                            driver_custodies.append({
-                                "custody_id": f"CUST-DIR-{d_rec.get('id', 1)}",
-                                "date": d_rec.get('date', get_ksa_now_str().split()[0]),
-                                "statement": d_rec.get('notes') or d_rec.get('purpose') or 'تسليم عُهدة سابقة',
-                                "original_amount": g_amt
-                            })
+        # جلب العُهد السحابية المباشرة
+        if isinstance(drivers_data, list):
+            for d_rec in drivers_data:
+                if isinstance(d_rec, dict):
+                    d_name = str(d_rec.get('driver_name') or d_rec.get('driver') or '')
+                    if selected_driver in d_name or ('سمان' in selected_driver and 'سمان' in d_name):
+                        if d_rec.get('type') == 'عهدة_جديدة' or d_rec.get('given_amt', 0) > 0 or d_rec.get('amount', 0) > 0:
+                            g_amt = float(d_rec.get('amount') or d_rec.get('given_amt') or 0.0)
+                            if g_amt > 0 and d_rec.get('status') != 'مصفاة':
+                                driver_custodies.append({
+                                    "custody_id": f"CUST-DIR-{d_rec.get('id', 1)}",
+                                    "date": d_rec.get('date', get_ksa_now_str().split()[0]),
+                                    "statement": d_rec.get('notes') or d_rec.get('purpose') or 'تسليم عُهدة سابقة',
+                                    "original_amount": g_amt
+                                })
 
-    # جلب التصفيات السابقة
-    settlements_list = []
-    if isinstance(drivers_data, list):
-        for d in drivers_data:
-            if isinstance(d, dict):
-                d_name = str(d.get('driver_name') or d.get('driver') or '')
-                if (selected_driver in d_name or ('سمان' in selected_driver and 'سمان' in d_name)) and d.get('status') == 'مصفاة':
-                    settlements_list.append(d)
+        # جلب التصفيات السابقة
+        settlements_list = []
+        if isinstance(drivers_data, list):
+            for d in drivers_data:
+                if isinstance(d, dict):
+                    d_name = str(d.get('driver_name') or d.get('driver') or '')
+                    if (selected_driver in d_name or ('سمان' in selected_driver and 'سمان' in d_name)) and d.get('status') == 'مصفاة':
+                        settlements_list.append(d)
 
-    # حساب إجمالي العُهد والتصفيات
-    total_given = sum(c.get('original_amount', 0) for c in driver_custodies)
-    total_settled = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list)
-    net_remaining = total_given - total_settled
+        # حساب إجمالي العُهد والتصفيات
+        total_given = sum(c.get('original_amount', 0) for c in driver_custodies)
+        total_settled = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list)
+        net_remaining = total_given - total_settled
 
-    # تحديد نص العنوان والقيمة بناءً على الصافي
-    if net_remaining > 0:
-        lbl_status = "⚠️ المتبقي بذمة السائق"
-        val_status = f"{net_remaining:,.2f} ر.س"
-    elif net_remaining < 0:
-        lbl_status = "💚 مستحق للسائق (له)"
-        val_status = f"{abs(net_remaining):,.2f} ر.س"
-    else:
-        lbl_status = "✅ حالة العُهدة"
-        val_status = "مصفاة (0.00 ر.س)"
-
-    # كروت ملخص العُهدة
-    dc1, dc2, dc3 = st.columns(3)
-    dc1.metric(f"💰 إجمالي العُهد لـ {selected_driver}", f"{total_given:,.2f} ر.س")
-    dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
-    dc3.metric(lbl_status, val_status)
-
-    st.divider()
-    col_tabs1, col_tabs2 = st.columns([1.3, 1])
-
-    with col_tabs1:
-        st.markdown(f"##### 📜 قائمة العُهد النشطة والمفتوحة لـ {selected_driver}:")
-        custody_display_list = []
-        for c_item in driver_custodies:
-            c_id = c_item['custody_id']
-            c_orig = c_item['original_amount']
-            c_settled_amount = sum(
-                float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0)
-                for s in settlements_list if s.get('target_custody_id') == c_id
-            )
-            c_rem = max(0.0, c_orig - c_settled_amount)
-            status_txt = "🔴 غير مصفاة" if c_settled_amount == 0 else ("🟡 مصفاة جزئياً" if c_rem > 0 else "🟢 مصفاة بالكامل")
-            
-            custody_display_list.append({
-                "custody_id": c_id,
-                "date": c_item.get('date', ''),
-                "statement": c_item.get('statement', ''),
-                "original_amount": c_orig,
-                "settled_amount": c_settled_amount,
-                "remaining_amount": c_rem,
-                "status": status_txt
-            })
-
-        if custody_display_list:
-            st.dataframe(pd.DataFrame(custody_display_list), use_container_width=True, hide_index=True)
+        # تحديد نص العنوان والقيمة بناءً على الصافي
+        if net_remaining > 0:
+            lbl_status = "⚠️ المتبقي بذمة السائق"
+            val_status = f"{net_remaining:,.2f} ر.س"
+        elif net_remaining < 0:
+            lbl_status = "💚 مستحق للسائق (له)"
+            val_status = f"{abs(net_remaining):,.2f} ر.س"
         else:
-            st.info("لا توجد عُهد مسجلة حالياً لهذا السائق.")
+            lbl_status = "✅ حالة العُهدة"
+            val_status = "مصفاة (0.00 ر.س)"
 
-    with col_tabs2:
-        st.markdown(f"##### 📑 خصم وتصفية جزئية لـ {selected_driver}:")
-        active_custodies = [c for c in custody_display_list if c.get('remaining_amount', 0) > 0]
-        if active_custodies:
-            custody_options = [f"{c['custody_id']} | المتبقي: {c['remaining_amount']:,.2f} ر.س" for c in active_custodies]
-            with st.form(f"form_partial_settle_{selected_driver}"):
-                selected_c_str = st.selectbox("اختر العُهدة للخصم منها:", custody_options)
-                target_c_id = selected_c_str.split('|')[0].strip()
-                target_c_obj = next((c for c in active_custodies if c['custody_id'] == target_c_id), active_custodies[0])
-                max_allowed = float(target_c_obj['remaining_amount'])
+        # كروت ملخص العُهدة
+        dc1, dc2, dc3 = st.columns(3)
+        dc1.metric(f"💰 إجمالي العُهد لـ {selected_driver}", f"{total_given:,.2f} ر.س")
+        dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
+        dc3.metric(lbl_status, val_status)
 
-                s_amt = st.number_input(f"المبلغ المراد خصمه (الحد الأقصى {max_allowed:,.2f} ر.س):", min_value=1.0, max_value=max_allowed, value=min(200.0, max_allowed), step=10.0)
-                s_notes = st.text_input("بيان الفاتورة / المصاريف:")
-                btn_sub_settle = st.form_submit_button("خصم وتصفية المبلغ من العُهدة ➕")
+        st.divider()
+        col_tabs1, col_tabs2 = st.columns([1.3, 1])
 
-                if btn_sub_settle and s_amt > 0:
-                    drivers_data.append({
-                        "id": len(drivers_data) + 1,
-                        "driver_name": selected_driver,
-                        "type": "تصفية",
-                        "spent_amt": float(s_amt),
-                        "purpose": s_notes,
-                        "target_custody_id": target_c_id,
-                        "date": get_ksa_now_str().split()[0],
-                        "status": "مصفاة"
-                    })
-                    save_drivers_data(drivers_data)
-                    st.success("تم تسجيل الفاتورة وخصمها من العُهدة بنجاح! 🚀")
-                    st.rerun()
+        with col_tabs1:
+            st.markdown(f"##### 📜 قائمة العُهد النشطة والمفتوحة لـ {selected_driver}:")
+            custody_display_list = []
+            for c_item in driver_custodies:
+                c_id = c_item['custody_id']
+                c_orig = c_item['original_amount']
+                c_settled_amount = sum(
+                    float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0)
+                    for s in settlements_list if s.get('target_custody_id') == c_id
+                )
+                c_rem = max(0.0, c_orig - c_settled_amount)
+                status_txt = "🔴 غير مصفاة" if c_settled_amount == 0 else ("🟡 مصفاة جزئياً" if c_rem > 0 else "🟢 مصفاة بالكامل")
+                
+                custody_display_list.append({
+                    "custody_id": c_id,
+                    "date": c_item.get('date', ''),
+                    "statement": c_item.get('statement', ''),
+                    "original_amount": c_orig,
+                    "settled_amount": c_settled_amount,
+                    "remaining_amount": c_rem,
+                    "status": status_txt
+                })
+
+            if custody_display_list:
+                st.dataframe(pd.DataFrame(custody_display_list), use_container_width=True, hide_index=True)
+            else:
+                st.info("لا توجد عُهد مسجلة حالياً لهذا السائق.")
+
+        with col_tabs2:
+            st.markdown(f"##### 📑 خصم وتصفية جزئية لـ {selected_driver}:")
+            active_custodies = [c for c in custody_display_list if c.get('remaining_amount', 0) > 0]
+            if active_custodies:
+                custody_options = [f"{c['custody_id']} | المتبقي: {c['remaining_amount']:,.2f} ر.س" for c in active_custodies]
+                with st.form(f"form_partial_settle_{selected_driver}"):
+                    selected_c_str = st.selectbox("اختر العُهدة للخصم منها:", custody_options)
+                    target_c_id = selected_c_str.split('|')[0].strip()
+                    target_c_obj = next((c for c in active_custodies if c['custody_id'] == target_c_id), active_custodies[0])
+                    max_allowed = float(target_c_obj['remaining_amount'])
+
+                    s_amt = st.number_input(f"المبلغ المراد خصمه (الحد الأقصى {max_allowed:,.2f} ر.س):", min_value=1.0, max_value=max_allowed, value=min(200.0, max_allowed), step=10.0)
+                    s_notes = st.text_input("بيان الفاتورة / المصاريف:")
+                    btn_sub_settle = st.form_submit_button("خصم وتصفية المبلغ من العُهدة ➕")
+
+                    if btn_sub_settle and s_amt > 0:
+                        drivers_data.append({
+                            "id": len(drivers_data) + 1,
+                            "driver_name": selected_driver,
+                            "type": "تصفية",
+                            "spent_amt": float(s_amt),
+                            "purpose": s_notes,
+                            "target_custody_id": target_c_id,
+                            "date": get_ksa_now_str().split()[0],
+                            "status": "مصفاة"
+                        })
+                        save_drivers_data(drivers_data)
+                        st.success("تم تسجيل الفاتورة وخصمها من العُهدة بنجاح! 🚀")
+                        st.rerun()
+            else:
+                st.info("لا توجد عُهد مفتوحة بانتظار التصفية حالياً لهذا السائق.")
+
+        st.divider()
+        st.markdown(f"##### 📜 سجل التصفيات والفواتير السابقة لـ ({selected_driver}):")
+
+        if settlements_list:
+            settle_display = []
+            for s_item in settlements_list:
+                settle_display.append({
+                    "تاريخ الفاتورة": s_item.get('date', ''),
+                    "رقم العُهدة المستهدفة": s_item.get('target_custody_id', 'عُهدة عامة'),
+                    "المبلغ المصروف (ر.س)": float(s_item.get('spent_amt') or s_item.get('amount') or 0),
+                    "البيان / ملاحظات": s_item.get('purpose') or s_item.get('notes') or '-'
+                })
+            st.dataframe(pd.DataFrame(settle_display), use_container_width=True, hide_index=True)
         else:
-            st.info("لا توجد عُهد مفتوحة بانتظار التصفية حالياً لهذا السائق.")
-
-    st.divider()
-    st.markdown(f"##### 📜 سجل التصفيات والفواتير السابقة لـ ({selected_driver}):")
-
-    if settlements_list:
-        settle_display = []
-        for s_item in settlements_list:
-            settle_display.append({
-                "تاريخ الفاتورة": s_item.get('date', ''),
-                "رقم العُهدة المستهدفة": s_item.get('target_custody_id', 'عُهدة عامة'),
-                "المبلغ المصروف (ر.س)": float(s_item.get('spent_amt') or s_item.get('amount') or 0),
-                "البيان / ملاحظات": s_item.get('purpose') or s_item.get('notes') or '-'
-            })
-        st.dataframe(pd.DataFrame(settle_display), use_container_width=True, hide_index=True)
-    else:
-        st.info("لا توجد فواتير تصفيات مسجلة سابقاً لهذا السائق.")
+            st.info("لا توجد فواتير تصفيات مسجلة سابقاً لهذا السائق.")
                 
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = '🌙 وضع ليلي'
