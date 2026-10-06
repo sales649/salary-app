@@ -50,7 +50,7 @@ def send_telegram_summary_report():
         if isinstance(drivers_db_list, list):
             tot_g_main = sum(float(pd.to_numeric(d.get('given_amt', 0) or d.get('amount', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
             tot_s_main = sum(float(pd.to_numeric(d.get('spent_amt', 0) or d.get('spent', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
-            saman_bal = max(0.0, tot_g_main - tot_s_main)
+            saman_bal = tot_g_main - tot_s_main
         else:
             saman_bal = 0.0
 
@@ -307,11 +307,23 @@ def save_uploaded_sales_batches(data):
             total_settled = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list)
             net_remaining = total_given - total_settled
 
-            # كروت ملخص العُهدة
-            dc1, dc2, dc3 = st.columns(3)
-            dc1.metric(f"💰 إجمالي العُهد لـ ({selected_driver})", f"{total_given:,.2f} ر.س")
-            dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
-            dc3.metric("⚠️ المتبقي بذمة السائق", f"{net_remaining:,.2f} ر.س")
+
+# تحديد نص العنوان والقيمة بناءً على الصافي
+if net_remaining > 0:
+    lbl_status = "⚠️ المتبقي بذمة السائق"
+    val_status = f"{net_remaining:,.2f} ر.س"
+elif net_remaining < 0:
+    lbl_status = "💚 مستحق للسائق (له)"
+    val_status = f"{abs(net_remaining):,.2f} ر.س"
+else:
+    lbl_status = "✅ حالة العُهدة"
+    val_status = "مصفاة (0.00 ر.س)"
+
+# كروت ملخص العُهدة
+dc1, dc2, dc3 = st.columns(3)
+dc1.metric(f"💰 إجمالي العُهد لـ {selected_driver}", f"{total_given:,.2f} ر.س")
+dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
+dc3.metric(lbl_status, val_status)
 
             st.divider()
             col_tabs1, col_tabs2 = st.columns([1.3, 1])
@@ -1265,38 +1277,40 @@ def edit_driver_custody_modal(drv_idx):
             e_purpose = st.text_input("البيان / الغرض:", value=str(d_item.get('purpose', '')))
 
             sub_e_drv = st.form_submit_button("حفظ تعديلات العُهدة 💾")
-            if sub_e_drv:
-                diff_given = e_given - float(d_item.get('given_amt', 0.0))
+if sub_e_drv:
+            # 1. حساب الفرق للخصم المباشر من صندوق عمر
+            diff_given = e_given - float(d_item.get('given_amt', 0.0))
+            
+            d_item['given_amt'] = e_given
+            d_item['spent_amt'] = e_spent
+            d_item['diff_amt'] = round(e_given - e_spent, 2)
+            d_item['purpose'] = e_purpose
+            drivers_db[drv_idx] = d_item
+            save_drivers_data(drivers_db)
+
+            # 2. الخصم التلقائي من صندوق المحاسب (عمر)
+            if diff_given != 0:
+                month_selected = st.session_state.get('month_selected', 'أكتوبر 2026')
+                all_cash_db = load_cash_data()
                 
-                d_item['given_amt'] = e_given
-                d_item['spent_amt'] = e_spent
-                d_item['diff_amt'] = round(e_given - e_spent, 2)
-                d_item['purpose'] = e_purpose
-                drivers_db[drv_idx] = d_item
-                save_drivers_data(drivers_db)
+                if month_selected not in all_cash_db:
+                    all_cash_db[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                if 'acc_transactions' not in all_cash_db[month_selected]:
+                    all_cash_db[month_selected]['acc_transactions'] = []
 
-                if diff_given != 0:
-                    month_selected = st.session_state.get('month_selected', 'سبتمبر 2026')
-                    all_cash_db = load_cash_data()
-                    
-                    if month_selected not in all_cash_db:
-                        all_cash_db[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
-                    if 'acc_transactions' not in all_cash_db[month_selected]:
-                        all_cash_db[month_selected]['acc_transactions'] = []
+                new_acc_tx = {
+                    "date": get_ksa_now_str().split()[0],
+                    "type": "صرف" if diff_given > 0 else "قبض",
+                    "amount": abs(float(diff_given)),
+                    "party": d_item.get('driver_name') or d_item.get('driver') or 'سمان',
+                    "statement": f"صرف/تعديل عُهدة للسائق: {d_item.get('driver_name') or d_item.get('driver') or 'سمان'}",
+                    "notes": "خصم تلقائي لصالح عُهدة السائق"
+                }
+                all_cash_db[month_selected]['acc_transactions'].append(new_acc_tx)
+                save_cash_data(all_cash_db)
 
-                    new_acc_tx = {
-                        "date": get_ksa_now_str().split()[0],
-                        "type": "صرف" if diff_given > 0 else "قبض",
-                        "amount": abs(float(diff_given)),
-                        "party": d_item.get('driver_name') or d_item.get('driver') or 'السائق',
-                        "statement": f"تعديل/صرف عُهدة للسائق: {d_item.get('driver_name') or d_item.get('driver') or 'سمان'}",
-                        "notes": "تحديث عُهدة تلقائي من شاشة السائقين"
-                    }
-                    all_cash_db[month_selected]['acc_transactions'].append(new_acc_tx)
-                    save_cash_data(all_cash_db)
-
-                st.success("تم الحفظ والخصم والتسميع بنجاح! 🚀")
-                st.rerun()
+            st.success("تم التعديل وخصم المبلغ من صندوق عمر بنجاح! 🚀")
+            st.rerun()
             
 @st.dialog("🖨️ معاينة وطباعة سند صرف بضاعة / عينات (A4)")
 def print_stock_out_dialog(v_item):
