@@ -327,28 +327,61 @@ def save_uploaded_sales_batches(data):
                     target_c_id = selected_c_str.split('|')[0].strip()
                     target_c_obj = next((c for c in active_custodies if c['custody_id'] == target_c_id), active_custodies[0])
                     max_allowed = float(target_c_obj['remaining_amount'])
+with col_tabs2:
+        st.markdown(f"##### 📑 خصم وتصفية جزئية لـ {selected_driver}:")
+        active_custodies = [c for c in custody_display_list if c.get('remaining_amount', 0) > 0]
+        if active_custodies:
+            custody_options = [f"{c['custody_id']} | المتبقي: {c['remaining_amount']:,.2f} ر.س" for c in active_custodies]
+            with st.form(f"form_partial_settle_{selected_driver}"):
+                selected_c_str = st.selectbox("اختر العُهدة للخصم منها:", custody_options)
+                target_c_id = selected_c_str.split('|')[0].strip()
+                target_c_obj = next((c for c in active_custodies if c['custody_id'] == target_c_id), active_custodies[0])
+                max_allowed = float(target_c_obj['remaining_amount'])
 
-                    s_amt = st.number_input(f"المبلغ المراد خصمه (الحد الأقصى {max_allowed:,.2f} ر.س):", min_value=1.0, max_value=max_allowed, value=min(200.0, max_allowed), step=10.0)
-                    s_notes = st.text_input("بيان الفاتورة / المصاريف:")
-                    btn_sub_settle = st.form_submit_button("خصم وتصفية المبلغ من العُهدة ➕")
+                s_amt = st.number_input(f"المبلغ المراد خصمه (الحد الأقصى {max_allowed:,.2f} ر.س):", min_value=1.0, max_value=max_allowed, value=min(200.0, max_allowed), step=10.0)
+                s_notes = st.text_input("بيان الفاتورة / المصاريف:")
+                btn_sub_settle = st.form_submit_button("خصم وتصفية المبلغ من العُهدة ➕")
 
-                    if btn_sub_settle and s_amt > 0:
-                        drivers_data.append({
-                            "id": len(drivers_data) + 1,
-                            "driver_name": selected_driver,
-                            "type": "تصفية",
-                            "spent_amt": float(s_amt),
-                            "purpose": s_notes,
-                            "target_custody_id": target_c_id,
-                            "date": get_ksa_now_str().split()[0],
-                            "status": "مصفاة"
-                        })
-                        save_drivers_data(drivers_data)
-                        st.success("تم تسجيل الفاتورة وخصمها من العُهدة بنجاح! 🚀")
-                        st.rerun()
-            else:
-                st.info("لا توجد عُهد مفتوحة بانتظار التصفية حالياً لهذا السائق.")
+                if btn_sub_settle and s_amt > 0:
+                    today_date = get_ksa_now_str().split()[0]
+                    month_selected = st.session_state.get('month_selected', 'أكتوبر 2026')
 
+                    # 1. الخصم المباشر من صندوق عمر المحاسب
+                    all_cash_db = load_cash_data()
+                    if month_selected not in all_cash_db:
+                        all_cash_db[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                    if 'acc_transactions' not in all_cash_db[month_selected]:
+                        all_cash_db[month_selected]['acc_transactions'] = []
+
+                    cash_tx_code = f"CASH-OUT-{len(all_cash_db[month_selected]['acc_transactions'])+1}"
+                    all_cash_db[month_selected]['acc_transactions'].append({
+                        "code": cash_tx_code,
+                        "date": today_date,
+                        "statement": f"تصفية / خصم عُهدة لـ {selected_driver}",
+                        "party": selected_driver,
+                        "amount": -float(s_amt),  # خصم مباشر بالسالب من صندوق عمر
+                        "notes": s_notes or "تصفية فاتورة"
+                    })
+                    save_cash_data(all_cash_db)
+
+                    # 2. حفظ التصفية في بيانات السائقين وتحديث الترحيل
+                    drivers_data.append({
+                        "id": len(drivers_data) + 1,
+                        "driver_name": selected_driver,
+                        "type": "تصفية",
+                        "spent_amt": float(s_amt),
+                        "purpose": s_notes,
+                        "target_custody_id": target_c_id,
+                        "cash_code": cash_tx_code,
+                        "date": today_date,
+                        "status": "مصفاة"
+                    })
+                    save_drivers_data(drivers_data)
+
+                    st.success("تم الخصم المباشر من صندوق المحاسب عمر وتحديث الحساب بنجاح! 🚀")
+                    st.rerun()
+        else:
+            st.info("لا توجد عُهد مفتوحة بانتظار التصفية حالياً لهذا السائق.")
         st.divider()
         st.markdown(f"##### 📜 سجل التصفيات والفواتير السابقة لـ ({selected_driver}):")
 
