@@ -239,9 +239,23 @@ def save_uploaded_sales_batches(data):
 
         if selected_driver:
             driver_custodies = []
-            
-            # جلب العُهد السابقة من الصندوق الرئيسي وعُهدة المحاسب
-            for tx_idx, tx in enumerate(all_cash_tx):
+        # تجميع حركات الصندوق الرئيسي وحركات المحاسب عمر معا
+    combined_tx = all_cash_tx + current_m_cash.get('acc_transactions', [])
+
+    for tx_idx, tx in enumerate(combined_tx):
+        if isinstance(tx, dict):
+            desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
+            if selected_driver in desc or ('سمان' in selected_driver and 'سمان' in desc):
+                tx_amt = float(pd.to_numeric(tx.get('amount', 0), errors='coerce') or 0)
+                v_code = tx.get('code', f"CASH-{tx_idx+1}")
+                if tx_amt > 0:
+                    driver_custodies.append({
+                        "custody_id": f"CUST-{v_code}",
+                        "date": tx.get('date', get_ksa_now_str().split()[0]),
+                        "statement": tx.get('party') or tx.get('statement') or 'صرف عُهدة نقدية',
+                        "original_amount": tx_amt
+                    })
+   
                 if isinstance(tx, dict):
                     desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
                     if selected_driver in desc or ('سمان' in selected_driver and 'سمان' in desc):
@@ -1251,15 +1265,41 @@ def edit_driver_custody_modal(drv_idx):
             e_purpose = st.text_input("البيان / الغرض:", value=d_item.get('purpose', ''))
             
             sub_e_drv = st.form_submit_button("💾 حفظ تعديلات العُهدة")
-            if sub_e_drv:
-                d_item['given_amt'] = e_given
-                d_item['spent_amt'] = e_spent
-                d_item['diff_amt'] = round(e_given - e_spent, 2)
-                d_item['purpose'] = e_purpose
-                drivers_db[drv_idx] = d_item
-                save_drivers_data(drivers_db)
-                st.success("تم التعديل بنجاح!")
-                st.rerun()
+if sub_e_drv:
+            # 1. حساب المبلغ المخصوم أو الجديد المصروف للسائق
+            diff_given = e_given - float(d_item.get('given_amt', 0.0))
+            
+            d_item['given_amt'] = e_given
+            d_item['spent_amt'] = e_spent
+            d_item['diff_amt'] = round(e_given - e_spent, 2)
+            d_item['purpose'] = e_purpose
+            drivers_db[drv_idx] = d_item
+            save_drivers_data(drivers_db)
+
+            # 2. الخصم التلقائي المباشر من صندوق المحاسب (عمر) إذا تم زيادة/صرف مبلغ جديد
+            if diff_given != 0:
+                month_selected = st.session_state.get('month_selected', 'سبتمبر 2026')
+                all_cash_db = load_cash_data()
+                
+                if month_selected not in all_cash_db:
+                    all_cash_db[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                if 'acc_transactions' not in all_cash_db[month_selected]:
+                    all_cash_db[month_selected]['acc_transactions'] = []
+
+                # إضافة حركة "صرف" بقيمة الفرق في صندوق عمر
+                new_acc_tx = {
+                    "date": get_ksa_now_str().split()[0],
+                    "type": "صرف" if diff_given > 0 else "قبض",
+                    "amount": abs(float(diff_given)),
+                    "party": d_item.get('driver', 'السائق'),
+                    "statement": f"صرف/تعديل عُهدة للسائق: {d_item.get('driver', 'سمان')}",
+                    "notes": "تعديل عُهدة تلقائي من شاشة السائقين"
+                }
+                all_cash_db[month_selected]['acc_transactions'].append(new_acc_tx)
+                save_cash_data(all_cash_db)
+
+            st.success("تم التعديل وخصم/تسميع المبلغ بعهد الموظف وحساب عمر بنجاح! 🎉")
+            st.rerun()
 
 @st.dialog("🖨️ معاينة وطباعة سند صرف بضاعة / عينات (A4)")
 def print_stock_out_dialog(v_item):
