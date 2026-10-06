@@ -280,98 +280,98 @@ def save_uploaded_sales_batches(data):
             lbl_status = "✅ حالة العُهدة"
             val_status = "مصفاة بالكامل (0.00 ر.س)"
 
-        # عرض الكروت
-        dc1, dc2, dc3 = st.columns(3)
-        dc1.metric(f"💰 إجمالي العُهد النقدية لـ {selected_driver}", f"{total_given:,.2f} ر.س")
-        dc2.metric("🧾 إجمالي التصفيات والفواتير", f"{total_settled:,.2f} ر.س")
-        dc3.metric(lbl_status, val_status)
+# كروت ملخص العُهدة
+    dc1, dc2, dc3 = st.columns(3)
+    dc1.metric(f"💰 إجمالي العُهد النقدية لـ {selected_driver}", f"{total_given:,.2f} ر.س")
+    dc2.metric("🧾 إجمالي التصفيات والفواتير", f"{total_settled:,.2f} ر.س")
+    dc3.metric(lbl_status, val_status)
 
-st.divider()
-        col_tabs1, col_tabs2 = st.columns([1.3, 1])
+    st.divider()
+    col_tabs1, col_tabs2 = st.columns([1.3, 1])
 
-        with col_tabs1:
-            st.markdown(f"##### 📜 قائمة العُهد النشطة والمفتوحة لـ {selected_driver}:")
-            custody_display_list = []
-            for c_item in driver_custodies:
-                c_id = c_item['custody_id']
-                c_orig = c_item['original_amount']
-                c_settled_amount = sum(
-                    float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0)
-                    for s in settlements_list if s.get('target_custody_id') == c_id
-                )
-                c_rem = max(0.0, c_orig - c_settled_amount)
-                status_txt = "🔴 غير مصفاة" if c_settled_amount == 0 else ("🟡 مصفاة جزئياً" if c_rem > 0 else "🟢 مصفاة بالكامل")
-                
-                custody_display_list.append({
-                    "custody_id": c_id,
-                    "date": c_item.get('date', ''),
-                    "statement": c_item.get('statement', ''),
-                    "original_amount": c_orig,
-                    "settled_amount": c_settled_amount,
-                    "remaining_amount": c_rem,
-                    "status": status_txt
-                })
+    with col_tabs1:
+        st.markdown(f"##### 📜 قائمة العُهد النشطة والمفتوحة لـ {selected_driver}:")
+        custody_display_list = []
+        for c_item in driver_custodies:
+            c_id = c_item['custody_id']
+            c_orig = c_item['original_amount']
+            c_settled_amount = sum(
+                float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0)
+                for s in settlements_list if s.get('target_custody_id') == c_id
+            )
+            c_rem = max(0.0, c_orig - c_settled_amount)
+            status_txt = "🔴 غير مصفاة" if c_settled_amount == 0 else ("🟡 مصفاة جزئياً" if c_rem > 0 else "🟢 مصفاة بالكامل")
+            
+            custody_display_list.append({
+                "custody_id": c_id,
+                "date": c_item.get('date', ''),
+                "statement": c_item.get('statement', ''),
+                "original_amount": c_orig,
+                "settled_amount": c_settled_amount,
+                "remaining_amount": c_rem,
+                "status": status_txt
+            })
 
-            if custody_display_list:
-                st.dataframe(pd.DataFrame(custody_display_list), use_container_width=True, hide_index=True)
-            else:
-                st.info("لا توجد عُهد مسجلة حالياً لهذا السائق.")
+        if custody_display_list:
+            st.dataframe(pd.DataFrame(custody_display_list), use_container_width=True, hide_index=True)
+        else:
+            st.info("لا توجد عُهد مسجلة حالياً لهذا السائق.")
 
-        with col_tabs2:
-            st.markdown(f"##### 📑 خصم وتصفية جزئية لـ {selected_driver}:")
-            active_custodies = [c for c in custody_display_list if c.get('remaining_amount', 0) > 0]
-            if active_custodies:
-                custody_options = [f"{c['custody_id']} | المتبقي: {c['remaining_amount']:,.2f} ر.س" for c in active_custodies]
-                with st.form(f"form_partial_settle_{selected_driver}"):
-                    selected_c_str = st.selectbox("اختر العُهدة للخصم منها:", custody_options)
-                    target_c_id = selected_c_str.split('|')[0].strip()
-                    target_c_obj = next((c for c in active_custodies if c['custody_id'] == target_c_id), active_custodies[0])
-                    max_allowed = float(target_c_obj['remaining_amount'])
+    with col_tabs2:
+        st.markdown(f"##### 📑 خصم وتصفية جزئية لـ {selected_driver}:")
+        active_custodies = [c for c in custody_display_list if c.get('remaining_amount', 0) > 0]
+        if active_custodies:
+            custody_options = [f"{c['custody_id']} | المتبقي: {c['remaining_amount']:,.2f} ر.س" for c in active_custodies]
+            with st.form(f"form_partial_settle_{selected_driver}"):
+                selected_c_str = st.selectbox("اختر العُهدة للخصم منها:", custody_options)
+                target_c_id = selected_c_str.split('|')[0].strip()
+                target_c_obj = next((c for c in active_custodies if c['custody_id'] == target_c_id), active_custodies[0])
+                max_allowed = float(target_c_obj['remaining_amount'])
 
-                    s_amt = st.number_input(f"المبلغ المراد خصمه (الحد الأقصى {max_allowed:,.2f} ر.س):", min_value=1.0, max_value=max_allowed, value=min(200.0, max_allowed), step=10.0)
-                    s_notes = st.text_input("بيان الفاتورة / المصاريف:")
-                    btn_sub_settle = st.form_submit_button("خصم وتصفية المبلغ من العُهدة ➕")
+                s_amt = st.number_input(f"المبلغ المراد خصمه (الحد الأقصى {max_allowed:,.2f} ر.س):", min_value=1.0, max_value=max_allowed, value=min(200.0, max_allowed), step=10.0)
+                s_notes = st.text_input("بيان الفاتورة / المصاريف:")
+                btn_sub_settle = st.form_submit_button("خصم وتصفية المبلغ من العُهدة ➕")
 
-                    if btn_sub_settle and s_amt > 0:
-                        today_date = get_ksa_now_str().split()[0]
-                        month_selected = st.session_state.get('month_selected', 'أكتوبر 2026')
+                if btn_sub_settle and s_amt > 0:
+                    today_date = get_ksa_now_str().split()[0]
+                    month_selected = st.session_state.get('month_selected', 'أكتوبر 2026')
 
-                        # 1. الخصم المباشر من صندوق المحاسب عمر
-                        all_cash_db = load_cash_data()
-                        if month_selected not in all_cash_db:
-                            all_cash_db[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
-                        if 'acc_transactions' not in all_cash_db[month_selected]:
-                            all_cash_db[month_selected]['acc_transactions'] = []
+                    # 1. الخصم المباشر من صندوق المحاسب عمر
+                    all_cash_db = load_cash_data()
+                    if month_selected not in all_cash_db:
+                        all_cash_db[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                    if 'acc_transactions' not in all_cash_db[month_selected]:
+                        all_cash_db[month_selected]['acc_transactions'] = []
 
-                        cash_tx_code = f"CASH-OUT-{len(all_cash_db[month_selected]['acc_transactions'])+1}"
-                        all_cash_db[month_selected]['acc_transactions'].append({
-                            "code": cash_tx_code,
-                            "date": today_date,
-                            "statement": f"تصفية / خصم عُهدة لـ {selected_driver}",
-                            "party": selected_driver,
-                            "amount": -float(s_amt),
-                            "notes": s_notes or "تصفية فاتورة"
-                        })
-                        save_cash_data(all_cash_db)
+                    cash_tx_code = f"CASH-OUT-{len(all_cash_db[month_selected]['acc_transactions'])+1}"
+                    all_cash_db[month_selected]['acc_transactions'].append({
+                        "code": cash_tx_code,
+                        "date": today_date,
+                        "statement": f"تصفية / خصم عُهدة لـ {selected_driver}",
+                        "party": selected_driver,
+                        "amount": -float(s_amt),
+                        "notes": s_notes or "تصفية فاتورة"
+                    })
+                    save_cash_data(all_cash_db)
 
-                        # 2. حفظ التصفية وتحديث بيانات السائق
-                        drivers_data.append({
-                            "id": len(drivers_data) + 1,
-                            "driver_name": selected_driver,
-                            "type": "تصفية",
-                            "spent_amt": float(s_amt),
-                            "purpose": s_notes,
-                            "target_custody_id": target_c_id,
-                            "cash_code": cash_tx_code,
-                            "date": today_date,
-                            "status": "مصفاة"
-                        })
-                        save_drivers_data(drivers_data)
+                    # 2. حفظ التصفية وتحديث بيانات السائق
+                    drivers_data.append({
+                        "id": len(drivers_data) + 1,
+                        "driver_name": selected_driver,
+                        "type": "تصفية",
+                        "spent_amt": float(s_amt),
+                        "purpose": s_notes,
+                        "target_custody_id": target_c_id,
+                        "cash_code": cash_tx_code,
+                        "date": today_date,
+                        "status": "مصفاة"
+                    })
+                    save_drivers_data(drivers_data)
 
-                        st.success("تم الخصم المباشر من صندوق المحاسب وتحديث الحساب بنجاح! 🚀")
-                        st.rerun()
-            else:
-                st.info("لا توجد عُهد مفتوحة بانتظار التصفية حالياً لهذا السائق.")
+                    st.success("تم الخصم المباشر من صندوق المحاسب وتحديث الحساب بنجاح! 🚀")
+                    st.rerun()
+        else:
+            st.info("لا توجد عُهد مفتوحة بانتظار التصفية حالياً لهذا السائق.")
                 
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = '🌙 وضع ليلي'
