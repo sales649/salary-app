@@ -226,14 +226,26 @@ def save_uploaded_sales_batches(data):
             if 'الاسم' in st.session_state.payroll_df.columns:
                 driver_names_set.update(st.session_state.payroll_df['الاسم'].dropna().tolist())
 
-        driver_list = sorted(list(driver_names_set))
-# اختيار السائق / الموظف
+# 1. تجهيز قائمة السائقين والموظفين
+driver_list = []
+if isinstance(drivers_data, list):
+    for d in drivers_data:
+        if isinstance(d, dict):
+            name = d.get('driver_name') or d.get('driver')
+            if name and name not in driver_list:
+                driver_list.append(str(name))
+
+if "سمان" not in driver_list:
+    driver_list.append("سمان")
+
+# 2. تحديد العنصر الافتراضي لقائمة الاختيار
 default_idx = 0
 for i, name in enumerate(driver_list):
     if 'سمان' in name:
         default_idx = i
         break
 
+# 3. عرض صندوق اختيار السائق
 col_drv_sel, _ = st.columns([1.5, 1])
 with col_drv_sel:
     selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", driver_list, index=default_idx)
