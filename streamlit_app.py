@@ -1227,7 +1227,7 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                 st.success(f"تم الحفظ السحابي بنجاح برقم #{v_code}!")
                 st.rerun()
 
-@st.dialog("📝 تعديل حركة عُهدة السائق")
+@st.dialog("✏️ تعديل حركة عُهدة السائق")
 def edit_driver_custody_modal(drv_idx):
     drivers_db = load_drivers_data()
     if drv_idx < len(drivers_db):
@@ -1239,11 +1239,12 @@ def edit_driver_custody_modal(drv_idx):
             e_spent = st.number_input("المصروف بالفواتير (ر.س):", min_value=0.0, value=float(d_item.get('spent_amt', 0.0)))
             e_purpose = st.text_input("البيان / الغرض:", value=str(d_item.get('purpose', '')))
 
-            sub_e_drv = st.form_submit_button("حفظ تعديلات العُهدة 💾")
-if sub_e_drv:
+            sub_e_drv = st.form_submit_button("💾 حفظ تعديلات العُهدة")
+
+        if sub_e_drv:
             # 1. حساب الفرق للخصم المباشر من صندوق عمر
             diff_given = e_given - float(d_item.get('given_amt', 0.0))
-            
+
             d_item['given_amt'] = e_given
             d_item['spent_amt'] = e_spent
             d_item['diff_amt'] = round(e_given - e_spent, 2)
@@ -1255,7 +1256,7 @@ if sub_e_drv:
             if diff_given != 0:
                 month_selected = st.session_state.get('month_selected', 'أكتوبر 2026')
                 all_cash_db = load_cash_data()
-                
+
                 if month_selected not in all_cash_db:
                     all_cash_db[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
                 if 'acc_transactions' not in all_cash_db[month_selected]:
