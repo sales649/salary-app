@@ -2008,11 +2008,14 @@ with col_right:
                 })
                 save_drivers_data(drivers_data)
 
-                # 3. إجبار Streamlit على مسح الكاش وتحديث الخزينة فوراً
+# 3. إجبار Streamlit على مسح الكاش وتحديث الخزينة فوراً
                 st.cache_data.clear()
                 st.success(f"تم خصم {new_amt:,.2f} ر.س من صندوق عمر وتسليم العُهدة لـ سمان بنجاح! 🚀")
                 st.rerun()
 
+    st.divider()
+
+elif selected_option == 'الرئيسية' or st.session_state.get('current_view') == 'الرئيسية':
 st.divider()
 
     elif selected_option == 'الرئيسية' or st.session_state.get('current_view') == 'الرئيسية':
