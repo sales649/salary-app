@@ -227,15 +227,16 @@ def save_uploaded_sales_batches(data):
                 driver_names_set.update(st.session_state.payroll_df['الاسم'].dropna().tolist())
 
         driver_list = sorted(list(driver_names_set))
-        default_idx = 0
-        for i, name in enumerate(driver_list):
-            if 'سمان' in name:
-                default_idx = i
-                break
+# اختيار السائق / الموظف
+default_idx = 0
+for i, name in enumerate(driver_list):
+    if 'سمان' in name:
+        default_idx = i
+        break
 
-        col_drv_sel, _ = st.columns([1.5, 1])
-        with col_drv_sel:
-            selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", driver_list, index=default_idx)
+col_drv_sel, _ = st.columns([1.5, 1])
+with col_drv_sel:
+    selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", driver_list, index=default_idx)
 
 if selected_driver:
     driver_custodies = []
