@@ -2015,7 +2015,7 @@ with col_right:
 
 st.divider()
 
-elif selected_option == 'الرئيسية' or st.session_state.get('current_view') == 'الرئيسية':
+    elif selected_option == 'الرئيسية' or st.session_state.get('current_view') == 'الرئيسية':
 # 🏠 2. الشاشة الرئيسية للنظام
     elif selected_option == 'الرئيسية' or st.session_state.get('current_view') == 'الرئيسية':
         all_cash_db = load_cash_data()
