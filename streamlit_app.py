@@ -1259,14 +1259,14 @@ def edit_driver_custody_modal(drv_idx):
         d_item = drivers_db[drv_idx]
         st.write(f"تعديل السند رقم **#{d_item['id']}** لـ **{d_item['driver']}**:")
         
-        with st.form(f"edit_driver_form_{drv_idx}"):
-            e_given = st.number_input("المبلغ المسلم / الافتتاحي (ر.س):", min_value=0.0, value=float(d_item['given_amt']))
-            e_spent = st.number_input("المصروف بالفواتير (ر.س):", min_value=0.0, value=float(d_item.get('spent_amt', 0.0)))
-            e_purpose = st.text_input("البيان / الغرض:", value=d_item.get('purpose', ''))
-            
-            sub_e_drv = st.form_submit_button("💾 حفظ تعديلات العُهدة")
-if sub_e_drv:
-            # 1. حساب المبلغ المخصوم أو الجديد المصروف للسائق
+with st.form(f"edit_driver_form_{drv_idx}"):
+        e_given = st.number_input("المبلغ المسلم / الافتتاحي (ر.س):", min_value=0.0, value=float(d_item.get('given_amt', 0.0)))
+        e_spent = st.number_input("المصروف بالفواتير (ر.س):", min_value=0.0, value=float(d_item.get('spent_amt', 0.0)))
+        e_purpose = st.text_input("البيان / الغرض:", value=d_item.get('purpose', ''))
+
+        sub_e_drv = st.form_submit_button("حفظ تعديلات العُهدة 💾")
+        if sub_e_drv:
+            # 1. حساب الفرق للتعديل لدى المحاسب عمر
             diff_given = e_given - float(d_item.get('given_amt', 0.0))
             
             d_item['given_amt'] = e_given
@@ -1276,7 +1276,7 @@ if sub_e_drv:
             drivers_db[drv_idx] = d_item
             save_drivers_data(drivers_db)
 
-            # 2. الخصم التلقائي المباشر من صندوق المحاسب (عمر) إذا تم زيادة/صرف مبلغ جديد
+            # 2. الخصم/التسميع التلقائي في صندوق عمر
             if diff_given != 0:
                 month_selected = st.session_state.get('month_selected', 'سبتمبر 2026')
                 all_cash_db = load_cash_data()
@@ -1286,21 +1286,20 @@ if sub_e_drv:
                 if 'acc_transactions' not in all_cash_db[month_selected]:
                     all_cash_db[month_selected]['acc_transactions'] = []
 
-                # إضافة حركة "صرف" بقيمة الفرق في صندوق عمر
                 new_acc_tx = {
                     "date": get_ksa_now_str().split()[0],
                     "type": "صرف" if diff_given > 0 else "قبض",
                     "amount": abs(float(diff_given)),
                     "party": d_item.get('driver', 'السائق'),
-                    "statement": f"صرف/تعديل عُهدة للسائق: {d_item.get('driver', 'سمان')}",
-                    "notes": "تعديل عُهدة تلقائي من شاشة السائقين"
+                    "statement": f"تعديل/صرف عُهدة للسائق: {d_item.get('driver', 'سمان')}",
+                    "notes": "تحديث عُهدة تلقائي من شاشة السائقين"
                 }
                 all_cash_db[month_selected]['acc_transactions'].append(new_acc_tx)
                 save_cash_data(all_cash_db)
 
-            st.success("تم التعديل وخصم/تسميع المبلغ بعهد الموظف وحساب عمر بنجاح! 🎉")
+            st.success("تم الحفظ والخصم والتسميع بنجاح! 🚀")
             st.rerun()
-
+            
 @st.dialog("🖨️ معاينة وطباعة سند صرف بضاعة / عينات (A4)")
 def print_stock_out_dialog(v_item):
     st.write(f"معاينة سند صرف بضاعة رقم: **#{v_item['code']}**")
