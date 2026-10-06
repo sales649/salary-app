@@ -339,15 +339,16 @@ with col_tabs1:
         )
         c_rem = max(0.0, c_orig - c_settled_amount)
         status_txt = "🔴 غير مصفاة" if c_settled_amount == 0 else ("🟡 مصفاة جزئياً" if c_rem > 0 else "🟢 مصفاة بالكامل")
-                    custody_display_list.append({
-                        "رقم العُهدة": c_id,
-                        "التاريخ": c_item['date'],
-                        "البيان": c_item['statement'],
-                        "المبلغ الأصلي": c_orig,
-                        "المخصوم منها": c_settled_amount,
-                        "المتبقي للتصفية": c_rem,
-                        "الحالة": status_txt
-                    })
+        
+        custody_display_list.append({
+            "custody_id": c_id,
+            "date": c_item.get('date', ''),
+            "statement": c_item.get('statement', ''),
+            "original_amount": c_orig,
+            "settled_amount": c_settled_amount,
+            "remaining_amount": c_rem,
+            "status": status_txt
+        })
 
                 st.dataframe(pd.DataFrame(custody_display_list), use_container_width=True, hide_index=True)
 
