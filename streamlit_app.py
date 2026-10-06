@@ -1961,11 +1961,11 @@ else:
             new_notes = st.text_input("بيان / ملاحظات العُهدة:", value="مصاريف نقل وبنزين")
             btn_give = st.form_submit_button("تسليم وتأكيد العُهدة", use_container_width=True)
 
-            if btn_give and new_amt > 0:
+           if btn_give and new_amt > 0:
                 today_date = get_ksa_now_str().split()[0]
                 month_selected = st.session_state.get('month_selected', '')
 
-                # 1. الخصم المباشر من صندوق عمر المحاسب (حركة نقدية سالبة)
+                # 1. الخصم المباشر المعتمد من صندوق المحاسب عمر
                 all_cash_db = load_cash_data()
 
                 if not month_selected or month_selected not in all_cash_db:
@@ -1980,13 +1980,15 @@ else:
 
                 cash_tx_code = f"CASH-OUT-{len(all_cash_db[month_selected]['acc_transactions'])+1}"
 
-                # إضافة حركة السحب/الخصم النقدية المباشرة في صندوق عمر
+                # القيد الصحيح المتوافق مع هيكل شاشة الخزينة لمنع KeyError: 'type'
                 all_cash_db[month_selected]['acc_transactions'].append({
                     "code": cash_tx_code,
                     "date": today_date,
                     "statement": "صرف عُهدة نقدية لـ سمان السواق",
                     "party": "سمان السواق",
-                    "amount": -float(new_amt),  # قيمة سالبة للخصم المباشر من الصندوق
+                    "type": "صرف",               # خيار متوافق مع السطر 3001 لمنع KeyError
+                    "type_tx": "صرف",            # توثيق نوع الحركة
+                    "amount": -float(new_amt),   # خصم مباشر بالسالب
                     "notes": new_notes or "تسليم عُهدة جديدة"
                 })
                 save_cash_data(all_cash_db)
@@ -2006,7 +2008,7 @@ else:
                 })
                 save_drivers_data(drivers_data)
 
-                # 3. إجبار Streamlit على مسح الكاش وتحديث شاشة الخزينة فوراً
+                # 3. تحديث الكاش وتحديث شاشة الخزينة والعُهد فوراً
                 st.cache_data.clear()
                 st.success(f"تم خصم {new_amt:,.2f} ر.س من صندوق عمر وتسليم العُهدة لـ سمان بنجاح! 🚀")
                 st.rerun()
