@@ -350,7 +350,10 @@ with col_tabs1:
             "status": status_txt
         })
 
-                st.dataframe(pd.DataFrame(custody_display_list), use_container_width=True, hide_index=True)
+    if custody_display_list:
+        st.dataframe(pd.DataFrame(custody_display_list), use_container_width=True, hide_index=True)
+    else:
+        st.info("لا توجد عُهد مسجلة حالياً لهذا السائق.")
 
             with col_tabs2:
                 st.markdown(f"##### 🧾 خصم وتصفية جزئية لـ ({selected_driver}):")
