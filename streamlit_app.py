@@ -303,10 +303,9 @@ def save_uploaded_sales_batches(data):
                         if (selected_driver in d_name or ('سمان' in selected_driver and 'سمان' in d_name)) and d.get('status') == 'مصفاة':
                             settlements_list.append(d)
 
-            total_given = sum(c['original_amount'] for c in driver_custodies)
-            total_settled = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list)
-            net_remaining = total_given - total_settled
-
+total_given = sum(c['original_amount'] for c in driver_custodies)
+total_settled = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list)
+net_remaining = total_given - total_settled
 
 # تحديد نص العنوان والقيمة بناءً على الصافي
 if net_remaining > 0:
@@ -326,8 +325,10 @@ dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled
 dc3.metric(lbl_status, val_status)
 
 st.divider()
-            col_tabs1, col_tabs2 = st.columns([1.3, 1])
+col_tabs1, col_tabs2 = st.columns([1.3, 1])
 
+with col_tabs1:
+    st.markdown(f"##### 📜 قائمة العُهد النشطة والمفتوحة لـ {selected_driver}:")
             with col_tabs1:
                 st.markdown(f"##### 📋 قائمة العُهد النشطة والمفتوحة لـ ({selected_driver}):")
                 custody_display_list = []
