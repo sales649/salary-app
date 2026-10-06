@@ -329,19 +329,16 @@ col_tabs1, col_tabs2 = st.columns([1.3, 1])
 
 with col_tabs1:
     st.markdown(f"##### 📜 قائمة العُهد النشطة والمفتوحة لـ {selected_driver}:")
-            with col_tabs1:
-                st.markdown(f"##### 📋 قائمة العُهد النشطة والمفتوحة لـ ({selected_driver}):")
-                custody_display_list = []
-                for c_item in driver_custodies:
-                    c_id = c_item['custody_id']
-                    c_orig = c_item['original_amount']
-                    c_settled_amount = sum(
-                        float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) 
-                        for s in settlements_list if s.get('target_custody_id') == c_id
-                    )
-                    c_rem = max(0.0, c_orig - c_settled_amount)
-                    status_txt = "🔴 غير مصفاة" if c_settled_amount == 0 else ("🟡 مصفاة جزئياً" if c_rem > 0 else "🟢 مصفاة بالكامل")
-
+    custody_display_list = []
+    for c_item in driver_custodies:
+        c_id = c_item['custody_id']
+        c_orig = c_item['original_amount']
+        c_settled_amount = sum(
+            float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0)
+            for s in settlements_list if s.get('target_custody_id') == c_id
+        )
+        c_rem = max(0.0, c_orig - c_settled_amount)
+        status_txt = "🔴 غير مصفاة" if c_settled_amount == 0 else ("🟡 مصفاة جزئياً" if c_rem > 0 else "🟢 مصفاة بالكامل")
                     custody_display_list.append({
                         "رقم العُهدة": c_id,
                         "التاريخ": c_item['date'],
