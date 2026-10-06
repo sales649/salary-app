@@ -1861,7 +1861,7 @@ else:
             r_id = r.get('id')
             g_amt = float(pd.to_numeric(r.get('given_amt', 0) or r.get('amount', 0), errors='coerce') or 0)
             if g_amt > 0 and r.get('type') != 'تصفية_جزئية':
-                custodies_dict[f"#{r_id}"] = {
+        custodies_dict[f"#{r_id}"] = {
                     "id": r_id,
                     "date": r.get('date', ''),
                     "given_amt": g_amt,
