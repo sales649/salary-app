@@ -1108,8 +1108,8 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                     m_cash['transactions'] = main_trans
 
                 else:
-                    rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
-                    pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
+                    rec_count = sum(1 for t in c_trans if "قبض" in t.get('type'))
+                    pay_count = sum(1 for t in c_trans if "صرف" in t.get('type'))
                     v_code = f"REC-{(rec_count + 1):03d}" if "قبض" in q_type else f"PAY-{(pay_count + 1):03d}"
                     
                     c_trans.append({
@@ -1293,8 +1293,8 @@ def print_inventory_report_dialog(df_inv):
 def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
     st.write(f"معاينة كشف الحساب لـ **{box_title}** ({period_txt}):")
     
-    tot_in = sum(t['amount'] for t in trans_list if 'قبض' in t['type'])
-    tot_out = sum(t['amount'] for t in trans_list if 'صرف' in t['type'])
+    tot_in = sum(t.get('amount', 0) for t in trans_list if 'قبض' in t.get('type'))
+    tot_out = sum(t.get('amount', 0) for t in trans_list if 'صرف' in t.get('type'))
     net_bal = tot_in - tot_out
 
     t_account_html = f"""
@@ -1320,14 +1320,14 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
                 <tbody>
     """
     for t in trans_list:
-        is_rec = 'قبض' in t['type']
-        rec_amt = f"{t['amount']:,.2f} ر.س" if is_rec else "-"
-        pay_amt = f"{t['amount']:,.2f} ر.س" if not is_rec else "-"
+        is_rec = 'قبض' in t.get('type')
+        rec_amt = f"{t.get('amount', 0):,.2f} ر.س" if is_rec else "-"
+        pay_amt = f"{t.get('amount', 0):,.2f} ر.س" if not is_rec else "-"
         t_account_html += f"""
             <tr>
                 <td>#{t.get('code', t['id'])}</td>
                 <td>{t['date']}</td>
-                <td>{t['type']}</td>
+                <td>{t.get('type')}</td>
                 <td>{t['party']}</td>
                 <td style="color:#047857; font-weight:bold;">{rec_amt}</td>
                 <td style="color:#b91c1c; font-weight:bold;">{pay_amt}</td>
@@ -1702,13 +1702,13 @@ else:
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
         
         curr_trans_main = current_m_cash.get('transactions', [])
-        tot_in_main = sum(t['amount'] for t in curr_trans_main if 'قبض' in t['type'])
-        tot_out_main = sum(t['amount'] for t in curr_trans_main if 'صرف' in t['type'])
+        tot_in_main = sum(t.get('amount', 0) for t in curr_trans_main if 'قبض' in t.get('type'))
+        tot_out_main = sum(t.get('amount', 0) for t in curr_trans_main if 'صرف' in t.get('type'))
         net_main_now = current_m_cash.get('opening', 0.0) + tot_in_main - tot_out_main
 
         curr_trans_acc = current_m_cash.get('acc_transactions', [])
-        tot_in_acc = sum(t['amount'] for t in curr_trans_acc if 'قبض' in t['type'])
-        tot_out_acc = sum(t['amount'] for t in curr_trans_acc if 'صرف' in t['type'])
+        tot_in_acc = sum(t.get('amount', 0) for t in curr_trans_acc if 'قبض' in t.get('type'))
+        tot_out_acc = sum(t.get('amount', 0) for t in curr_trans_acc if 'صرف' in t.get('type'))
         net_acc_now = current_m_cash.get('acc_opening', 0.0) + tot_in_acc - tot_out_acc
 
         total_company_cash = net_main_now + net_acc_now
@@ -2359,8 +2359,8 @@ else:
 
         opening_bal = current_m_cash.get(active_opening_key, 0.0)
         curr_trans = current_m_cash.get(active_box_key, [])
-        tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
-        tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
+        tot_cash_in = sum(t.get('amount', 0) for t in curr_trans if 'قبض' in t.get('type'))
+        tot_cash_out = sum(t.get('amount', 0) for t in curr_trans if 'صرف' in t.get('type'))
         system_book_balance = opening_bal + tot_cash_in - tot_cash_out
 
         st.divider()
@@ -2643,8 +2643,8 @@ else:
                 opening_balance_dialog(month_selected, active_target_box)
 
         curr_trans = current_m_cash.get(active_box_key, [])
-        tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
-        tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
+        tot_cash_in = sum(t.get('amount', 0) for t in curr_trans if 'قبض' in t.get('type'))
+        tot_cash_out = sum(t.get('amount', 0) for t in curr_trans if 'صرف' in t.get('type'))
         net_cash_now = opening_bal + tot_cash_in - tot_cash_out
 
         c_m1, c_m2, c_m3, c_m4 = st.columns(4)
@@ -2774,8 +2774,8 @@ else:
                             current_m_cash['transactions'] = main_trans
 
                         else:
-                            rec_cnt = sum(1 for t in curr_trans if "قبض" in t['type'])
-                            pay_cnt = sum(1 for t in curr_trans if "صرف" in t['type'])
+                            rec_cnt = sum(1 for t in curr_trans if "قبض" in t.get('type'))
+                            pay_cnt = sum(1 for t in curr_trans if "صرف" in t.get('type'))
                             v_code = f"REC-{(rec_cnt + 1):03d}" if "قبض" in trans_type else f"PAY-{(pay_cnt + 1):03d}"
                             
                             curr_trans.append({
@@ -2809,7 +2809,7 @@ else:
                 if cash_search:
                     filtered_cash = [t for t in filtered_cash if cash_search.lower() in t['party'].lower()]
                 if cash_filter_type != "جميع الحركات":
-                    filtered_cash = [t for t in filtered_cash if t['type'] == cash_filter_type]
+                    filtered_cash = [t for t in filtered_cash if t.get('type') == cash_filter_type]
 
                 if filtered_cash:
                     dates_set = []
@@ -2830,8 +2830,8 @@ else:
 
                     day_trans = [t for t in filtered_cash if t['date'].startswith(selected_day_page)][::-1]
 
-                    d_in = sum(t['amount'] for t in day_trans if 'قبض' in t['type'])
-                    d_out = sum(t['amount'] for t in day_trans if 'صرف' in t['type'])
+                    d_in = sum(t.get('amount', 0) for t in day_trans if 'قبض' in t.get('type'))
+                    d_out = sum(t.get('amount', 0) for t in day_trans if 'صرف' in t.get('type'))
                     d_net = d_in - d_out
 
                     st.info(f"📆 **حركة يوم ({selected_day_page}):** مقبوضات اليوم: `{d_in:,.2f} ر.س` | مصروفات اليوم: `{d_out:,.2f} ر.س` | صافي الحركة اليومية: `{d_net:,.2f} ر.س`")
