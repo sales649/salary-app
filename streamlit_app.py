@@ -1707,8 +1707,8 @@ else:
         net_main_now = current_m_cash.get('opening', 0.0) + tot_in_main - tot_out_main
 
         curr_trans_acc = current_m_cash.get('acc_transactions', [])
-        tot_in_acc = sum(t.get('amount', 0) for t in curr_trans_acc if 'قبض' in t.get('type'))
-        tot_out_acc = sum(t.get('amount', 0) for t in curr_trans_acc if 'صرف' in t.get('type'))
+        tot_in_acc = sum(t.get('amount', 0) for t in (curr_trans_acc or []) if 'قبض' in t.get('type'))
+        tot_out_acc = sum(t.get('amount', 0) for t in (curr_trans_acc or []) if 'صرف' in t.get('type'))
         net_acc_now = current_m_cash.get('acc_opening', 0.0) + tot_in_acc - tot_out_acc
 
         total_company_cash = net_main_now + net_acc_now
