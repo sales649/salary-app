@@ -86,9 +86,9 @@ def save_uploaded_sales_batches(data):
 # ================= ================= =================
 # موديول عُهدة السائق (سمان) الأصلي والمربوط بالسحابة
 # ================= ================= =================
-if st.session_state.get('current_view') in ['عهدة السواقين', 'عهدة_السواقين', 'عهدة السائقين'] or st.session_state.get('selected_option') in ['عهدة السواقين', 'عهدة_السواقين', 'عهدة السائقين']:
-    st.subheader('🚚 موديول إدارة ومتابعة عُهدة السائق (سمان)')
-    st.caption('تخصيص كامل لإدارة العُهد النقدية، المصاريف، والتأثير المباشر على صندوق عمر / الخزينة')
+# 2. موديول عُهدة السائق (سمان) الأصلي والمربوط بالسحابة
+current_nav = str(st.session_state.get('current_view', '')) + " " + str(st.session_state.get('selected_option', '')) + " " + str(st.session_state.get('nav', ''))
+if any(x in current_nav for x in ['السواقين', 'السائقين', 'عهدة', 'عهدة_السواقين']) or (selected_option in ['عهدة السواقين', 'عهدة_السواقين'] if 'selected_option' in globals() else False):
 
     # جلب كافة البيانات من السحابة بجميع الحمايات
     cash_data = load_cash_data() if 'load_cash_data' in globals() else {}
