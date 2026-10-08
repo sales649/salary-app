@@ -6,13 +6,121 @@ import os
 import re
 import csv
 import base64
+import requests
+
+# بيانات التليجرام
+TELEGRAM_BOT_TOKEN = "8826053948:AAEktJAhqt4QzMCQFYyByoDwCV7DdLiPgeE"
+TELEGRAM_CHAT_ID = "1899126592"
+
+# بيانات UltraMsg (الواتساب)
+ULTRAMSG_INSTANCE_ID = "instance193501"
+ULTRAMSG_TOKEN = "50l4oslbz40gf04f"
+MANAGER_PHONE_NUMBER = "966544933233"
+
+def send_whatsapp_summary_report(msg_plain):
+    try:
+        url = f"https://api.ultramsg.com/{ULTRAMSG_INSTANCE_ID}/messages/chat"
+        payload = {
+            "token": ULTRAMSG_TOKEN,
+            "to": MANAGER_PHONE_NUMBER,
+            "body": msg_plain,
+            "priority": "10"
+        }
+        headers = {'content-type': 'application/x-www-form-urlencoded'}
+        res = requests.post(url, data=payload, headers=headers, timeout=10)
+        return res.status_code == 200
+    except Exception:
+        return False
+
+def send_telegram_summary_report():
+    try:
+        all_cash_db = load_cash_data()
+        month_selected = st.session_state.get('month_selected', 'سبتمبر 2026')
+        current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
+
+        tot_in_main = sum(t['amount'] for t in current_m_cash.get('transactions', []) if 'قبض' in t['type'])
+        tot_out_main = sum(t['amount'] for t in current_m_cash.get('transactions', []) if 'صرف' in t['type'])
+        net_main_now = current_m_cash.get('opening', 0.0) + tot_in_main - tot_out_main
+
+        tot_in_acc = sum(t['amount'] for t in current_m_cash.get('acc_transactions', []) if 'قبض' in t['type'])
+        tot_out_acc = sum(t['amount'] for t in current_m_cash.get('acc_transactions', []) if 'صرف' in t['type'])
+        net_acc_now = current_m_cash.get('acc_opening', 0.0) + tot_in_acc - tot_out_acc
+
+        drivers_db_list = load_drivers_data()
+        if isinstance(drivers_db_list, list):
+            tot_g_main = sum(float(pd.to_numeric(d.get('given_amt', 0) or d.get('amount', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
+            tot_s_main = sum(float(pd.to_numeric(d.get('spent_amt', 0) or d.get('spent', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
+            saman_bal = max(0.0, tot_g_main - tot_s_main)
+        else:
+            saman_bal = 0.0
+
+        total_company_cash = net_main_now + net_acc_now
+
+        # نص الرسالة للتليجرام (HTML)
+        msg_html = f"""<b>📊 التقرير المالي اليومي - شركة ميم الخماسية</b>
+🗓 <b>التاريخ:</b> <code>{get_ksa_now_str().split()[0]}</code>
+
+───────────────
+🏦 <b>الخزينة الرئيسية (Wahbi):</b>
+💵 <code>{net_main_now:,.2f} ر.س</code>
+
+💼 <b>عُهدة المحاسب (Omar):</b>
+💵 <code>{net_acc_now:,.2f} ر.س</code>
+
+🚚 <b>المتبقي بذمة (سمان السواق):</b>
+💵 <code>{saman_bal:,.2f} ر.س</code>
+───────────────
+💰 <b>إجمالي نقدية الشركة:</b>
+💎 <code>{total_company_cash:,.2f} ر.س</code>
+───────────────
+
+🟢 <i>نظام الإدارة المالي والمدفوعات الموحد</i>"""
+
+        # نص الرسالة للواتساب (تنسيق الواتساب)
+        msg_wa = f"""📊 *التقرير المالي اليومي - شركة ميم الخماسية*
+🗓 *التاريخ:* {get_ksa_now_str().split()[0]}
+
+───────────────
+🏦 *الخزينة الرئيسية (Wahbi):*
+💵 {net_main_now:,.2f} ر.س
+
+💼 *عُهدة المحاسب (Omar):*
+💵 {net_acc_now:,.2f} ر.س
+
+🚚 *المتبقي بذمة (سمان السواق):*
+💵 {saman_bal:,.2f} ر.س
+───────────────
+💰 *إجمالي نقدية الشركة:*
+💎 {total_company_cash:,.2f} ر.س
+───────────────
+
+🟢 _نظام الإدارة المالي والمدفوعات الموحد_"""
+
+        # إرسال تليجرام
+        url_tg = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        payload_tg = {"chat_id": TELEGRAM_CHAT_ID, "text": msg_html, "parse_mode": "HTML"}
+        res_tg = requests.post(url_tg, json=payload_tg, timeout=10)
+
+        # إرسال واتساب للمدير
+        send_whatsapp_summary_report(msg_wa)
+
+        return res_tg.status_code == 200
+    except Exception:
+        return False
+
+# 🤖 تنفيذ الجدولة التلقائية فور استدعاء الرابط من cron-job (الساعة 9:00 مساءً)
+if st.query_params.get("action") == "send_daily_summary":
+    success = send_telegram_summary_report()
+    if success:
+        st.success("تم إرسال التقرير التلقائي المجدول عبر Telegram و WhatsApp بنجاح! 🚀")
+    else:
+        st.error("فشل إرسال التقرير المجدول.")
+    st.stop()
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 
-# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
-st.set_page_config(page_title='5M', layout='wide', page_icon='📱', initial_sidebar_state="auto")
-
-# ⏰ دالتان مخصصتان لاحتساب الوقت المباشر بتوقيت السعودية (KSA Timezone GMT+3)
+# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL (تم تصحيح القوس والفاصلة)
+st.set_page_config(page_title='5M Accounting ERP', layout='wide', page_icon='📱', initial_sidebar_state="auto")
 def get_ksa_now():
     return datetime.utcnow() + timedelta(hours=3)
 
@@ -22,20 +130,19 @@ def get_ksa_now_str():
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
 
-# روابط الصور المباشرة من مستودع GitHub
+# روابط الصور المباشرة الموحدة
 STAMP_IMG_URL = "https://raw.githubusercontent.com/sales649/salary-app/main/stamp.png"
 SIGN_IMG_URL = "https://raw.githubusercontent.com/sales649/salary-app/main/sign.png"
 
-# إعدادات الربط السحابي بـ Supabase
 SUPABASE_URL = "https://ohoqprtvmhyjomaavwct.supabase.co"
 SUPABASE_KEY = "sb_publishable_T6YFCaos1EexLgGG9KtwCw_nNMRHjJ_"
 
-# تعريف دالة الاتصال بـ Supabase
 @st.cache_resource
 def init_supabase() -> Client:
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 supabase = init_supabase()
+
 
 # =========================================================
 # ☁️ دالة الحفظ والجلب السحابي الموحد (Supabase Cloud Store)
@@ -66,7 +173,11 @@ def load_cash_data():
 
 def save_cash_data(data):
     save_cloud_store('company_cash_data', data)
+def load_drivers_data():
+    return fetch_cloud_store('driver_custody', [])
 
+def save_drivers_data(data):
+    save_cloud_store('driver_custody', data)
 # 📦 2. دوال المخزون المربوطة بالسحابة
 def load_inventory_data():
     return fetch_cloud_store('company_inventory_data', [])
@@ -85,40 +196,17 @@ def load_uploaded_sales_batches():
 
 def save_uploaded_sales_batches(data):
     save_cloud_store('company_sales_batches', data)
-
-# 🚚 موديول عُهد السواقين والموظفين
-    if selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين'] or st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
+    
+# 🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين (عرض مباشر ومستقل)
+    if st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين'] or ( 'selected_option' in locals() and selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين'] ):
         st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
-        st.caption('إمكانية التصفية الجزئية لكل عُهدة على حدة، وتتبع المتبقي لكل عُهدة حتى إغلاقها بالكامل')
+        st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصفيات المباشرة والجزئية لـ سمان السواق وكافة الموظفين')
 
+        # جلب البيانات السحابية
         cash_data = load_cash_data()
         drivers_data = load_drivers_data()
 
-       # استخراج قائمة أسماء السواقين والموظفين من كافة السجلات السحابية المعتمدة
-        driver_names_set = set()
-        
-        # 1. جلب الأسماء المعتمدة المسجلة في السحابة لجدول العُهد المباشر
-        if isinstance(drivers_data, list):
-            for d in drivers_data:
-                if isinstance(d, dict):
-                    if d.get('driver_name'): driver_names_set.add(d.get('driver_name'))
-                    if d.get('driver'): driver_names_set.add(d.get('driver'))
-
-        # 2. جلب أسماء الموظفين من مسير الرواتب
-        if 'payroll_df' in st.session_state and isinstance(st.session_state.payroll_df, pd.DataFrame) and not st.session_state.payroll_df.empty:
-            if 'الاسم' in st.session_state.payroll_df.columns:
-                driver_names_set.update(st.session_state.payroll_df['الاسم'].dropna().tolist())
-
-        # 3. جلب الأسماء المذكورة بحركات الصندوق
-        for tx in all_cash_tx:
-            if isinstance(tx, dict):
-                desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
-                for name_item in ['عثمان', 'عمر', 'علي', 'محمود', 'إسماعيل', 'محمد', 'سمان']:
-                    if name_item in desc:
-                        driver_names_set.add(name_item)
-
-        if not driver_names_set:
-            driver_names_set = {'عثمان', 'عمر', 'علي', 'سمان السواق'}
+        # تجميع حركات الخزائن والصناديق
         all_cash_tx = []
         if isinstance(cash_data, dict):
             for month_k, month_v in cash_data.items():
@@ -126,59 +214,86 @@ def save_uploaded_sales_batches(data):
                     all_cash_tx.extend(month_v.get('transactions', []))
                     all_cash_tx.extend(month_v.get('acc_transactions', []))
 
-        # استخراج قائمة أسماء السواقين والموظفين
-        driver_names_set = set()
-        if 'payroll_df' in st.session_state and isinstance(st.session_state.payroll_df, pd.DataFrame) and not st.session_state.payroll_df.empty:
-            driver_names_set.update(st.session_state.payroll_df['الاسم'].dropna().tolist())
-        
+        # تجميع القائمة الموحدة لأسماء السواقين مع الضبط على سمان السواق
+        driver_names_set = {'سمان السواق', 'عثمان عبدالله', 'عمر', 'علي'}
         if isinstance(drivers_data, list):
             for d in drivers_data:
-                if isinstance(d, dict) and d.get('driver_name'):
-                    driver_names_set.add(d.get('driver_name'))
-                    
-        for tx in all_cash_tx:
-            if isinstance(tx, dict):
-                desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
-                for name_item in ['عثمان', 'عمر', 'علي', 'محمود', 'إسماعيل', 'محمد']:
-                    if name_item in desc:
-                        driver_names_set.add(name_item)
+                if isinstance(d, dict):
+                    if d.get('driver_name'): driver_names_set.add(d.get('driver_name'))
+                    if d.get('driver'): driver_names_set.add(d.get('driver'))
 
-        if not driver_names_set:
-            driver_names_set = {'عثمان', 'عمر', 'علي'}
+        if 'payroll_df' in st.session_state and isinstance(st.session_state.payroll_df, pd.DataFrame) and not st.session_state.payroll_df.empty:
+            if 'الاسم' in st.session_state.payroll_df.columns:
+                driver_names_set.update(st.session_state.payroll_df['الاسم'].dropna().tolist())
+
+        driver_list = sorted(list(driver_names_set))
+        default_idx = 0
+        for i, name in enumerate(driver_list):
+            if 'سمان' in name:
+                default_idx = i
+                break
 
         col_drv_sel, _ = st.columns([1.5, 1])
         with col_drv_sel:
-            selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", sorted(list(driver_names_set)))
+            selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", driver_list, index=default_idx)
 
         if selected_driver:
             driver_custodies = []
+            
+            # جلب العُهد السابقة من الصندوق الرئيسي وعُهدة المحاسب
             for tx_idx, tx in enumerate(all_cash_tx):
                 if isinstance(tx, dict):
                     desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
-                    if selected_driver in desc:
+                    if selected_driver in desc or ('سمان' in selected_driver and 'سمان' in desc):
                         tx_amt = float(pd.to_numeric(tx.get('amount', 0), errors='coerce') or 0)
                         v_code = tx.get('code', f"CASH-{tx_idx+1}")
                         if tx_amt > 0:
                             driver_custodies.append({
                                 "custody_id": f"CUST-{v_code}",
                                 "date": tx.get('date', get_ksa_now_str().split()[0]),
-                                "statement": tx.get('party', 'صرف عُهدة محولة'),
+                                "statement": tx.get('party') or tx.get('statement') or 'صرف عُهدة نقدية',
                                 "original_amount": tx_amt
                             })
 
+            # جلب العُهد السحابية المباشرة
+            if isinstance(drivers_data, list):
+                for d_rec in drivers_data:
+                    if isinstance(d_rec, dict):
+                        d_name = str(d_rec.get('driver_name') or d_rec.get('driver') or '')
+                        if selected_driver in d_name or ('سمان' in selected_driver and 'سمان' in d_name):
+                            if d_rec.get('type') == 'عُهدة_جديدة' or d_rec.get('given_amt', 0) > 0 or d_rec.get('amount', 0) > 0:
+                                g_amt = float(d_rec.get('amount') or d_rec.get('given_amt') or 0.0)
+                                if g_amt > 0 and d_rec.get('status') != 'مصفاة':
+                                    driver_custodies.append({
+                                        "custody_id": f"CUST-DIR-{d_rec.get('id', 1)}",
+                                        "date": d_rec.get('date', get_ksa_now_str().split()[0]),
+                                        "statement": d_rec.get('notes') or d_rec.get('purpose') or 'تسليم عُهدة سابقة',
+                                        "original_amount": g_amt
+                                    })
+
             if not driver_custodies:
+                init_val = 3500.0 if 'سمان' in selected_driver else 1000.0
                 driver_custodies.append({
                     "custody_id": f"CUST-{selected_driver}-01",
-                    "date": get_ksa_now_str().split()[0],
-                    "statement": f"عُهدة نقدية محولة لـ {selected_driver}",
-                    "original_amount": 500.0
+                    "date": "2026-08-01",
+                    "statement": f"رصيد عُهدة سابقة بذمة {selected_driver}",
+                    "original_amount": init_val
                 })
 
-            settlements_list = [d for d in drivers_data if isinstance(d, dict) and d.get('driver_name') == selected_driver and d.get('status') == 'مصفاة']
+            # جلب التصفيات السابقة
+            settlements_list = []
+            if isinstance(drivers_data, list):
+                for d in drivers_data:
+                    if isinstance(d, dict):
+                        d_name = str(d.get('driver_name') or d.get('driver') or '')
+                        if (selected_driver in d_name or ('سمان' in selected_driver and 'سمان' in d_name)) and d.get('status') == 'مصفاة':
+                            settlements_list.append(d)
+
             total_given = sum(c['original_amount'] for c in driver_custodies)
-            total_settled = sum(float(pd.to_numeric(s.get('amount', 0), errors='coerce') or 0) for s in settlements_list)
+            total_settled = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list)
             net_remaining = total_given - total_settled
 
+            # كروت ملخص العُهدة
             dc1, dc2, dc3 = st.columns(3)
             dc1.metric(f"💰 إجمالي العُهد لـ ({selected_driver})", f"{total_given:,.2f} ر.س")
             dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
@@ -188,12 +303,15 @@ def save_uploaded_sales_batches(data):
             col_tabs1, col_tabs2 = st.columns([1.3, 1])
 
             with col_tabs1:
-                st.markdown("##### 📋 قائمة العُهد النشطة والمفتوحة:")
+                st.markdown(f"##### 📋 قائمة العُهد النشطة والمفتوحة لـ ({selected_driver}):")
                 custody_display_list = []
                 for c_item in driver_custodies:
                     c_id = c_item['custody_id']
                     c_orig = c_item['original_amount']
-                    c_settled_amount = sum(float(pd.to_numeric(s.get('amount', 0), errors='coerce') or 0) for s in settlements_list if s.get('target_custody_id') == c_id)
+                    c_settled_amount = sum(
+                        float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) 
+                        for s in settlements_list if s.get('target_custody_id') == c_id
+                    )
                     c_rem = max(0.0, c_orig - c_settled_amount)
                     status_txt = "🔴 غير مصفاة" if c_settled_amount == 0 else ("🟡 مصفاة جزئياً" if c_rem > 0 else "🟢 مصفاة بالكامل")
 
@@ -210,33 +328,52 @@ def save_uploaded_sales_batches(data):
                 st.dataframe(pd.DataFrame(custody_display_list), use_container_width=True, hide_index=True)
 
             with col_tabs2:
-                st.markdown("##### 🧾 خصم وتصفية جزئية من عُهدة محددة:")
+                st.markdown(f"##### 🧾 خصم وتصفية جزئية لـ ({selected_driver}):")
                 active_custodies = [c for c in custody_display_list if c['المتبقي للتصفية'] > 0]
                 if active_custodies:
-                    custody_options = [f"{c['رقم العُهدة']} | [المتبقي منها: {c['المتبقي للتصفية']:,.2f} ر.س]" for c in active_custodies]
+                    custody_options = [f"{c['رقم العُهدة']} | [المتبقي: {c['المتبقي للتصفية']:,.2f} ر.س]" for c in active_custodies]
                     with st.form(f"form_partial_settle_{selected_driver}"):
                         selected_c_str = st.selectbox("اختر العُهدة الخصم منها:", custody_options)
                         target_c_id = selected_c_str.split(' | ')[0].strip()
                         target_c_obj = next((c for c in active_custodies if c['رقم العُهدة'] == target_c_id), active_custodies[0])
                         max_allowed = float(target_c_obj['المتبقي للتصفية'])
 
-                        s_amt = st.number_input(f"المبلغ الخصمه الآن (الحد الأقصى {max_allowed:,.2f} ر.س):", min_value=1.0, max_value=max_allowed, value=min(200.0, max_allowed))
+                        s_amt = st.number_input(f"المبلغ المُراد خصمه (الحد الأقصى {max_allowed:,.2f} ر.س):", min_value=1.0, max_value=max_allowed, value=min(200.0, max_allowed), step=10.0)
                         s_notes = st.text_input("بيان الفاتورة / المصاريف:")
-                        btn_sub_settle = st.form_submit_button("📥 خصم وتصفية المبلغ")
+                        btn_sub_settle = st.form_submit_button("📥 خصم وتصفية المبلغ من العُهدة")
 
                         if btn_sub_settle and s_amt > 0:
                             drivers_data.append({
                                 "id": len(drivers_data) + 1,
                                 "driver_name": selected_driver,
+                                "driver": selected_driver,
                                 "target_custody_id": target_c_id,
                                 "date": get_ksa_now_str().split()[0],
                                 "amount": s_amt,
+                                "spent_amt": s_amt,
                                 "status": "مصفاة",
                                 "notes": s_notes
                             })
                             save_drivers_data(drivers_data)
                             st.success(f"تم خصم مبلغ ({s_amt:,.2f} ر.س) بنجاح!")
                             st.rerun()
+
+            st.divider()
+
+            st.markdown(f"##### 📜 سجل التصفيات والفواتير السابقة لـ ({selected_driver}):")
+            if settlements_list:
+                history_rows = []
+                for s_item in settlements_list:
+                    history_rows.append({
+                        "التاريخ": s_item.get('date', ''),
+                        "رقم العُهدة المخصوم منها": s_item.get('target_custody_id', 'عام'),
+                        "المبلغ المخصوم": float(pd.to_numeric(s_item.get('amount') or s_item.get('spent_amt') or 0, errors='coerce') or 0),
+                        "البيان / الفاتورة": s_item.get('notes') or s_item.get('purpose') or ''
+                    })
+                st.dataframe(pd.DataFrame(history_rows), use_container_width=True, hide_index=True)
+            else:
+                st.info(f"لا توجد تصفيات سابقة مسجلة لـ ({selected_driver}).")
+                
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = '🌙 وضع ليلي'
 
@@ -1517,8 +1654,7 @@ else:
             st.query_params.clear()
             st.rerun()
 
-        selected_option = st.session_state.get('current_view', 'الرئيسية')
-
+ 
     st.session_state.payroll_df = get_payroll_for_month(month_selected)
     st.session_state.current_active_month = month_selected
 
@@ -1669,10 +1805,171 @@ else:
         return output
 
     # 4. الواجهة الرئيسية الشاملة
-    if selected_option == 'الرئيسية':
+    selected_option = st.session_state.get('current_view', 'الرئيسية')
+# 🚚 موديول إدارة عُهدة السواقين المباشر (مضبوط الحسابات وتصحيح المتبقي لـ سمان)
+    if st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
+        drivers_data = load_drivers_data()
+        if not isinstance(drivers_data, list):
+            drivers_data = []
+
+        # تصفية حركات سمان السواق
+        saman_records = [d for d in drivers_data if isinstance(d, dict) and ('سمان' in str(d.get('driver_name') or d.get('driver') or '') or d.get('driver_name') is None)]
+
+        # 1. تجميع العُهد وتحديد المتبقي الحقيقي لكل حركة
+        custodies_dict = {}
+        for r in saman_records:
+            r_id = r.get('id')
+            g_amt = float(pd.to_numeric(r.get('given_amt', 0) or r.get('amount', 0), errors='coerce') or 0)
+            if g_amt > 0 and r.get('type') != 'تصفية_جزئية':
+                custodies_dict[f"#{r_id}"] = {
+                    "id": r_id,
+                    "date": r.get('date', ''),
+                    "given_amt": g_amt,
+                    "spent_total": 0.0,
+                    "notes": r.get('notes', 'تسليم عُهدة نقدية')
+                }
+
+        # خصم الفواتير المربوطة بالعُهد
+        for r in saman_records:
+            target_id = r.get('target_custody_id')
+            s_amt = float(pd.to_numeric(r.get('spent_amt', 0) or r.get('spent', 0), errors='coerce') or 0)
+            if target_id and target_id in custodies_dict and s_amt > 0:
+                custodies_dict[target_id]["spent_total"] += s_amt
+
+        # حساب المتبقي الصافي الفعلي من العُهد المفتوحة بدقة
+        open_custodies_list = []
+        tot_open_rem = 0.0
+        for c_key, c_val in custodies_dict.items():
+            rem_amt = max(0.0, c_val["given_amt"] - c_val["spent_total"])
+            if rem_amt > 0:
+                tot_open_rem += rem_amt
+                open_custodies_list.append({
+                    "key": c_key,
+                    "id": c_val["id"],
+                    "given": c_val["given_amt"],
+                    "spent": c_val["spent_total"],
+                    "rem": rem_amt,
+                    "notes": c_val["notes"],
+                    "label": f"{c_key} | [المتبقي بها: {rem_amt:,.2f} ر.س] | {c_val['notes']}"
+                })
+
+        tot_given = sum(c["given_amt"] for c in custodies_dict.values())
+        tot_spent = sum(c["spent_total"] for c in custodies_dict.values())
+
+        # 1. الهيدر والأزرار العلوية
+        st.markdown("<h2 style='text-align: center;'>🚚 موديول إدارة عُهدة السواقين المباشر - (سبتمبر 2026)</h2>", unsafe_allow_html=True)
+        st.caption("تراكمي سحابي: متابعة العُهد والتصفيات الفتية بدقة الربط المباشر مع الخزينة")
+        
+        b1, b2, b3 = st.columns(3)
+        with b1: st.button("⚙️ تثبيت رصيد افتتاحي للسائق", use_container_width=True)
+        with b2: st.button("🖨️ طباعة كشف حساب عُهدة سمان (A4)", use_container_width=True)
+        with b3: st.button("📊 تصدير كشف حساب العُهد إلى Excel", use_container_width=True)
+
+        st.write("")
+
+        # 2. كروت المبالغ الإحصائية الثلاثية
+        m1, m2, m3 = st.columns(3)
+        m1.metric("إجمالي العُهد المسلمة لـ سمان السواق", f"{tot_given:,.2f} ر.س")
+        m2.metric("إجمالي المصروفات المصفاة بالفواتير", f"{tot_spent:,.2f} ر.س")
+        m3.metric("🔴 المتبقي بذمته حالياً (المُرحّل)", f"{tot_open_rem:,.2f} ر.س")
+
+        st.divider()
+
+        # 3. قسم التسليم والتصفية جنبًا إلى جنب
+        col_left, col_right = st.columns(2)
+
+        with col_left:
+            st.markdown("### ⚙️ 2. تصفية عُهدة (سمان السواق) بالعهدة:")
+            if open_custodies_list:
+                with st.form("form_fix_settle_saman"):
+                    sel_custody_str = st.selectbox("اختر العُهدة المراد تصفية فواتير منها:", [c["label"] for c in open_custodies_list])
+                    target_key = sel_custody_str.split(' | ')[0].strip()
+                    target_obj = next((c for c in open_custodies_list if c["key"] == target_key), open_custodies_list[0])
+                    c_rem_val = float(target_obj["rem"])
+
+                    spent_val = st.number_input(f"مبلغ الفاتورة / المصاريف المصفاة (الحد المتاح {c_rem_val:,.2f} ر.س):", min_value=1.0, value=min(215.0, c_rem_val), step=10.0)
+                    notes_val = st.text_input("ملاحظات / مصاريف الفاتورة (بنزين، ديزل، صيانة...):")
+                    btn_confirm_settle = st.form_submit_button("تأكيد خصم الفاتورة وتعديل الرصيد التراكمي", use_container_width=True)
+
+                    if btn_confirm_settle and spent_val > 0:
+                        new_id = len(drivers_data) + 1
+                        drivers_data.append({
+                            "id": new_id,
+                            "target_custody_id": target_key,
+                            "type": "تصفية_جزئية",
+                            "driver_name": "سمان السواق",
+                            "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
+                            "given_amt": 0.0,
+                            "spent_amt": spent_val,
+                            "rem_amt": max(0.0, c_rem_val - spent_val),
+                            "notes": f"تصفية من {target_key}: {notes_val}",
+                            "status": "مصفاة_بالكامل" if (c_rem_val - spent_val) <= 0 else "مصفاة_جزئياً"
+                        })
+                        save_drivers_data(drivers_data)
+                        st.success(f"تم خصم مبلغ ({spent_val:,.2f} ر.س) بنجاح من العُهدة {target_key}!")
+                        st.rerun()
+            else:
+                st.info("لا توجد عُهد مفتوحة حالياً لـ سمان السواق بانتظار التصفية.")
+
+        with col_right:
+            st.markdown("### 🚚 1. تسليم عُهدة جديدة لـ (سمان السواق):")
+            st.warning(f"💡 بجِراب السائق متبقي سابق عليه بـ ({tot_open_rem:,.2f} ر.س).")
+
+            with st.form("form_give_saman_fixed"):
+                st.text_input("اسم السائق:", value="سمان السواق", disabled=True)
+                new_amt = st.number_input("المبلغ النقدي المسلم باليد (يُخصم من الصندوق):", min_value=0.0, value=0.0, step=50.0)
+                new_notes = st.text_input("بيان / ملاحظات العُهدة:", value="مصاريف نقل وبنزين")
+                btn_give = st.form_submit_button("تسليم وتأكيد العُهدة", use_container_width=True)
+                
+                if btn_give and new_amt > 0:
+                    new_id = len(drivers_data) + 1
+                    drivers_data.append({
+                        "id": new_id,
+                        "driver_name": "سمان السواق",
+                        "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
+                        "given_amt": new_amt,
+                        "spent_amt": 0.0,
+                        "rem_amt": tot_open_rem + new_amt,
+                        "notes": new_notes,
+                        "status": "مفتوحة"
+                    })
+                    save_drivers_data(drivers_data)
+                    st.success(f"تم تسليم عُهدة جديدة بـ ({new_amt:,.2f} ر.س) وتحديث الرصيد التراكمي!")
+                    st.rerun()
+
+        st.divider()
+
+        # 4. سجل كشف حساب وتصفية عُهد (سمان السواق)
+        st.markdown("### 📄 سجل كشف حساب وتصفية عُهد (سمان السواق):")
+        if saman_records:
+            for rec in reversed(saman_records):
+                rec_id = rec.get('id', 1)
+                rec_date = rec.get('date', '')
+                rec_given = float(pd.to_numeric(rec.get('given_amt', 0) or rec.get('amount', 0), errors='coerce') or 0)
+                rec_spent = float(pd.to_numeric(rec.get('spent_amt', 0) or rec.get('spent', 0), errors='coerce') or 0)
+                rec_notes = rec.get('notes', 'مصاريف نقل وبنزين')
+
+                with st.container():
+                    ck1, ck2, ck3, ck4, ck5 = st.columns([1, 3, 3, 1, 1])
+                    with ck1: st.markdown(f"#### #{rec_id}")
+                    with ck2:
+                        st.markdown(f"🚚 **سمان السواق**  📅 {rec_date}")
+                        st.caption(f"المسلم: **{rec_given:,.2f} ر.س**  | المصروف: **{rec_spent:,.2f} ر.س**")
+                    with ck3:
+                        st.markdown(f"ملاحظات: {rec_notes}")
+                    with ck4:
+                        if st.button("✏️ تعديل", key=f"edit_fx_{rec_id}"): pass
+                    with ck5:
+                        if st.button("🗑️ حذف", key=f"del_fx_{rec_id}"):
+                            drivers_data = [d for d in drivers_data if d.get('id') != rec_id]
+                            save_drivers_data(drivers_data)
+                            st.rerun()
+                    st.divider()
+# 🏠 2. الشاشة الرئيسية للنظام
+    elif selected_option == 'الرئيسية' or st.session_state.get('current_view') == 'الرئيسية':
         all_cash_db = load_cash_data()
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
-        
+
         curr_trans_main = current_m_cash.get('transactions', [])
         tot_in_main = sum(t['amount'] for t in curr_trans_main if 'قبض' in t['type'])
         tot_out_main = sum(t['amount'] for t in curr_trans_main if 'صرف' in t['type'])
@@ -1685,29 +1982,42 @@ else:
 
         total_company_cash = net_main_now + net_acc_now
 
-        drivers_db = load_drivers_data()
-        open_driver_custody_sum = sum(d['given_amt'] - d.get('spent_amt', 0.0) for d in drivers_db if d.get('status') == 'مفتوحة')
+        drivers_db_list = load_drivers_data()
+        if isinstance(drivers_db_list, list):
+            tot_g_main = sum(float(pd.to_numeric(d.get('given_amt', 0) or d.get('amount', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
+            tot_s_main = sum(float(pd.to_numeric(d.get('spent_amt', 0) or d.get('spent', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
+            open_driver_custody_sum = max(0.0, tot_g_main - tot_s_main)
+        else:
+            open_driver_custody_sum = 0.0
 
         audit_history = load_audit_data()
         last_audit = audit_history[-1] if audit_history else None
 
+        # زر إرسال تقرير ملخص الصناديق عبر التليجرام
+        col_tg1, col_tg2 = st.columns([3, 1])
+        with col_tg2:
+            if st.button("📲 إرسال ملخص اليوم عبر Telegram", use_container_width=True):
+                if send_telegram_summary_report():
+                    st.success("تم إرسال التقرير اليومي إلى التليجرام بنجاح! 🚀")
+                else:
+                    st.error("حدث خطأ أثناء إرسال التقرير.")
+
         st.markdown(f"### ملخص الصندوق والعُهد - {month_selected}")
-        
+
         if st.session_state.user_role == "admin":
             c_box1, c_box2, c_box3, c_box4 = st.columns(4)
             with c_box1:
-                st.markdown("#### الخزينة الرئيسية (wahby):")
+                st.markdown("#### الخزينة الرئيسية (wahbi):")
                 st.metric("رصيد الخزينة الرئيسية", f"{net_main_now:,.2f} ر.س")
             with c_box2:
                 st.markdown("#### عُهدة المحاسب (omar):")
                 st.metric("رصيد عُهدة omar", f"{net_acc_now:,.2f} ر.س")
             with c_box3:
-                st.markdown("#### 🚚 عُهد السائقين المترصدة:")
+                st.markdown("#### 🚚 عُهد السواقين المترصدة:")
                 st.metric("إجمالي المتبقي باليد", f"{open_driver_custody_sum:,.2f} ر.س")
             with c_box4:
-                st.markdown("#### 💳 إجمالي نقدية الشركة:")
+                st.markdown("#### = إجمالي نقدية الشركة:")
                 st.metric("مجموع الصناديق", f"{total_company_cash:,.2f} ر.س")
-
             if last_audit:
                 a_diff = last_audit['diff']
                 diff_tag = "🟢 مطابقة تامة" if a_diff == 0 else (f"🔴 عجز بقيمة ({abs(a_diff):,.2f} ر.س)" if a_diff < 0 else f"🔵 زيادة بقيمة ({a_diff:,.2f} ر.س)")
