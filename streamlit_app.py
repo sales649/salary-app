@@ -1921,21 +1921,50 @@ else:
                 new_notes = st.text_input("بيان / ملاحظات العُهدة:", value="مصاريف نقل وبنزين")
                 btn_give = st.form_submit_button("تسليم وتأكيد العُهدة", use_container_width=True)
                 
-                if btn_give and new_amt > 0:
-                    new_id = len(drivers_data) + 1
-                    drivers_data.append({
-                        "id": new_id,
-                        "driver_name": "سمان السواق",
-                        "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
-                        "given_amt": new_amt,
-                        "spent_amt": 0.0,
-                        "rem_amt": tot_open_rem + new_amt,
-                        "notes": new_notes,
-                        "status": "مفتوحة"
-                    })
-                    save_drivers_data(drivers_data)
-                    st.success(f"تم تسليم عُهدة جديدة بـ ({new_amt:,.2f} ر.س) وتحديث الرصيد التراكمي!")
-                    st.rerun()
+if btn_give and new_amt > 0:
+            # 1. تحديد الصندوق المطلوب الخصم منه تلقائياً (وهبي أو عمر)
+            cash_data = load_cash_data() if 'load_cash_data' in globals() else {}
+            curr_m = st.session_state.get('current_active_month') or month_selected
+            
+            if curr_m not in cash_data or not isinstance(cash_data[curr_m], dict):
+                cash_data[curr_m] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+            
+            target_box_key = 'acc_transactions' if st.session_state.get('user_role') == 'accountant' else 'transactions'
+            
+            # 2. إنشاء سند صرف آلي بالصندوق لخصم المبلغ
+            c_trans = cash_data[curr_m].get(target_box_key, [])
+            v_code = f"PAY-DRV-{(len(c_trans) + 1):03d}"
+            
+            c_trans.append({
+                'id': len(c_trans) + 1,
+                'code': v_code,
+                'date': get_ksa_now_str(),
+                'type': 'سند صرف',
+                'party': 'تسليم عُهدة نقدية للسائق (سمان السواق)',
+                'amount': float(new_amt),
+                'method': 'نقداً بالصندوق',
+                'notes': new_notes if new_notes else "صرف عُهدة نقدية للسائق سمان"
+            })
+            
+            cash_data[curr_m][target_box_key] = c_trans
+            save_cash_data(cash_data)
+            
+            # 3. التسجيل في سجل عُهد السواقين
+            new_id = len(drivers_data) + 1
+            drivers_data.append({
+                "id": new_id,
+                "driver_name": "سمان السواق",
+                "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
+                "given_amt": new_amt,
+                "spent_amt": 0.0,
+                "rem_amt": tot_open_rem + new_amt,
+                "notes": new_notes,
+                "status": "مفتوحة"
+            })
+            save_drivers_data(drivers_data)
+            
+            st.success(f"✅ تم تسليم عُهدة جديدة بـ ({new_amt:,.2f} ر.س) وخصمها تلقائياً كـ سند صرف (#{v_code}) من الصندوق!")
+            st.rerun()
 
         st.divider()
 
