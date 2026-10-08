@@ -11,6 +11,7 @@ from supabase import create_client, Client
 
 # 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL (تم تصحيح القوس والفاصلة)
 st.set_page_config(page_title='5M Accounting ERP', layout='wide', page_icon='📱', initial_sidebar_state="auto")
+
 def get_ksa_now():
     return datetime.utcnow() + timedelta(hours=3)
 
@@ -82,199 +83,151 @@ def load_uploaded_sales_batches():
 
 def save_uploaded_sales_batches(data):
     save_cloud_store('company_sales_batches', data)
-    
-# ================= ================= =================
-# موديول عُهدة السائق (سمان) الأصلي والمربوط بالسحابة
-# ================= ================= =================
-# 2. موديول عُهدة السائق (سمان) الأصلي والمربوط بالسحابة
-current_nav = str(st.session_state.get('current_view', '')) + " " + str(st.session_state.get('selected_option', '')) + " " + str(st.session_state.get('nav', ''))
-if any(x in current_nav for x in ['السواقين', 'السائقين', 'عهدة', 'عهدة_السواقين']) or (selected_option in ['عهدة السواقين', 'عهدة_السواقين'] if 'selected_option' in globals() else False):
 
-    # جلب كافة البيانات من السحابة بجميع الحمايات
-    cash_data = load_cash_data() if 'load_cash_data' in globals() else {}
-    drivers_data = load_drivers_data() if 'load_drivers_data' in globals() else (fetch_cloud_store('company_drivers_data', []) if 'fetch_cloud_store' in globals() else [])
-    curr_month = st.session_state.get('current_month', '2026-09')
+# 2. عُهدة السواقين الشاملة مع قراءة جميع البيانات
+    elif selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
+        st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
+        st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصفيات المباشرة والجزئية لكل موظف وسائق')
 
-    # 1. تجميع كافة الحركات السابقة المحولة لسائق العُهدة "سمان"
-    all_cash_tx = []
-    if isinstance(cash_data, dict):
-        for month_k, month_v in cash_data.items():
-            if isinstance(month_v, dict):
-                tx_l = month_v.get('transactions') or []
-                acc_l = month_v.get('acc_transactions') or []
-                all_cash_tx.extend([t for t in tx_l if isinstance(t, dict)])
-                all_cash_tx.extend([t for t in acc_l if isinstance(t, dict)])
+        cash_data = load_cash_data()
+        drivers_data = load_drivers_data()
 
-    drivers_list = drivers_data if isinstance(drivers_data, list) else (drivers_data.get('drivers', []) if isinstance(drivers_data, dict) else list(drivers_data.values()) if isinstance(drivers_data, dict) else [])
+        all_cash_tx = []
+        if isinstance(cash_data, dict):
+            for month_k, month_v in cash_data.items():
+                if isinstance(month_v, dict):
+                    all_cash_tx.extend(month_v.get('transactions', []))
+                    all_cash_tx.extend(month_v.get('acc_transactions', []))
 
-    selected_driver = "سمان"
-    driver_custodies = []
-    settlements_list = []
+        driver_names_set = set()
+        
+        # جلب جميع الأسماء من جدول العُهد السحابي المباشر
+        if isinstance(drivers_data, list):
+            for d in drivers_data:
+                if isinstance(d, dict):
+                    if d.get('driver_name'): driver_names_set.add(d.get('driver_name'))
+                    if d.get('driver'): driver_names_set.add(d.get('driver'))
 
-    # أ. استخراج العُهد المصروفة لسمان من حركة الصندوق والخزينة
-    for tx_idx, tx in enumerate(all_cash_tx or []):
-        full_desc = str(tx.get('party', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('statement', ''))
-        if 'سمان' in full_desc or 'سامان' in full_desc:
-            tx_amt = float(pd.to_numeric(tx.get('amount', 0), errors='coerce') or 0)
-            tx_code = tx.get('code', f"CASH-{tx_idx+1}")
-            tx_date = str(tx.get('date', '')).split()[0] if tx.get('date') else get_ksa_now_str().split()[0]
+        # جلب جميع أسماء الموظفين والسواقين من جدول الرواتب
+        if 'payroll_df' in st.session_state and isinstance(st.session_state.payroll_df, pd.DataFrame) and not st.session_state.payroll_df.empty:
+            if 'الاسم' in st.session_state.payroll_df.columns:
+                driver_names_set.update(st.session_state.payroll_df['الاسم'].dropna().tolist())
 
-            if tx.get('is_settlement') or 'تصفية' in full_desc or 'فاتورة' in full_desc:
-                settlements_list.append({
-                    "date": tx_date,
-                    "target_custody_id": tx_code,
-                    "amount": tx_amt,
-                    "notes": str(tx.get('party') or tx.get('statement') or 'تصفية فاتورة')
-                })
-            elif tx_amt > 0:
+        # جلب أي أسماء محولة بداخل حركات الخزينة
+        for tx in all_cash_tx:
+            if isinstance(tx, dict):
+                desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
+                for name_item in ['عثمان', 'عمر', 'علي', 'محمود', 'إسماعيل', 'محمد', 'سمان']:
+                    if name_item in desc: driver_names_set.add(name_item)
+
+        if not driver_names_set:
+            driver_names_set = {'عثمان', 'عمر', 'علي', 'سمان السواق'}
+
+        selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", sorted(list(driver_names_set)))
+
+        if selected_driver:
+            driver_custodies = []
+            
+            # جلب العُهد من حركات الخزينة
+            for tx_idx, tx in enumerate(all_cash_tx):
+                if isinstance(tx, dict):
+                    desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
+                    if selected_driver in desc:
+                        tx_amt = float(pd.to_numeric(tx.get('amount', 0), errors='coerce') or 0)
+                        v_code = tx.get('code', f"CASH-{tx_idx+1}")
+                        if tx_amt > 0:
+                            driver_custodies.append({
+                                "custody_id": f"CUST-{v_code}",
+                                "date": tx.get('date', get_ksa_now_str().split()[0]),
+                                "statement": tx.get('party', 'صرف عُهدة محولة'),
+                                "original_amount": tx_amt
+                            })
+
+            # جلب العُهد من السجل السحابي المباشر
+            if isinstance(drivers_data, list):
+                for d_rec in drivers_data:
+                    if isinstance(d_rec, dict) and (d_rec.get('driver_name') == selected_driver or d_rec.get('driver') == selected_driver):
+                        if d_rec.get('type') == 'عُهدة_جديدة' or d_rec.get('given_amt', 0) > 0:
+                            g_amt = float(d_rec.get('amount') or d_rec.get('given_amt') or 0.0)
+                            if g_amt > 0:
+                                driver_custodies.append({
+                                    "custody_id": f"CUST-DIR-{d_rec.get('id', 1)}",
+                                    "date": d_rec.get('date', get_ksa_now_str().split()[0]),
+                                    "statement": d_rec.get('notes') or d_rec.get('purpose') or 'تسليم عُهدة جديدة',
+                                    "original_amount": g_amt
+                                })
+
+            if not driver_custodies:
                 driver_custodies.append({
-                    "custody_id": f"CUST-{tx_code}",
-                    "date": tx_date,
-                    "statement": str(tx.get('party') or tx.get('statement') or 'عُهدة محولة لسمان'),
-                    "original_amount": tx_amt
+                    "custody_id": f"CUST-{selected_driver}-01",
+                    "date": get_ksa_now_str().split()[0],
+                    "statement": f"عُهدة نقدية محولة لـ {selected_driver}",
+                    "original_amount": 500.0
                 })
 
-    # ب. استخراج العُهد السابقة من السحابة لجدول العُهد
-    for d_item in drivers_list:
-        if isinstance(d_item, dict):
-            d_name = str(d_item.get('driver_name') or d_item.get('driver') or '')
-            if 'سمان' in d_name or 'سامان' in d_name:
-                d_amt = float(pd.to_numeric(d_item.get('amount') or d_item.get('spent_amt') or d_item.get('given_amt') or 0, errors='coerce') or 0)
-                d_date = str(d_item.get('date', '')).split()[0] if d_item.get('date') else get_ksa_now_str().split()[0]
+            settlements_list = [d for d in drivers_data if isinstance(d, dict) and (d.get('driver_name') == selected_driver or d.get('driver') == selected_driver) and d.get('status') == 'مصفاة']
+            total_given = sum(c['original_amount'] for c in driver_custodies)
+            total_settled = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list)
+            net_remaining = total_given - total_settled
 
-                if d_item.get('status') == 'مصفاة' or d_item.get('type') == 'تصفية':
-                    settlements_list.append({
-                        "date": d_date,
-                        "target_custody_id": str(d_item.get('target_custody_id', 'عام')),
-                        "amount": d_amt,
-                        "notes": str(d_item.get('notes') or d_item.get('purpose') or 'خصم فاتورة')
+            dc1, dc2, dc3 = st.columns(3)
+            dc1.metric(f"💰 إجمالي العُهد لـ ({selected_driver})", f"{total_given:,.2f} ر.س")
+            dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
+            dc3.metric("⚠️ المتبقي بذمة السائق", f"{net_remaining:,.2f} ر.س")
+
+            st.divider()
+            col_tabs1, col_tabs2 = st.columns([1.3, 1])
+
+            with col_tabs1:
+                st.markdown("##### 📋 قائمة العُهد النشطة والمفتوحة:")
+                custody_display_list = []
+                for c_item in driver_custodies:
+                    c_id = c_item['custody_id']
+                    c_orig = c_item['original_amount']
+                    c_settled_amount = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list if s.get('target_custody_id') == c_id)
+                    c_rem = max(0.0, c_orig - c_settled_amount)
+                    status_txt = "🔴 غير مصفاة" if c_settled_amount == 0 else ("🟡 مصفاة جزئياً" if c_rem > 0 else "🟢 مصفاة بالكامل")
+
+                    custody_display_list.append({
+                        "رقم العُهدة": c_id,
+                        "التاريخ": c_item['date'],
+                        "البيان": c_item['statement'],
+                        "المبلغ الأصلي": c_orig,
+                        "المخصوم منها": c_settled_amount,
+                        "المتبقي للتصفية": c_rem,
+                        "الحالة": status_txt
                     })
-                elif d_amt > 0:
-                    driver_custodies.append({
-                        "custody_id": f"CUST-DIR-{d_item.get('id', 1)}",
-                        "date": d_date,
-                        "statement": str(d_item.get('notes') or d_item.get('purpose') or 'تسليم عُهدة مباشرة لسمان'),
-                        "original_amount": d_amt
-                    })
 
-    if not driver_custodies:
-        driver_custodies.append({
-            "custody_id": "CUST-01",
-            "date": get_ksa_now_str().split()[0],
-            "statement": "عُهدة نقدية محولة لـ سمان",
-            "original_amount": 500.0
-        })
+                st.dataframe(pd.DataFrame(custody_display_list), use_container_width=True, hide_index=True)
 
-    # الإجماليات المالية
-    total_given = sum(c['original_amount'] for c in driver_custodies)
-    total_settled = sum(s['amount'] for s in settlements_list)
-    net_remaining = total_given - total_settled
+            with col_tabs2:
+                st.markdown("##### 🧾 خصم وتصفية جزئية من عُهدة محددة:")
+                active_custodies = [c for c in custody_display_list if c['المتبقي للتصفية'] > 0]
+                if active_custodies:
+                    custody_options = [f"{c['رقم العُهدة']} | [المتبقي منها: {c['المتبقي للتصفية']:,.2f} ر.س]" for c in active_custodies]
+                    with st.form(f"form_partial_settle_{selected_driver}"):
+                        selected_c_str = st.selectbox("اختر العُهدة الخصم منها:", custody_options)
+                        target_c_id = selected_c_str.split(' | ')[0].strip()
+                        target_c_obj = next((c for c in active_custodies if c['رقم العُهدة'] == target_c_id), active_custodies[0])
+                        max_allowed = float(target_c_obj['المتبقي للتصفية'])
 
-    # كروت الملخص المالي
-    dc1, dc2, dc3 = st.columns(3)
-    dc1.metric("💰 إجمالي عُهد (سمان)", f"{total_given:,.2f} ر.س")
-    dc2.metric("🧾 إجمالي الفواتير والمصاريف", f"{total_settled:,.2f} ر.س")
-    dc3.metric("⚠️ الصافي بذمة سائق العُهدة", f"{net_remaining:,.2f} ر.س")
+                        s_amt = st.number_input(f"المبلغ الخصمه الآن (الحد الأقصى {max_allowed:,.2f} ر.س):", min_value=1.0, max_value=max_allowed, value=min(200.0, max_allowed))
+                        s_notes = st.text_input("بيان الفاتورة / المصاريف:")
+                        btn_sub_settle = st.form_submit_button("📥 خصم وتصفية المبلغ")
 
-    st.divider()
-
-    # تصميم الجانبين الأصلي (الأيمن: تسليم النقدية / الأيسر: خصم وتصفية)
-    col_right, col_left = st.columns([1, 1])
-
-    with col_right:
-        st.markdown("##### 💵 تسليم عُهدة نقدية جديدة لـ (سمان):")
-        st.caption("تتخصم فوراً كحركة صرف من صندوق عمر / الخزينة")
-        with st.form("form_give_cash_samman_orig"):
-            give_amt = st.number_input("المبلغ المسلم لسمان (ر.س):", min_value=1.0, value=500.0, step=50.0)
-            give_notes = st.text_input("البيان / السبب:", value="تسليم عُهدة نقدية للسائق سمان")
-            btn_give = st.form_submit_button("📤 تسليم المبلغ وخصمه المباشر من الصندوق")
-
-            if btn_give and give_amt > 0:
-                if curr_month not in cash_data or not isinstance(cash_data[curr_month], dict):
-                    cash_data[curr_month] = {"transactions": [], "acc_transactions": []}
-
-                new_tx = {
-                    "code": f"DRV-{int(time.time()) if 'time' in globals() else 101}",
-                    "date": get_ksa_now_str().split()[0],
-                    "type": "صرف",
-                    "amount": give_amt,
-                    "party": f"تسليم عُهدة نقدية للسائق سمان - {give_notes}",
-                    "category": "عُهد وسلف",
-                    "statement": give_notes
-                }
-                cash_data[curr_month].setdefault("transactions", []).append(new_tx)
-
-                if 'save_cash_data' in globals():
-                    save_cash_data(cash_data)
-                elif 'save_cloud_store' in globals():
-                    save_cloud_store('company_cash_data', cash_data)
-
-                st.success(f"تم خصم مبلغ ({give_amt:,.2f} ر.س) من صندوق عمر وتسليمه لسمان بنجاح!")
-                st.rerun()
-
-    with col_left:
-        st.markdown("##### 🧾 خصم فواتير ومصاريف من عُهدة (سمان):")
-        st.caption("يمكن الخصم بأي قيمة (بالزيادة أو النقص)")
-
-        custody_opts = [f"{c['custody_id']} | {c['statement']} [{c['original_amount']:,.2f} ر.س]" for c in driver_custodies]
-
-        with st.form("form_settle_samman_orig"):
-            selected_c_str = st.selectbox("اختر العُهدة المراد الخصم منها:", custody_opts)
-            s_amt = st.number_input("مبلغ الفاتورة / المصروف المُراد خصمه (ر.س):", min_value=1.0, value=100.0, step=10.0)
-            s_notes = st.text_input("بيان الفاتورة (بنزين، صيانة، صوف، سكن...):")
-            btn_settle = st.form_submit_button("📥 خصم الفاتورة وتصفيتها من سمان")
-
-            if btn_settle and s_amt > 0:
-                target_c_id = selected_c_str.split(' | ')[0].strip()
-                save_list = drivers_list if isinstance(drivers_list, list) else []
-                save_list.append({
-                    "id": len(save_list) + 1,
-                    "driver_name": selected_driver,
-                    "driver": selected_driver,
-                    "target_custody_id": target_c_id,
-                    "date": get_ksa_now_str().split()[0],
-                    "amount": s_amt,
-                    "spent_amt": s_amt,
-                    "status": "مصفاة",
-                    "notes": s_notes
-                })
-
-                if 'save_drivers_data' in globals():
-                    save_drivers_data(save_list)
-                elif 'save_cloud_store' in globals():
-                    save_cloud_store('company_drivers_data', save_list)
-
-                st.success(f"تم تسجيل فاتورة تصفية بمبلغ ({s_amt:,.2f} ر.س) لسمان بنجاح!")
-                st.rerun()
-
-    st.divider()
-
-    # السجل القديم التراكمي الكامل لـ سمان
-    st.markdown("##### 📜 سجل العُهد القديمة والتصفيات السابقة بالكامل لـ (سمان):")
-    history_rows = []
-
-    for c_item in driver_custodies:
-        history_rows.append({
-            "التاريخ": c_item['date'],
-            "النوع": "📥 تسليم عُهدة",
-            "رقم الحركة": c_item['custody_id'],
-            "المبلغ (ر.س)": f"{c_item['original_amount']:,.2f}",
-            "البيان والتفاصيل": c_item['statement']
-        })
-
-    for s_item in settlements_list:
-        history_rows.append({
-            "التاريخ": s_item['date'],
-            "النوع": "🧾 خصم فاتورة",
-            "رقم الحركة": s_item['target_custody_id'],
-            "المبلغ (ر.س)": f"{s_item['amount']:,.2f}",
-            "البيان والتفاصيل": s_item['notes']
-        })
-
-    if history_rows:
-        st.dataframe(pd.DataFrame(history_rows), use_container_width=True, hide_index=True)
-    else:
-        st.info("لا توجد سجلات عُهد سابقة مسجلة لـ (سمان).")
+                        if btn_sub_settle and s_amt > 0:
+                            drivers_data.append({
+                                "id": len(drivers_data) + 1,
+                                "driver_name": selected_driver,
+                                "target_custody_id": target_c_id,
+                                "date": get_ksa_now_str().split()[0],
+                                "amount": s_amt,
+                                "status": "مصفاة",
+                                "notes": s_notes
+                            })
+                            save_drivers_data(drivers_data)
+                            st.success(f"تم خصم مبلغ ({s_amt:,.2f} ر.س) بنجاح!")
+                            st.rerun()
 if 'theme_mode' not in st.session_state:
     st.session_state['theme_mode'] = '🌙 وضع ليلي'
 
@@ -1118,8 +1071,8 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                     m_cash['transactions'] = main_trans
 
                 else:
-                    rec_count = sum(1 for t in c_trans if "قبض" in (t.get('type') if isinstance(t, dict) else ''))
-                    pay_count = sum(1 for t in c_trans if "صرف" in (t.get('type') if isinstance(t, dict) else ''))
+                    rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
+                    pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
                     v_code = f"REC-{(rec_count + 1):03d}" if "قبض" in q_type else f"PAY-{(pay_count + 1):03d}"
                     
                     c_trans.append({
@@ -1303,8 +1256,8 @@ def print_inventory_report_dialog(df_inv):
 def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
     st.write(f"معاينة كشف الحساب لـ **{box_title}** ({period_txt}):")
     
-    tot_in = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in trans_list if 'قبض' in (t.get('type') if isinstance(t, dict) else ''))
-    tot_out = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in trans_list if 'صرف' in (t.get('type') if isinstance(t, dict) else ''))
+    tot_in = sum(t['amount'] for t in trans_list if 'قبض' in t['type'])
+    tot_out = sum(t['amount'] for t in trans_list if 'صرف' in t['type'])
     net_bal = tot_in - tot_out
 
     t_account_html = f"""
@@ -1330,14 +1283,14 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
                 <tbody>
     """
     for t in trans_list:
-        is_rec = 'قبض' in (t.get('type') if isinstance(t, dict) else '')
-        rec_amt = f"{(t.get('amount', 0) if isinstance(t, dict) else 0):,.2f} ر.س" if is_rec else "-"
-        pay_amt = f"{(t.get('amount', 0) if isinstance(t, dict) else 0):,.2f} ر.س" if not is_rec else "-"
+        is_rec = 'قبض' in t['type']
+        rec_amt = f"{t['amount']:,.2f} ر.س" if is_rec else "-"
+        pay_amt = f"{t['amount']:,.2f} ر.س" if not is_rec else "-"
         t_account_html += f"""
             <tr>
                 <td>#{t.get('code', t['id'])}</td>
                 <td>{t['date']}</td>
-                <td>{(t.get('type') if isinstance(t, dict) else '')}</td>
+                <td>{t['type']}</td>
                 <td>{t['party']}</td>
                 <td style="color:#047857; font-weight:bold;">{rec_amt}</td>
                 <td style="color:#b91c1c; font-weight:bold;">{pay_amt}</td>
@@ -1712,13 +1665,13 @@ else:
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
         
         curr_trans_main = current_m_cash.get('transactions', [])
-        tot_in_main = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in curr_trans_main if 'قبض' in (t.get('type') if isinstance(t, dict) else ''))
-        tot_out_main = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in curr_trans_main if 'صرف' in (t.get('type') if isinstance(t, dict) else ''))
+        tot_in_main = sum(t['amount'] for t in curr_trans_main if 'قبض' in t['type'])
+        tot_out_main = sum(t['amount'] for t in curr_trans_main if 'صرف' in t['type'])
         net_main_now = current_m_cash.get('opening', 0.0) + tot_in_main - tot_out_main
 
         curr_trans_acc = current_m_cash.get('acc_transactions', [])
-        tot_in_acc = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans_acc or []) if isinstance(t, dict) and t.get('type') == 'قبض')
-        tot_out_acc = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans_acc or []) if isinstance(t, dict) and t.get('type') == 'صرف')
+        tot_in_acc = sum(t['amount'] for t in curr_trans_acc if 'قبض' in t['type'])
+        tot_out_acc = sum(t['amount'] for t in curr_trans_acc if 'صرف' in t['type'])
         net_acc_now = current_m_cash.get('acc_opening', 0.0) + tot_in_acc - tot_out_acc
 
         total_company_cash = net_main_now + net_acc_now
@@ -2369,8 +2322,8 @@ else:
 
         opening_bal = current_m_cash.get(active_opening_key, 0.0)
         curr_trans = current_m_cash.get(active_box_key, [])
-        tot_cash_in = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans or []) if isinstance(t, dict) and t.get('type') == 'قبض')
-        tot_cash_out = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans or []) if isinstance(t, dict) and t.get('type') == 'صرف')
+        tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
+        tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
         system_book_balance = opening_bal + tot_cash_in - tot_cash_out
 
         st.divider()
@@ -2653,8 +2606,8 @@ else:
                 opening_balance_dialog(month_selected, active_target_box)
 
         curr_trans = current_m_cash.get(active_box_key, [])
-        tot_cash_in = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans or []) if isinstance(t, dict) and t.get('type') == 'قبض')
-        tot_cash_out = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans or []) if isinstance(t, dict) and t.get('type') == 'صرف')
+        tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
+        tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
         net_cash_now = opening_bal + tot_cash_in - tot_cash_out
 
         c_m1, c_m2, c_m3, c_m4 = st.columns(4)
@@ -2784,8 +2737,8 @@ else:
                             current_m_cash['transactions'] = main_trans
 
                         else:
-                            rec_cnt = sum(1 for t in curr_trans if "قبض" in (t.get('type') if isinstance(t, dict) else ''))
-                            pay_cnt = sum(1 for t in curr_trans if "صرف" in (t.get('type') if isinstance(t, dict) else ''))
+                            rec_cnt = sum(1 for t in curr_trans if "قبض" in t['type'])
+                            pay_cnt = sum(1 for t in curr_trans if "صرف" in t['type'])
                             v_code = f"REC-{(rec_cnt + 1):03d}" if "قبض" in trans_type else f"PAY-{(pay_cnt + 1):03d}"
                             
                             curr_trans.append({
@@ -2819,7 +2772,7 @@ else:
                 if cash_search:
                     filtered_cash = [t for t in filtered_cash if cash_search.lower() in t['party'].lower()]
                 if cash_filter_type != "جميع الحركات":
-                    filtered_cash = [t for t in filtered_cash if (t.get('type') if isinstance(t, dict) else '') == cash_filter_type]
+                    filtered_cash = [t for t in filtered_cash if t['type'] == cash_filter_type]
 
                 if filtered_cash:
                     dates_set = []
@@ -2840,8 +2793,8 @@ else:
 
                     day_trans = [t for t in filtered_cash if t['date'].startswith(selected_day_page)][::-1]
 
-                    d_in = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in day_trans if 'قبض' in (t.get('type') if isinstance(t, dict) else ''))
-                    d_out = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in day_trans if 'صرف' in (t.get('type') if isinstance(t, dict) else ''))
+                    d_in = sum(t['amount'] for t in day_trans if 'قبض' in t['type'])
+                    d_out = sum(t['amount'] for t in day_trans if 'صرف' in t['type'])
                     d_net = d_in - d_out
 
                     st.info(f"📆 **حركة يوم ({selected_day_page}):** مقبوضات اليوم: `{d_in:,.2f} ر.س` | مصروفات اليوم: `{d_out:,.2f} ر.س` | صافي الحركة اليومية: `{d_net:,.2f} ر.س`")
