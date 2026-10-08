@@ -1707,7 +1707,7 @@ else:
         net_main_now = current_m_cash.get('opening', 0.0) + tot_in_main - tot_out_main
 
         curr_trans_acc = current_m_cash.get('acc_transactions', [])
-        tot_in_acc = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in curr_trans_acc if 'قبض' in (t.get('type') if isinstance(t, dict) else ''))
+        tot_in_acc = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans_acc or []) if isinstance(t, dict) and t.get('type') == 'قبض')
         tot_out_acc = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in curr_trans_acc if 'صرف' in (t.get('type') if isinstance(t, dict) else ''))
         net_acc_now = current_m_cash.get('acc_opening', 0.0) + tot_in_acc - tot_out_acc
 
