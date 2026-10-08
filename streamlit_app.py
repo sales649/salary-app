@@ -1967,9 +1967,10 @@ if btn_give and new_amt > 0:
             st.rerun()
 
 st.divider()
-        # 4. سجل كشف حساب وتصفية عُهد (سمان السواق)
-        st.markdown("### 📄 سجل كشف حساب وتصفية عُهد (سمان السواق):")
-        if saman_records:
+
+# سجل كشف حساب وتصفية عُهد (سمان السواق)
+st.markdown("### 📄 سجل كشف حساب وتصفية عُهد (سمان السواق):")
+if saman_records:
             for rec in reversed(saman_records):
                 rec_id = rec.get('id', 1)
                 rec_date = rec.get('date', '')
