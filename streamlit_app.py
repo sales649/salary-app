@@ -1946,26 +1946,27 @@ if btn_give and new_amt > 0:
                 'notes': new_notes if new_notes else "صرف عُهدة نقدية للسائق سمان"
             })
             
-            cash_data[curr_m][target_box_key] = c_trans
-            save_cash_data(cash_data)
-            
-            # 3. التسجيل في سجل عُهد السواقين
-            new_id = len(drivers_data) + 1
-            drivers_data.append({
-                "id": new_id,
-                "driver_name": "سمان السواق",
-                "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
-                "given_amt": new_amt,
-                "spent_amt": 0.0,
-                "rem_amt": tot_open_rem + new_amt,
-                "notes": new_notes,
-                "status": "مفتوحة"
-            })
-            save_drivers_data(drivers_data)
-            
-            st.success(f"✅ تم تسليم عُهدة جديدة بـ ({new_amt:,.2f} ر.س) وخصمها تلقائياً كـ سند صرف (#{v_code}) من الصندوق!")
-            st.rerun()
+cash_data[curr_m][target_box_key] = c_trans
+        save_cash_data(cash_data)
+        
+        # التسجيل في سجل عهد السواقين
+        new_id = len(drivers_data) + 1
+        drivers_data.append({
+            "id": new_id,
+            "driver_name": "سمان السواق",
+            "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
+            "given_amt": new_amt,
+            "spent_amt": 0.0,
+            "rem_amt": tot_open_rem + new_amt,
+            "notes": new_notes,
+            "status": "مفتوحة"
+        })
+        save_drivers_data(drivers_data)
+        
+        st.success(f"تم تسليم عُهدة جديدة بـ ({new_amt:,.2f} ر.س) وخصمها من الصندوق!")
+        st.rerun()
 
+    # السطر 1969 الصحيح (4 مسافات فقط من بداية السطر):
     st.divider()
 
         # 4. سجل كشف حساب وتصفية عُهد (سمان السواق)
