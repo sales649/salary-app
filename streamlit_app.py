@@ -89,8 +89,15 @@ if 'السواقين' in current_page or 'السائقين' in current_page or '
     st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
     st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصنيفات المباشرة والجزئية لكل موظف وسائق')
 
-    cash_data = load_cash_data() or {}
-    drivers_data = load_drivers_data() or {}
+    cash_data = load_cash_data() if 'load_cash_data' in globals() else {}
+    
+    # جلب بيانات السائقين بأمان بغض النظر عن اسم الدالة
+    if 'load_drivers_data' in globals():
+        drivers_data = load_drivers_data() or {}
+    elif 'fetch_cloud_store' in globals():
+        drivers_data = fetch_cloud_store('company_drivers_data', []) or {}
+    else:
+        drivers_data = {}
 
     # تجميع حرّكات الخزينة والصندوق بأمان
     all_cash_tx = []
