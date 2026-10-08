@@ -9,9 +9,10 @@ import base64
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 
-# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL (تم تصحيح القوس والفاصلة)
-st.set_page_config(page_title='5M Accounting ERP', layout='wide', page_icon='📱', initial_sidebar_state="auto")
+# 1. إعداد الصفحة وتنسيق الاتجاه العربي الموحد RTL
+st.set_page_config(page_title='5M', layout='wide', page_icon='📱', initial_sidebar_state="auto")
 
+# ⏰ دالتان مخصصتان لاحتساب الوقت المباشر بتوقيت السعودية (KSA Timezone GMT+3)
 def get_ksa_now():
     return datetime.utcnow() + timedelta(hours=3)
 
@@ -21,19 +22,20 @@ def get_ksa_now_str():
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
 
-# روابط الصور المباشرة الموحدة
+# روابط الصور المباشرة من مستودع GitHub
 STAMP_IMG_URL = "https://raw.githubusercontent.com/sales649/salary-app/main/stamp.png"
 SIGN_IMG_URL = "https://raw.githubusercontent.com/sales649/salary-app/main/sign.png"
 
+# إعدادات الربط السحابي بـ Supabase
 SUPABASE_URL = "https://ohoqprtvmhyjomaavwct.supabase.co"
 SUPABASE_KEY = "sb_publishable_T6YFCaos1EexLgGG9KtwCw_nNMRHjJ_"
 
+# تعريف دالة الاتصال بـ Supabase
 @st.cache_resource
 def init_supabase() -> Client:
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 supabase = init_supabase()
-
 
 # =========================================================
 # ☁️ دالة الحفظ والجلب السحابي الموحد (Supabase Cloud Store)
@@ -84,14 +86,39 @@ def load_uploaded_sales_batches():
 def save_uploaded_sales_batches(data):
     save_cloud_store('company_sales_batches', data)
 
-# 2. عُهدة السواقين الشاملة مع قراءة جميع البيانات
-    elif selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
+# 🚚 موديول عُهد السواقين والموظفين
+    if selected_option in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين'] or st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
         st.subheader('🚚 موديول إدارة ومتابعة عُهد الموظفين والسواقين')
-        st.caption('تراكم سحابي شامل لكافة العُهد النقدية والتصفيات المباشرة والجزئية لكل موظف وسائق')
+        st.caption('إمكانية التصفية الجزئية لكل عُهدة على حدة، وتتبع المتبقي لكل عُهدة حتى إغلاقها بالكامل')
 
         cash_data = load_cash_data()
         drivers_data = load_drivers_data()
 
+       # استخراج قائمة أسماء السواقين والموظفين من كافة السجلات السحابية المعتمدة
+        driver_names_set = set()
+        
+        # 1. جلب الأسماء المعتمدة المسجلة في السحابة لجدول العُهد المباشر
+        if isinstance(drivers_data, list):
+            for d in drivers_data:
+                if isinstance(d, dict):
+                    if d.get('driver_name'): driver_names_set.add(d.get('driver_name'))
+                    if d.get('driver'): driver_names_set.add(d.get('driver'))
+
+        # 2. جلب أسماء الموظفين من مسير الرواتب
+        if 'payroll_df' in st.session_state and isinstance(st.session_state.payroll_df, pd.DataFrame) and not st.session_state.payroll_df.empty:
+            if 'الاسم' in st.session_state.payroll_df.columns:
+                driver_names_set.update(st.session_state.payroll_df['الاسم'].dropna().tolist())
+
+        # 3. جلب الأسماء المذكورة بحركات الصندوق
+        for tx in all_cash_tx:
+            if isinstance(tx, dict):
+                desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
+                for name_item in ['عثمان', 'عمر', 'علي', 'محمود', 'إسماعيل', 'محمد', 'سمان']:
+                    if name_item in desc:
+                        driver_names_set.add(name_item)
+
+        if not driver_names_set:
+            driver_names_set = {'عثمان', 'عمر', 'علي', 'سمان السواق'}
         all_cash_tx = []
         if isinstance(cash_data, dict):
             for month_k, month_v in cash_data.items():
@@ -99,36 +126,32 @@ def save_uploaded_sales_batches(data):
                     all_cash_tx.extend(month_v.get('transactions', []))
                     all_cash_tx.extend(month_v.get('acc_transactions', []))
 
+        # استخراج قائمة أسماء السواقين والموظفين
         driver_names_set = set()
+        if 'payroll_df' in st.session_state and isinstance(st.session_state.payroll_df, pd.DataFrame) and not st.session_state.payroll_df.empty:
+            driver_names_set.update(st.session_state.payroll_df['الاسم'].dropna().tolist())
         
-        # جلب جميع الأسماء من جدول العُهد السحابي المباشر
         if isinstance(drivers_data, list):
             for d in drivers_data:
-                if isinstance(d, dict):
-                    if d.get('driver_name'): driver_names_set.add(d.get('driver_name'))
-                    if d.get('driver'): driver_names_set.add(d.get('driver'))
-
-        # جلب جميع أسماء الموظفين والسواقين من جدول الرواتب
-        if 'payroll_df' in st.session_state and isinstance(st.session_state.payroll_df, pd.DataFrame) and not st.session_state.payroll_df.empty:
-            if 'الاسم' in st.session_state.payroll_df.columns:
-                driver_names_set.update(st.session_state.payroll_df['الاسم'].dropna().tolist())
-
-        # جلب أي أسماء محولة بداخل حركات الخزينة
+                if isinstance(d, dict) and d.get('driver_name'):
+                    driver_names_set.add(d.get('driver_name'))
+                    
         for tx in all_cash_tx:
             if isinstance(tx, dict):
                 desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
-                for name_item in ['عثمان', 'عمر', 'علي', 'محمود', 'إسماعيل', 'محمد', 'سمان']:
-                    if name_item in desc: driver_names_set.add(name_item)
+                for name_item in ['عثمان', 'عمر', 'علي', 'محمود', 'إسماعيل', 'محمد']:
+                    if name_item in desc:
+                        driver_names_set.add(name_item)
 
         if not driver_names_set:
-            driver_names_set = {'عثمان', 'عمر', 'علي', 'سمان السواق'}
+            driver_names_set = {'عثمان', 'عمر', 'علي'}
 
-        selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", sorted(list(driver_names_set)))
+        col_drv_sel, _ = st.columns([1.5, 1])
+        with col_drv_sel:
+            selected_driver = st.selectbox("👤 اختر الموظف / السائق لمراجعة وتصفية العُهدة:", sorted(list(driver_names_set)))
 
         if selected_driver:
             driver_custodies = []
-            
-            # جلب العُهد من حركات الخزينة
             for tx_idx, tx in enumerate(all_cash_tx):
                 if isinstance(tx, dict):
                     desc = str(tx.get('statement', '')) + " " + str(tx.get('notes', '')) + " " + str(tx.get('party', ''))
@@ -143,20 +166,6 @@ def save_uploaded_sales_batches(data):
                                 "original_amount": tx_amt
                             })
 
-            # جلب العُهد من السجل السحابي المباشر
-            if isinstance(drivers_data, list):
-                for d_rec in drivers_data:
-                    if isinstance(d_rec, dict) and (d_rec.get('driver_name') == selected_driver or d_rec.get('driver') == selected_driver):
-                        if d_rec.get('type') == 'عُهدة_جديدة' or d_rec.get('given_amt', 0) > 0:
-                            g_amt = float(d_rec.get('amount') or d_rec.get('given_amt') or 0.0)
-                            if g_amt > 0:
-                                driver_custodies.append({
-                                    "custody_id": f"CUST-DIR-{d_rec.get('id', 1)}",
-                                    "date": d_rec.get('date', get_ksa_now_str().split()[0]),
-                                    "statement": d_rec.get('notes') or d_rec.get('purpose') or 'تسليم عُهدة جديدة',
-                                    "original_amount": g_amt
-                                })
-
             if not driver_custodies:
                 driver_custodies.append({
                     "custody_id": f"CUST-{selected_driver}-01",
@@ -165,9 +174,9 @@ def save_uploaded_sales_batches(data):
                     "original_amount": 500.0
                 })
 
-            settlements_list = [d for d in drivers_data if isinstance(d, dict) and (d.get('driver_name') == selected_driver or d.get('driver') == selected_driver) and d.get('status') == 'مصفاة']
+            settlements_list = [d for d in drivers_data if isinstance(d, dict) and d.get('driver_name') == selected_driver and d.get('status') == 'مصفاة']
             total_given = sum(c['original_amount'] for c in driver_custodies)
-            total_settled = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list)
+            total_settled = sum(float(pd.to_numeric(s.get('amount', 0), errors='coerce') or 0) for s in settlements_list)
             net_remaining = total_given - total_settled
 
             dc1, dc2, dc3 = st.columns(3)
@@ -184,7 +193,7 @@ def save_uploaded_sales_batches(data):
                 for c_item in driver_custodies:
                     c_id = c_item['custody_id']
                     c_orig = c_item['original_amount']
-                    c_settled_amount = sum(float(pd.to_numeric(s.get('amount') or s.get('spent_amt') or 0, errors='coerce') or 0) for s in settlements_list if s.get('target_custody_id') == c_id)
+                    c_settled_amount = sum(float(pd.to_numeric(s.get('amount', 0), errors='coerce') or 0) for s in settlements_list if s.get('target_custody_id') == c_id)
                     c_rem = max(0.0, c_orig - c_settled_amount)
                     status_txt = "🔴 غير مصفاة" if c_settled_amount == 0 else ("🟡 مصفاة جزئياً" if c_rem > 0 else "🟢 مصفاة بالكامل")
 
