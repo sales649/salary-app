@@ -1976,7 +1976,7 @@ else:
         net_main_now = current_m_cash.get('opening', 0.0) + tot_in_main - tot_out_main
 
         curr_trans_acc = current_m_cash.get('acc_transactions', [])
-        tot_in_acc = sum(t['amount'] for t in curr_trans_acc if 'قبض' in t['type'])
+        tot_in_acc = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans_acc or []) if isinstance(t, dict) and 'قبض' in str(t.get('type', '')))
         tot_out_acc = sum(t['amount'] for t in curr_trans_acc if 'صرف' in t['type'])
         net_acc_now = current_m_cash.get('acc_opening', 0.0) + tot_in_acc - tot_out_acc
 
@@ -2925,7 +2925,7 @@ else:
                 opening_balance_dialog(month_selected, active_target_box)
 
         curr_trans = current_m_cash.get(active_box_key, [])
-        tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
+        tot_cash_in = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans or []) if isinstance(t, dict) and 'قبض' in str(t.get('type', '')))
         tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
         net_cash_now = opening_bal + tot_cash_in - tot_cash_out
 
