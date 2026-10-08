@@ -1708,7 +1708,7 @@ else:
 
         curr_trans_acc = current_m_cash.get('acc_transactions', [])
         tot_in_acc = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans_acc or []) if isinstance(t, dict) and t.get('type') == 'قبض')
-        tot_out_acc = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in curr_trans_acc if 'صرف' in (t.get('type') if isinstance(t, dict) else ''))
+        tot_out_acc = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans_acc or []) if isinstance(t, dict) and t.get('type') == 'صرف')
         net_acc_now = current_m_cash.get('acc_opening', 0.0) + tot_in_acc - tot_out_acc
 
         total_company_cash = net_main_now + net_acc_now
@@ -2643,8 +2643,8 @@ else:
                 opening_balance_dialog(month_selected, active_target_box)
 
         curr_trans = current_m_cash.get(active_box_key, [])
-        tot_cash_in = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in curr_trans if 'قبض' in (t.get('type') if isinstance(t, dict) else ''))
-        tot_cash_out = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in curr_trans if 'صرف' in (t.get('type') if isinstance(t, dict) else ''))
+        tot_cash_in = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans or []) if isinstance(t, dict) and t.get('type') == 'قبض')
+        tot_cash_out = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans or []) if isinstance(t, dict) and t.get('type') == 'صرف')
         net_cash_now = opening_bal + tot_cash_in - tot_cash_out
 
         c_m1, c_m2, c_m3, c_m4 = st.columns(4)
