@@ -2359,8 +2359,8 @@ else:
 
         opening_bal = current_m_cash.get(active_opening_key, 0.0)
         curr_trans = current_m_cash.get(active_box_key, [])
-        tot_cash_in = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in curr_trans if 'قبض' in (t.get('type') if isinstance(t, dict) else ''))
-        tot_cash_out = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in curr_trans if 'صرف' in (t.get('type') if isinstance(t, dict) else ''))
+        tot_cash_in = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans or []) if isinstance(t, dict) and t.get('type') == 'قبض')
+        tot_cash_out = sum((t.get('amount', 0) if isinstance(t, dict) else 0) for t in (curr_trans or []) if isinstance(t, dict) and t.get('type') == 'صرف')
         system_book_balance = opening_bal + tot_cash_in - tot_cash_out
 
         st.divider()
