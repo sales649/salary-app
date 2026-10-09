@@ -1893,34 +1893,37 @@ else:
     with col_left:
         st.markdown("### 🧾 2. تصفية عُهدة (سمان السواق) بالعهدة:")
         if open_custodies_list:
-                    target_key = sel_custody_str.split(' | ')[0].strip()
-                    target_obj = next((c for c in open_custodies_list if c["key"] == target_key), open_custodies_list[0])
-                    c_rem_val = float(target_obj["rem"])
+            with st.form("form_fix_settle_saman"):
+                sel_custody_str = st.selectbox("اختر العُهدة المراد تصفية فواتير منها:", [c["label"] for c in open_custodies_list])
+                target_key = sel_custody_str.split(' | ')[0].strip()
+                target_obj = next((c for c in open_custodies_list if c["key"] == target_key), open_custodies_list[0])
+                c_rem_val = float(target_obj["rem"])
 
-                    spent_val = st.number_input(f"مبلغ الفاتورة / المصاريف المصفاة (الحد المتاح {c_rem_val:,.2f} ر.س):", min_value=1.0, value=min(215.0, c_rem_val), step=10.0)
-                    notes_val = st.text_input("ملاحظات / مصاريف الفاتورة (بنزين، ديزل، صيانة...):")
-                    btn_confirm_settle = st.form_submit_button("تأكيد خصم الفاتورة وتعديل الرصيد التراكمي", use_container_width=True)
+                spent_val = st.number_input(f"مبلغ الفاتورة / المصاريف المصفاة (الحد المتاح {c_rem_val:,.2f} ر.س):", min_value=0.0, value=c_rem_val, step=10.0)
+                notes_val = st.text_input("ملاحظات / مصاريف الفاتورة (بنزين، ديزل، صيانة...):")
+                btn_confirm_settle = st.form_submit_button("تأكيد خصم الفاتورة وتعديل الرصيد التراكمي", use_container_width=True)
 
-                    if btn_confirm_settle and spent_val > 0:
-                        new_id = len(drivers_data) + 1
-                        drivers_data.append({
-                            "id": new_id,
-                            "target_custody_id": target_key,
-                            "type": "تصفية_جزئية",
-                            "driver_name": "سمان السواق",
-                            "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
-                            "given_amt": 0.0,
-                            "spent_amt": spent_val,
-                            "rem_amt": max(0.0, c_rem_val - spent_val),
-                            "notes": f"تصفية من {target_key}: {notes_val}",
-                            "status": "مصفاة_بالكامل" if (c_rem_val - spent_val) <= 0 else "مصفاة_جزئياً"
-                        })
-                        save_drivers_data(drivers_data)
-                        st.success(f"تم خصم مبلغ ({spent_val:,.2f} ر.س) بنجاح من العُهدة {target_key}!")
-                        st.rerun()
-            else:
-                st.info("لا توجد عُهد مفتوحة حالياً لـ سمان السواق بانتظار التصفية.")
-
+                if btn_confirm_settle and spent_val > 0:
+                    new_id = len(drivers_data) + 1
+                    new_rem_balance = c_rem_val - spent_val
+                    
+                    drivers_data.append({
+                        "id": new_id,
+                        "target_custody_id": target_key,
+                        "type": "تصفية_جزئية",
+                        "driver_name": "سمان السواق",
+                        "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
+                        "given_amt": 0.0,
+                        "spent_amt": spent_val,
+                        "rem_amt": new_rem_balance,
+                        "notes": f"تصفية {target_key}: {notes_val}",
+                        "status": "مصفاة_بالكامل" if new_rem_balance <= 0 else "مصفاة_جزئياً"
+                    })
+                    save_drivers_data(drivers_data)
+                    st.success(f"تم خصم مبلغ {spent_val:,.2f} ر.س بنجاح من العُهدة {target_key} وتحديث الرصيد التراكمي!")
+                    st.rerun()
+        else:
+            st.info("لا توجد عُهد مفتوحة حالياً لـ سمان السواق بانتظار التصفية.")
         with col_right:
             st.markdown("### 🚚 1. تسليم عُهدة جديدة لـ (سمان السواق):")
             st.warning(f"💡 بجِراب السائق متبقي سابق عليه بـ ({tot_open_rem:,.2f} ر.س).")
