@@ -2118,7 +2118,7 @@ if selected_option == 'الرئيسية' or st.session_state.get('current_view')
                 st.session_state['current_view'] = 'النسخ الاحتياطي'
                 st.rerun()
 
-else:
+    else:
         c_box1, c_box2 = st.columns(2)
         with c_box1:
             st.markdown("#### عُهدتك الحالية (omar):")
