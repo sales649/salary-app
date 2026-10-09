@@ -1956,56 +1956,64 @@ if st.session_state.get('current_view') in ['عهدة السواقين', 'عهد
         else:
             st.info("لا توجد عُهد مفتوحة حالياً لـ سمان السواق بانتظار التصفية.")
 
-        with col_right:
-            st.markdown("### 🚚 1. تسليم عُهدة جديدة لـ (سمان السواق):")
-            st.warning(f"💡 بجِراب السائق متبقي سابق عليه بـ ({tot_open_rem:,.2f} ر.س).")
+    with col_right:
+        st.markdown("### 🚚 1. تسليم عُهدة جديدة لـ (سمان السواق)")
+        st.warning(f"💡 بجراب السائق متبقي سابق عليه بـ ({tot_open_rem:,.2f} ر.س).")
 
-            # التحديد التلقائي للصندوق بناءً على اليوزر الحالي
-            user_role = str(st.session_state.get("user_role", "")).lower()
-            user_name = str(st.session_state.get("username", "")).lower()
-            auto_box = "صندوق عمر" if ("عمر" in user_role or "عمر" in user_name or "omar" in user_name) else "الصندوق الرئيسي"
+        with st.form("form_give_saman_fixed"):
+            st.text_input("اسم السائق:", value="سمان السواق", disabled=True)
+            new_amt = st.number_input("المبلغ النقدي المسلم باليد (يُخصم من الصندوق):", min_value=0.0, value=0.0, step=50.0)
+            new_notes = st.text_input("بيان / ملاحظات العُهدة:", value="مصاريف نقل وبنزين")
+            btn_give = st.form_submit_button("تسليم وتأكيد العُهدة", use_container_width=True)
 
-            with st.form("form_give_saman_fixed"):
-                st.text_input("اسم السائق:", value="سمان السواق", disabled=True)
-                st.info(f"🏦 يُخصم تلقائياً من: **{auto_box}**")
-                new_amt = st.number_input("المبلغ النقدي المسلم باليد (يُخصم من الصندوق):", min_value=0.0, value=0.0, step=50.0)
-                new_notes = st.text_input("بيان / ملاحظات العُهدة:", value="مصاريف نقل وبنزين")
-                btn_give = st.form_submit_button("تسليم وتأكيد العُهدة", use_container_width=True)
+            if btn_give and new_amt > 0:
+                today_date = get_ksa_now_str().split()[0]
+                month_selected = st.session_state.get('month_selected', '')
 
-                if btn_give and new_amt > 0:
-                    today_date = get_ksa_now_str().split()[0]
-                    month_selected = st.session_state.get('month_selected', '')
+                all_cash_db = load_cash_data()
 
-                    # 1. إضافة العُهدة للسائق
-                    new_id = len(drivers_data) + 1
-                    drivers_data.append({
-                        "id": new_id,
-                        "driver_name": "سمان السواق",
-                        "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
-                        "given_amt": new_amt,
-                        "spent_amt": 0.0,
-                        "rem_amt": tot_open_rem + new_amt,
-                        "notes": f"[{auto_box}] {new_notes}",
-                        "status": "مفتوحة"
-                    })
-                    save_drivers_data(drivers_data)
+                if not month_selected or month_selected not in all_cash_db:
+                    if all_cash_db:
+                        month_selected = list(all_cash_db.keys())[-1]
+                    else:
+                        month_selected = 'سبتمبر 2026'
+                        all_cash_db[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
 
-                    # 2. خصم المبلغ تلقائياً من الصندوق المناسب
-                    all_cash_db = load_cash_data()
-                    if isinstance(all_cash_db, list):
-                        all_cash_db.append({
-                            "id": len(all_cash_db) + 1,
-                            "date": today_date,
-                            "type": "صرف",
-                            "box": auto_box,
-                            "amount": new_amt,
-                            "party": "سمان السواق",
-                            "notes": f"تسليم عُهدة رقم #{new_id} - {new_notes}"
-                        })
-                        save_cash_data(all_cash_db)
+                if 'acc_transactions' not in all_cash_db[month_selected]:
+                    all_cash_db[month_selected]['acc_transactions'] = []
 
-                    st.success(f"تم تسليم العُهدة بنجاح وخصم ({new_amt:,.2f} ر.س) من {auto_box}!")
-                    st.rerun()
+                cash_tx_code = f"CASH-OUT-{len(all_cash_db[month_selected]['acc_transactions'])+1}"
+
+                all_cash_db[month_selected]['acc_transactions'].append({
+                    "code": cash_tx_code,
+                    "date": today_date,
+                    "statement": "صرف عُهدة نقدية لـ سمان السواق",
+                    "party": "سمان السواق",
+                    "type": "صرف",
+                    "type_tx": "صرف",
+                    "amount": -float(new_amt),
+                    "notes": new_notes or "تسليم عُهدة جديدة"
+                })
+                save_cash_data(all_cash_db)
+
+                new_id = len(drivers_data) + 1
+                drivers_data.append({
+                    "id": new_id,
+                    "driver_name": "سمان السواق",
+                    "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
+                    "given_amt": float(new_amt),
+                    "spent_amt": 0.0,
+                    "rem_amt": float(tot_open_rem) + float(new_amt),
+                    "notes": new_notes,
+                    "status": "مفتوحة",
+                    "cash_code": cash_tx_code
+                })
+                save_drivers_data(drivers_data)
+
+                st.cache_data.clear()
+                st.success(f"تم خصم {new_amt:,.2f} ر.س من الصندوق وتسليم العُهدة لـ سمان بنجاح! 🚀")
+                st.rerun()
+
 st.divider()
 
 if selected_option == 'الرئيسية' or st.session_state.get('current_view') == 'الرئيسية':
