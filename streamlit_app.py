@@ -1875,14 +1875,24 @@ else:
 
         st.divider()
 
-        # 3. قسم التسليم والتصفية جنبًا إلى جنب
-        col_left, col_right = st.columns(2)
+ # 3. قسم التسليم والتصفية جنبًا إلى جنب
+    col_left, col_right = st.columns(2)
 
-        with col_left:
-            st.markdown("### ⚙️ 2. تصفية عُهدة (سمان السواق) بالعهدة:")
-            if open_custodies_list:
-                with st.form("form_fix_settle_saman"):
-                    sel_custody_str = st.selectbox("اختر العُهدة المراد تصفية فواتير منها:", [c["label"] for c in open_custodies_list])
+    # تجهيز قائمة العُهد المفتوحة لـ سمان السواق لمنع NameError
+    open_custodies_list = []
+    for d in drivers_data:
+        if d.get("driver_name") == "سمان السواق" and d.get("given_amt", 0) > 0:
+            rem_val = d.get("given_amt", 0) - d.get("spent_amt", 0)
+            if rem_val > 0 or d.get("status") == "مفتوحة":
+                open_custodies_list.append({
+                    "key": f"#{d.get('id')}",
+                    "rem": rem_val,
+                    "label": f"#{d.get('id')} | المتبقي بها: {rem_val:,.2f} ر.س | {d.get('notes', '')}"
+                })
+
+    with col_left:
+        st.markdown("### 🧾 2. تصفية عُهدة (سمان السواق) بالعهدة:")
+        if open_custodies_list:
                     target_key = sel_custody_str.split(' | ')[0].strip()
                     target_obj = next((c for c in open_custodies_list if c["key"] == target_key), open_custodies_list[0])
                     c_rem_val = float(target_obj["rem"])
