@@ -1001,6 +1001,55 @@ def opening_balance_dialog(month_name, target_box):
             st.rerun()
 
 @st.dialog("⚙️ تثبيت الرصيد الافتتاحي لذمة السائق")
+def post_custody_cash_voucher(month_name, user_role, driver_name, amount, notes, custody_id, method="نقداً بالصندوق"):
+    """يسجل سند صرف في صندوق المستخدم الحالي (الأدمن: الخزينة الرئيسية، عمر: عُهدة المحاسب) مقابل تسليم عُهدة لسائق."""
+    all_cash = load_cash_data()
+    if not isinstance(all_cash, dict):
+        all_cash = {}
+    if month_name not in all_cash or not isinstance(all_cash[month_name], dict):
+        all_cash[month_name] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+    m_cash = all_cash[month_name]
+    box_key = 'transactions' if user_role == "admin" else 'acc_transactions'
+    if box_key not in m_cash or not isinstance(m_cash[box_key], list):
+        m_cash[box_key] = []
+    trans = m_cash[box_key]
+
+    existing_codes = {str(t.get('code')) for t in trans if isinstance(t, dict)}
+    pay_cnt = sum(1 for t in trans if isinstance(t, dict) and 'صرف' in str(t.get('type', '')))
+    v_code = f"PAY-{(pay_cnt + 1):03d}"
+    while v_code in existing_codes:
+        pay_cnt += 1
+        v_code = f"PAY-{(pay_cnt + 1):03d}"
+
+    trans.append({
+        'id': len(trans) + 1,
+        'code': v_code,
+        'date': get_ksa_now_str(),
+        'type': 'سند صرف',
+        'party': f"عُهدة سائق - {driver_name}",
+        'amount': float(amount),
+        'method': method,
+        'notes': notes or "تسليم عُهدة نقدية",
+        'custody_ref': custody_id
+    })
+    save_cash_data(all_cash)
+    return v_code, box_key
+
+def remove_custody_cash_voucher(month_name, box_key, v_code):
+    """يحذف سند الصرف المرتبط بعُهدة عند حذف العُهدة حتى يرجع المبلغ للصندوق."""
+    if not (month_name and box_key and v_code):
+        return False
+    all_cash = load_cash_data()
+    if not isinstance(all_cash, dict) or month_name not in all_cash:
+        return False
+    trans = all_cash[month_name].get(box_key, [])
+    new_trans = [t for t in trans if not (isinstance(t, dict) and str(t.get('code')) == str(v_code) and 'custody_ref' in t)]
+    if len(new_trans) == len(trans):
+        return False
+    all_cash[month_name][box_key] = new_trans
+    save_cash_data(all_cash)
+    return True
+
 def driver_opening_balance_dialog(driver_name):
     drivers_db = load_drivers_data()
     
@@ -1922,7 +1971,12 @@ else:
                 btn_give = st.form_submit_button("تسليم وتأكيد العُهدة", use_container_width=True)
                 
                 if btn_give and new_amt > 0:
-                    new_id = len(drivers_data) + 1
+                    existing_ids = [int(d.get('id')) for d in drivers_data if isinstance(d, dict) and str(d.get('id', '')).isdigit()]
+                    new_id = (max(existing_ids) if existing_ids else 0) + 1
+                    # خصم المبلغ من صندوق المستخدم الحالي (الأدمن: الرئيسية | عمر: عُهدة المحاسب) بسند صرف
+                    cash_code, cash_box = post_custody_cash_voucher(
+                        month_selected, st.session_state.get('user_role'), "سمان السواق", new_amt, new_notes, new_id
+                    )
                     drivers_data.append({
                         "id": new_id,
                         "driver_name": "سمان السواق",
@@ -1931,10 +1985,13 @@ else:
                         "spent_amt": 0.0,
                         "rem_amt": tot_open_rem + new_amt,
                         "notes": new_notes,
-                        "status": "مفتوحة"
+                        "status": "مفتوحة",
+                        "cash_voucher_code": cash_code,
+                        "cash_box": cash_box,
+                        "cash_month": month_selected
                     })
                     save_drivers_data(drivers_data)
-                    st.success(f"تم تسليم عُهدة جديدة بـ ({new_amt:,.2f} ر.س) وتحديث الرصيد التراكمي!")
+                    st.success(f"تم تسليم عُهدة جديدة بـ ({new_amt:,.2f} ر.س) وتسجيل سند الصرف ({cash_code}) في حركة الصندوق!")
                     st.rerun()
 
         st.divider()
@@ -1961,6 +2018,7 @@ else:
                         if st.button("✏️ تعديل", key=f"edit_fx_{rec_id}"): pass
                     with ck5:
                         if st.button("🗑️ حذف", key=f"del_fx_{rec_id}"):
+                            remove_custody_cash_voucher(rec.get('cash_month'), rec.get('cash_box'), rec.get('cash_voucher_code'))
                             drivers_data = [d for d in drivers_data if d.get('id') != rec_id]
                             save_drivers_data(drivers_data)
                             st.rerun()
