@@ -2008,7 +2008,7 @@ if saman_records:
                             st.rerun()
                     st.divider()
 # 🏠 2. الشاشة الرئيسية للنظام
-    elif selected_option == 'الرئيسية' or st.session_state.get('current_view') == 'الرئيسية':
+if selected_option == 'الرئيسية' or st.session_state.get('current_view') == 'الرئيسية':
         all_cash_db = load_cash_data()
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
 
