@@ -2461,29 +2461,29 @@ if selected_option == 'جرد وحركة المخزون' or st.session_state.get
                     if col_v4.button("🖨️ طباعة", key=f"print_day_sv_{sv_idx}"):
                         print_stock_out_dialog(sv_item)
 
-if col_v5.button("🗑️ حذف السند", key=f"del_day_sv_{sv_idx}"):
-            t_item = next((item for item in inv_data if str(item.get('كود_الصنف')).strip() == str(sv_item.get('item_code','')).strip() or str(item.get('اسم_الصنف')).strip().lower() == str(sv_item.get('item_name','')).strip().lower()), None)
-            if t_item:
-                t_item['المنصرف'] = max(0.0, float(t_item.get('المنصرف',0)) - float(sv_item.get('qty',0)))
+                    if col_v5.button("🗑️ حذف السند", key=f"del_day_sv_{sv_idx}"):
+                        t_item = next((item for item in inv_data if str(item.get('كود_الصنف')).strip() == str(sv_item.get('item_code','')).strip() or str(item.get('اسم_الصنف')).strip().lower() == str(sv_item.get('item_name','')).strip().lower()), None)
+                        if t_item:
+                            t_item['المنصرف'] = max(0.0, float(t_item.get('المنصرف',0)) - float(sv_item.get('qty',0)))
 
-            save_inventory_data(inv_data)
-            stock_vouchers.remove(sv_item)
-            save_stock_out_vouchers(stock_vouchers)
-            st.success("تم حذف السند وإعادة الكميات للرصيد!")
-            st.rerun()
+                        save_inventory_data(inv_data)
+                        stock_vouchers.remove(sv_item)
+                        save_stock_out_vouchers(stock_vouchers)
+                        st.success("تم حذف السند وإعادة الكميات للرصيد!")
+                        st.rerun()
 
-    st.divider()
+        st.divider()
 
-    with tab_inv4:
-        st.markdown("#### 🧹 تصفيَة وتصفير المخزن بالكامل")
-        st.caption("عند الضغط على هذا الزر، سيتم حذف كافة السجلات والسندات والبدء برصيد 0 ناصع ونظيف.")
+        with tab_inv4:
+            st.markdown("#### 🧹 تصفيَة وتصفير المخزن بالكامل")
+            st.caption("عند الضغط على هذا الزر، سيتم حذف كافة السجلات والسندات والبدء برصيد 0 ناصع ونظيف.")
 
-        if st.button("🧹 تصفية ومسح المستودع بالكامل (الرصيد الآن 0)", key="btn_zero_inventory"):
-            save_inventory_data([])
-            save_stock_out_vouchers([])
-            save_uploaded_sales_batches([])
-            st.success("تم مسح المخزن بالكامل وحفظ الرصيد كـ 0 أصناف و 0 كميات!")
-            st.rerun()
+            if st.button("🧹 تصفية ومسح المستودع بالكامل (الرصيد الآن 0)", key="btn_zero_inventory"):
+                save_inventory_data([])
+                save_stock_out_vouchers([])
+                save_uploaded_sales_batches([])
+                st.success("تم مسح المخزن بالكامل وحفظ الرصيد كـ 0 أصناف و 0 كميات!")
+                st.rerun()
 
 # 🚚 4. موديول إدارة ومتابعة عُهد الموظفين والسواقين
 if selected_option == 'عُهد السواقين' or st.session_state.get('current_view') in ['عهدة السواقين', 'عهد السواقين', 'عُهدة السواقين']:
@@ -2618,7 +2618,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
             st.info("لا توجد جلسات جرد سابقة محفوظة لهذا الصندوق.")
 
     # 8. موديول إدخال الدفعات
-    elif selected_option == 'إدخال الدفعات' and st.session_state.user_role == "admin":
+elif selected_option == 'إدخال الدفعات' and st.session_state.user_role == "admin":
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات - ({month_selected})')
         
         curr_m_idx = st.session_state.months_list.index(month_selected)
@@ -2779,7 +2779,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
     # 9. موديول حركة الصندوق
-    elif selected_option == 'حركة الصندوق':
+elif selected_option == 'حركة الصندوق':
         st.subheader(f'🏦 إدارة حركة الصندوق - ({month_selected})')
         
         all_cash_db = load_cash_data()
@@ -3040,7 +3040,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
             else:
                 st.info("لا توجد حركات تسوية بالصندوق مسجلة لهذا الشهر.")
 
-    elif selected_option == 'دليل الموظفين' and st.session_state.user_role == "admin":
+elif selected_option == 'دليل الموظفين' and st.session_state.user_role == "admin":
         st.subheader('👤 دليل الموظفين والملفات الإدارية')
         
         search_kw = st.text_input("🔍 استعلام باسم الموظف أو الوظيفة:", placeholder="اكتب جزءاً من الاسم...")
@@ -3094,7 +3094,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
                     else:
                         st.info(f"لا يوجد موظفين حالياً في {b_name}.")
 
-    elif selected_option == 'مسير الرواتب' and st.session_state.user_role == "admin":
+elif selected_option == 'مسير الرواتب' and st.session_state.user_role == "admin":
         st.subheader(f'📋 كشف مسير الرواتب الشهري الموحد - ({month_selected})')
         filter_sheet = st.selectbox('اختر الفرع للكشف:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
         df_sheet = st.session_state.payroll_df if 'جميع الفروع' in filter_sheet else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == filter_sheet]
@@ -3194,7 +3194,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
             use_container_width=True
         )
 
-    elif selected_option == 'طباعة السندات' and st.session_state.user_role == "admin":
+elif selected_option == 'طباعة السندات' and st.session_state.user_role == "admin":
         st.subheader(f'🖨️ طباعة سندات القبض والصرف الرسمية A4 - ({month_selected})')
         col_p1, col_p2 = st.columns(2)
         with col_p1:
@@ -3214,7 +3214,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
             use_container_width=True
         )
 # 📜 10. موديول الخطابات والإنذارات الرسمية المطور مع حل مشكلة الألوان
-    elif selected_option == 'الخطابات الرسمية' and st.session_state.user_role == "admin":
+elif selected_option == 'الخطابات الرسمية' and st.session_state.user_role == "admin":
         st.subheader('📜 موديول إدارة وتوليد الخطابات والأرشيف الرسمي (5M)')
         st.caption('توليد الخطابات، جلب أرقام الإقامات تلقائياً، حفظ الأرشيف السحابي، وتواقيع الموظفين المعتمدة')
 
@@ -3455,7 +3455,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
                     st.divider()
             else:
                 st.info("لا توجد خطابات صادر محفوظة في الأرشيف حالياً.")
-    elif selected_option == 'التنبيهات' and st.session_state.user_role == "admin":
+elif selected_option == 'التنبيهات' and st.session_state.user_role == "admin":
         st.subheader('🔔 مركز تنبيهات انتهاء الإقامات وعقود العمل')
         today = datetime.now().date()
         alerts = []
@@ -3475,7 +3475,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
         if alerts: st.dataframe(pd.DataFrame(alerts), use_container_width=True, hide_index=True)
         else: st.success('جميع الإقامات والعقود سارية ولا يوجد وثائق منتهية حالياً!')
 
-    elif selected_option == 'النسخ الاحتياطي' and st.session_state.user_role == "admin":
+elif selected_option == 'النسخ الاحتياطي' and st.session_state.user_role == "admin":
         st.subheader('💾 مركز إدارة وتصدير النسخ الاحتياطية سحابياً')
         all_payroll = load_monthly_payroll_store()
         all_cash = load_cash_data()
@@ -3494,7 +3494,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
             use_container_width=True
         )
 
-    elif selected_option == 'الإغلاق السنوي' and st.session_state.user_role == "admin":
+elif selected_option == 'الإغلاق السنوي' and st.session_state.user_role == "admin":
         st.subheader('🏁 شاشة الإغلاق المالي السنوي وفتح سنة جديدة')
         st.markdown("### ملخص الرواتب والدفعات الكلية بالسجلات:")
         st.dataframe(st.session_state.payroll_df[['م', 'الاسم', 'الوظيفة', 'الفرع', 'الراتب الأساسي', 'الخصومات', 'الدفعة المدفوعة', 'المتبقي']], use_container_width=True, hide_index=True)
@@ -3512,7 +3512,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
                 st.success(f"تم إغلاق السنة الحالية وافتتاح سنة ({next_year_name}) بنجاح!")
                 st.rerun()
     # 🏛️ موديول ضريبة القيمة المضافة (ZATCA) المطور المباشر بـ 0.00 الافتراضية
-    elif selected_option == 'تقرير القيمة المضافة' and st.session_state.user_role == "admin":
+elif selected_option == 'تقرير القيمة المضافة' and st.session_state.user_role == "admin":
         st.subheader('🏛️ موديول إقرار ضريبة القيمة المضافة الربع سنوي (ZATCA)')
         st.write('قم بإدخال مبالغ إجمالي التقارير والضريبة المستخرجة من شيتات الوعلان وسيتم توزيع المبيعات والمشتريات الخاضعة لـ 15% والصفرية تلقائياً بموجب المعادلة العكسية:')
 
@@ -3784,7 +3784,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
             )
 
     # 8. موديول إدخال الدفعات
-    elif selected_option == 'إدخال الدفعات' and st.session_state.user_role == "admin":
+elif selected_option == 'إدخال الدفعات' and st.session_state.user_role == "admin":
         st.subheader(f'📊 جدول إدخال وتعديل الدفعات - ({month_selected})')
         
         curr_m_idx = st.session_state.months_list.index(month_selected)
@@ -3944,7 +3944,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
 
-    elif selected_option == 'دليل الموظفين' and st.session_state.user_role == "admin":
+elif selected_option == 'دليل الموظفين' and st.session_state.user_role == "admin":
         st.subheader('👤 دليل الموظفين والملفات الإدارية')
         
         search_kw = st.text_input("🔍 استعلام باسم الموظف أو الوظيفة:", placeholder="اكتب جزءاً من الاسم...")
@@ -3998,7 +3998,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
                     else:
                         st.info(f"لا يوجد موظفين حالياً في {b_name}.")
 
-    elif selected_option == 'مسير الرواتب' and st.session_state.user_role == "admin":
+elif selected_option == 'مسير الرواتب' and st.session_state.user_role == "admin":
         st.subheader(f'📋 كشف مسير الرواتب الشهري الموحد - ({month_selected})')
         filter_sheet = st.selectbox('اختر الفرع للكشف:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
         df_sheet = st.session_state.payroll_df if 'جميع الفروع' in filter_sheet else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == filter_sheet]
@@ -4098,7 +4098,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
             use_container_width=True
         )
 
-    elif selected_option == 'طباعة السندات' and st.session_state.user_role == "admin":
+elif selected_option == 'طباعة السندات' and st.session_state.user_role == "admin":
         st.subheader(f'🖨️ طباعة سندات القبض والصرف الرسمية A4 - ({month_selected})')
         col_p1, col_p2 = st.columns(2)
         with col_p1:
@@ -4118,7 +4118,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
             use_container_width=True
         )
 
-    elif selected_option == 'حاسبة الخدمة' and st.session_state.user_role == "admin":
+elif selected_option == 'حاسبة الخدمة' and st.session_state.user_role == "admin":
         st.subheader('🇸🇦 حاسبة مستحقات نهاية الخدمة وبدل الإجازات (نظام العمل السعودي)')
         saudi_reports = []
         for _, r in st.session_state.payroll_df.iterrows():
@@ -4137,7 +4137,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
         df_saudi = pd.DataFrame(saudi_reports)
         st.dataframe(df_saudi, use_container_width=True, hide_index=True)
 
-    elif selected_option == 'التنبيهات' and st.session_state.user_role == "admin":
+elif selected_option == 'التنبيهات' and st.session_state.user_role == "admin":
         st.subheader('🔔 مركز تنبيهات انتهاء الإقامات وعقود العمل')
         today = datetime.now().date()
         alerts = []
@@ -4157,7 +4157,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
         if alerts: st.dataframe(pd.DataFrame(alerts), use_container_width=True, hide_index=True)
         else: st.success('جميع الإقامات والعقود سارية ولا يوجد وثائق منتهية حالياً!')
 
-    elif selected_option == 'النسخ الاحتياطي' and st.session_state.user_role == "admin":
+elif selected_option == 'النسخ الاحتياطي' and st.session_state.user_role == "admin":
         st.subheader('💾 مركز إدارة وتصدير النسخ الاحتياطية سحابياً')
         all_payroll = load_monthly_payroll_store()
         all_cash = load_cash_data()
@@ -4176,7 +4176,7 @@ if selected_option == 'جرد الخزينة' or st.session_state.get('current_v
             use_container_width=True
         )
 
-    elif selected_option == 'الإغلاق السنوي' and st.session_state.user_role == "admin":
+elif selected_option == 'الإغلاق السنوي' and st.session_state.user_role == "admin":
         st.subheader('🏁 شاشة الإغلاق المالي السنوي وفتح سنة جديدة')
         st.markdown("### ملخص الرواتب والدفعات الكلية بالسجلات:")
         st.dataframe(st.session_state.payroll_df[['م', 'الاسم', 'الوظيفة', 'الفرع', 'الراتب الأساسي', 'الخصومات', 'الدفعة المدفوعة', 'المتبقي']], use_container_width=True, hide_index=True)
