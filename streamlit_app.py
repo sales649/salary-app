@@ -1956,7 +1956,7 @@ if st.session_state.get('current_view') in ['عهدة السواقين', 'عهد
         else:
             st.info("لا توجد عُهد مفتوحة حالياً لـ سمان السواق بانتظار التصفية.")
 
-   with col_right:
+        with col_right:
             st.markdown("### 🚚 1. تسليم عُهدة جديدة لـ (سمان السواق):")
             st.warning(f"💡 بجِراب السائق متبقي سابق عليه بـ ({tot_open_rem:,.2f} ر.س).")
 
