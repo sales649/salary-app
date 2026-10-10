@@ -849,18 +849,13 @@ august_payroll_data = [
 
 @st.cache_data(ttl=600)
 def fetch_cloud_store(key_name, default_data):
-    session_key = f"cloud_cache_{key_name}"
-    if session_key in st.session_state:
-        return st.session_state[session_key]
+    # قراءة طازجة من السحابة (الكاش العام بيتمسح مع كل حفظ) عشان كل مستخدم يشوف شغل التاني فوراً
     try:
         response = supabase.table('app_stores').select('data_val').eq('store_key', key_name).execute()
         if response.data and len(response.data) > 0:
-            val = response.data[0]['data_val']
-            st.session_state[session_key] = val
-            return val
+            return response.data[0]['data_val']
     except Exception:
         pass
-    st.session_state[session_key] = default_data
     return default_data
 
 def save_cloud_store(key_name, data_val):
@@ -902,35 +897,59 @@ def ensure_month_in_list(months, label):
         months.append(label)
     return sorted(months, key=lambda m: month_label_to_ym(m) or (9999, 99))
 
-def ensure_month_initialized(month_label):
-    """أول ما الشهر يتفتح (جديد وفاضي) يترحّل له رصيد آخر الشهر اللي قبله تلقائياً كرصيد أول المدة."""
+def run_daily_auto_backup(keep_days=30):
+    """أول مرة حد يفتح البرنامج كل يوم: ياخد نسخة كاملة من كل البيانات السحابية ويحتفظ بآخر 30 يوم."""
     try:
-        all_cash = load_cash_data()
-        if not isinstance(all_cash, dict):
+        today = get_ksa_now().strftime('%Y-%m-%d')
+        if st.session_state.get('_daily_backup_done') == today:
             return
-        m = all_cash.get(month_label)
-        is_blank = (m is None) or (
-            isinstance(m, dict) and not m.get('transactions') and not m.get('acc_transactions')
-            and not m.get('opening') and not m.get('acc_opening')
-            and not m.get('opening_manual') and not m.get('carried_from')
-        )
-        if not is_blank:
+        st.session_state['_daily_backup_done'] = today
+        bk_key = f"auto_backup_{today}"
+        exists = supabase.table('app_stores').select('store_key').eq('store_key', bk_key).execute()
+        if exists.data:
+            return
+        rows = supabase.table('app_stores').select('store_key,data_val').execute().data or []
+        bundle = {
+            r['store_key']: r['data_val'] for r in rows
+            if not str(r['store_key']).startswith('auto_backup_') and r['store_key'] != 'cashbox_data_backup_before_move'
+        }
+        supabase.table('app_stores').upsert({'store_key': bk_key, 'data_val': {'timestamp': get_ksa_now_str(), 'stores': bundle}}).execute()
+        old = supabase.table('app_stores').select('store_key').like('store_key', 'auto_backup_%').execute().data or []
+        old_keys = sorted(r['store_key'] for r in old)
+        for k in old_keys[:-keep_days]:
+            supabase.table('app_stores').delete().eq('store_key', k).execute()
+    except Exception:
+        pass
+
+def ensure_month_initialized(month_label):
+    """يفتح شهر جديد (غير موجود أصلاً) ويرحّل له رصيد آخر الشهر السابق. محمي: قراءة مباشرة وناجحة، ولا يلمس أي شهر موجود."""
+    try:
+        checked = st.session_state.setdefault('_month_init_checked', set())
+        if month_label in checked:
             return
         months = st.session_state.get('months_list', [])
         if month_label not in months or months.index(month_label) == 0:
             return
+        resp = supabase.table('app_stores').select('data_val').eq('store_key', 'cashbox_data').execute()
+        if not resp.data:
+            return
+        all_cash = resp.data[0]['data_val']
+        if not isinstance(all_cash, dict) or not all_cash:
+            return
+        checked.add(month_label)
+        if month_label in all_cash:
+            return
         prev_label = months[months.index(month_label) - 1]
         pm = all_cash.get(prev_label)
-        open_main = open_acc = 0.0
-        if isinstance(pm, dict):
-            def _net(box, op_key):
-                tl = [t for t in pm.get(box, []) if isinstance(t, dict)]
-                tin = sum(float(t.get('amount', 0) or 0) for t in tl if 'قبض' in str(t.get('type', '')))
-                tout = sum(float(t.get('amount', 0) or 0) for t in tl if 'صرف' in str(t.get('type', '')))
-                return float(pm.get(op_key, 0.0) or 0.0) + tin - tout
-            open_main = _net('transactions', 'opening')
-            open_acc = _net('acc_transactions', 'acc_opening')
-        all_cash[month_label] = {'opening': open_main, 'transactions': [], 'acc_opening': open_acc,
+        if not isinstance(pm, dict):
+            return
+        def _net(box, op_key):
+            tl = [t for t in pm.get(box, []) if isinstance(t, dict)]
+            tin = sum(float(t.get('amount', 0) or 0) for t in tl if 'قبض' in str(t.get('type', '')))
+            tout = sum(float(t.get('amount', 0) or 0) for t in tl if 'صرف' in str(t.get('type', '')))
+            return float(pm.get(op_key, 0.0) or 0.0) + tin - tout
+        all_cash[month_label] = {'opening': _net('transactions', 'opening'), 'transactions': [],
+                                 'acc_opening': _net('acc_transactions', 'acc_opening'),
                                  'acc_transactions': [], 'carried_from': prev_label}
         save_cash_data(all_cash)
     except Exception:
@@ -984,8 +1003,57 @@ def save_payroll_for_month(df, month_name):
 def load_cash_data():
     return fetch_cloud_store('cashbox_data', {})
 
-def save_cash_data(data):
+def _cash_counts(d):
+    out = {}
+    if isinstance(d, dict):
+        for m, v in d.items():
+            if isinstance(v, dict):
+                for bk in ('transactions', 'acc_transactions'):
+                    out[(m, bk)] = len(v.get(bk, []) or [])
+    return out
+
+def _snapshot_cash(old):
+    """نسخة من حالة الصندوق قبل أي حفظ (واحدة كل 10 دقايق) ونحتفظ بآخر 60 نسخة."""
+    try:
+        n = get_ksa_now()
+        key = f"cashbox_hist_{n.strftime('%Y%m%d_%H')}{n.minute // 10}"
+        ex = supabase.table('app_stores').select('store_key').eq('store_key', key).execute()
+        if not ex.data:
+            supabase.table('app_stores').upsert({'store_key': key, 'data_val': {'timestamp': get_ksa_now_str(), 'data': old}}).execute()
+        hour_flag = n.strftime('%Y%m%d_%H')
+        if st.session_state.get('_hist_clean') != hour_flag:
+            st.session_state['_hist_clean'] = hour_flag
+            rows = supabase.table('app_stores').select('store_key').like('store_key', 'cashbox_hist_%').execute().data or []
+            keys = sorted(r['store_key'] for r in rows)
+            for k in keys[:-60]:
+                supabase.table('app_stores').delete().eq('store_key', k).execute()
+    except Exception:
+        pass
+
+def save_cash_data(data, allow_shrink=False):
+    """حفظ الصندوق مع حماية: يرفض أي حفظ هيفضّي صندوق فيه حركات أو يشيل شهر كامل، ويحتفظ بنسخة قبل كل حفظ."""
+    old = None
+    try:
+        resp = supabase.table('app_stores').select('data_val').eq('store_key', 'cashbox_data').execute()
+        if resp.data:
+            old = resp.data[0]['data_val']
+    except Exception:
+        old = None
+    if isinstance(old, dict) and old:
+        if not allow_shrink:
+            oc, nc = _cash_counts(old), _cash_counts(data)
+            wiped = [k for k, v in oc.items() if v >= 3 and nc.get(k, 0) == 0]
+            missing = [m for m in old if not isinstance(data, dict) or m not in data]
+            if wiped or missing:
+                try:
+                    supabase.table('app_stores').upsert({'store_key': f"cashbox_blocked_{get_ksa_now().strftime('%Y%m%d_%H%M%S')}", 'data_val': old}).execute()
+                except Exception:
+                    pass
+                st.session_state['cash_block_msg'] = "⛔ تم منع حفظ كان هيمسح حركات موجودة في الصندوق. البيانات الحالية محمية وما اتغيرتش، وفي نسخة منها محفوظة. ابعت للمطور اللي كنت بتعمله لحظتها."
+                return False
+        _snapshot_cash(old)
     save_cloud_store('cashbox_data', data)
+    return True
 
 def load_audit_data():
     return fetch_cloud_store('audit_history', [])
@@ -1698,6 +1766,10 @@ else:
 
         month_selected = st.selectbox('الشهر الحالي:', st.session_state.months_list, key='month_selected')
         ensure_month_initialized(month_selected)
+        run_daily_auto_backup()
+        _blk_msg = st.session_state.pop('cash_block_msg', None)
+        if _blk_msg:
+            st.error(_blk_msg)
 
         st.session_state['theme_mode'] = st.selectbox("نمط الألوان:", ["🌙 وضع ليلي", "☀️ وضع نهاري"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
 
@@ -2947,6 +3019,9 @@ else:
                         st.rerun()
 
                 with col_auto2:
+                    _post_msg = st.session_state.pop(f"sal_post_msg_{b_name}", None)
+                    if _post_msg:
+                        st.success(_post_msg)
                     source_options = [f"رواتب شهر ({month_selected}) الحالي", f"رواتب شهر ({prev_month_label}) السابق"]
 
                     src_choice = st.selectbox(
@@ -3043,7 +3118,14 @@ else:
                             m_cash[target_trans_key] = c_trans
                             all_cash[month_selected] = m_cash
                             save_cash_data(all_cash)
-                            st.success(f"تم اعتماد وتخصيم {amt_to_deduct:,.2f} ر.س كـ سند صرف (#{v_code}) بـ فرع ({b_name}) بنجاح!")
+                            _paid_before = sum(float(v.get('amount', 0) or 0) for v in posted_vouchers)
+                            _net_due = float(target_df_branch['الراتب الأساسي'].sum()) - float(target_df_branch['الخصومات'].sum())
+                            _rem_after = _net_due - (_paid_before + float(amt_to_deduct))
+                            st.session_state[f"sal_post_msg_{b_name}"] = (
+                                f"تم خصم {amt_to_deduct:,.2f} ر.س من الصندوق (سند #{v_code}) لفرع ({b_name}) | "
+                                f"المستحق بعد الخصومات: {_net_due:,.2f} | إجمالي المخصوم من الصندوق: {(_paid_before + float(amt_to_deduct)):,.2f} | "
+                                f"🔴 الباقي: {_rem_after:,.2f} ر.س"
+                            )
                             st.rerun()
 
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'المتبقي', 'الملاحظات']
@@ -3102,6 +3184,24 @@ else:
                 s_col3.metric("إجمالي الدفعة 2", f"{b_tot_p2:,.0f} ر.س")
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
+
+                cash_paid_branch = 0.0
+                for _v in existing_vouchers:
+                    _vp = str(_v.get('party', ''))
+                    if "سداد رواتب ودفعات" not in _vp:
+                        continue
+                    if not (f"فرع ({b_name})" in _vp or b_name in _vp):
+                        continue
+                    if "شهر (" in _vp and f"شهر ({month_selected})" not in _vp:
+                        continue
+                    cash_paid_branch += float(_v.get('amount', 0) or 0)
+                net_due_branch = b_tot_req - b_tot_ded
+                st.markdown(f"#### 🏦 حالة الصرف من الصندوق لفرع ({b_name}):")
+                k1, k2, k3, k4 = st.columns(4)
+                k1.metric("المستحق بعد الخصومات", f"{net_due_branch:,.0f} ر.س")
+                k2.metric("المخصوم من الصندوق", f"{cash_paid_branch:,.0f} ر.س")
+                k3.metric("مجهز بالجدول ولم يُخصم بعد", f"{max(0.0, (b_tot_p1 + b_tot_p2) - cash_paid_branch):,.0f} ر.س")
+                k4.metric("🔴 الباقي بعد الصندوق", f"{net_due_branch - cash_paid_branch:,.0f} ر.س")
 
     # 9. موديول حركة الصندوق
     elif selected_option == 'حركة الصندوق':
@@ -3820,6 +3920,70 @@ else:
         )
 
         st.divider()
+        st.markdown("#### 🗓️ النسخ الاحتياطية التلقائية اليومية")
+        try:
+            _auto_rows = supabase.table('app_stores').select('store_key').like('store_key', 'auto_backup_%').execute().data or []
+            _auto_keys = sorted([r['store_key'] for r in _auto_rows], reverse=True)
+        except Exception:
+            _auto_keys = []
+        if _auto_keys:
+            st.caption(f"عدد النسخ المحفوظة: {len(_auto_keys)} (بيتحفظ آخر 30 يوم، والنسخة بتتاخد أول مرة حد يفتح البرنامج كل يوم).")
+            _sel_bk = st.selectbox("اختار تاريخ النسخة:", _auto_keys, format_func=lambda k: k.replace('auto_backup_', ''), key="auto_bk_sel")
+            if st.button("📥 تجهيز النسخة للتحميل", key="auto_bk_prep_btn"):
+                _r = supabase.table('app_stores').select('data_val').eq('store_key', _sel_bk).execute().data
+                st.session_state['auto_bk_json'] = (_sel_bk, json.dumps(_r[0]['data_val'], ensure_ascii=False, indent=2).encode('utf-8')) if _r else None
+            _prep = st.session_state.get('auto_bk_json')
+            if _prep and _prep[0] == _sel_bk:
+                st.download_button("⬇️ تحميل نسخة " + _sel_bk.replace('auto_backup_', ''), data=_prep[1], file_name=f"{_sel_bk}.json", mime="application/json", use_container_width=True)
+        else:
+            st.info("لسه مفيش نسخ تلقائية محفوظة. أول نسخة هتتاخد أول ما حد يفتح البرنامج بعد التحديث.")
+
+        st.divider()
+        st.markdown("#### 🛟 استرجاع الصندوق من نسخة محفوظة")
+        st.caption("بيرجّع حركات الصندوق (الرئيسية وعمر) لحالة النسخة المختارة. أي حركة اتسجلت بعد وقت النسخة هتتمسح، وبيتاخد نسخة من الحالة الحالية قبل الاسترجاع.")
+        _snap_keys = []
+        try:
+            for _pat in ('auto_backup_%', 'cashbox_hist_%', 'cashbox_blocked_%'):
+                _rows = supabase.table('app_stores').select('store_key').like('store_key', _pat).execute().data or []
+                _snap_keys += [r['store_key'] for r in _rows]
+        except Exception:
+            _snap_keys = []
+        _snap_keys = sorted(set(_snap_keys), reverse=True)
+        if _snap_keys:
+            def _snap_label(k):
+                if k.startswith('auto_backup_'):
+                    return "يومية " + k.replace('auto_backup_', '')
+                if k.startswith('cashbox_hist_'):
+                    t = k.replace('cashbox_hist_', '')
+                    return f"قبل حفظ {t[:4]}-{t[4:6]}-{t[6:8]} {t[9:11]}:{t[11]}0"
+                return "محمية (حفظ مرفوض) " + k.replace('cashbox_blocked_', '')
+            _rs_key = st.selectbox("اختار النسخة:", _snap_keys, format_func=_snap_label, key="rs_snap_sel")
+            _row = supabase.table('app_stores').select('data_val').eq('store_key', _rs_key).execute().data
+            _val = _row[0]['data_val'] if _row else None
+            _snap_data = None
+            if isinstance(_val, dict):
+                if 'stores' in _val:
+                    _snap_data = (_val.get('stores') or {}).get('cashbox_data')
+                elif 'timestamp' in _val and 'data' in _val:
+                    _snap_data = _val.get('data')
+                else:
+                    _snap_data = _val
+            if isinstance(_snap_data, dict) and _snap_data:
+                _cnt = _cash_counts(_snap_data)
+                st.dataframe(pd.DataFrame([{
+                    'الشهر': m, 'الصندوق': 'الرئيسية' if bk == 'transactions' else 'عُهدة omar', 'عدد الحركات': n
+                } for (m, bk), n in _cnt.items()]), use_container_width=True, hide_index=True)
+                _rs_ok = st.checkbox("أؤكد استرجاع الصندوق من النسخة دي", key="rs_confirm_chk")
+                if st.button("↩️ استرجاع الصندوق من النسخة المختارة", key="rs_exec_btn", disabled=not _rs_ok, use_container_width=True):
+                    save_cash_data(_snap_data, allow_shrink=True)
+                    st.success("تم استرجاع الصندوق من النسخة المختارة.")
+                    st.rerun()
+            else:
+                st.info("النسخة دي مفيهاش بيانات صندوق.")
+        else:
+            st.info("مفيش نسخ للاسترجاع حالياً.")
+
+        st.divider()
         with st.expander("🔁 نقل حركات الصندوق من شهر لشهر (حسب تاريخ كل حركة)", expanded=False):
             st.caption("بينقل الحركات اللي تاريخها داخل الشهر الهدف من الشهر المصدر (مثلاً حركات أكتوبر اللي اتسجلت غلط في سبتمبر). بياخد نسخة احتياطية تلقائية قبل النقل.")
             if st.session_state.get('mv_done_msg'):
@@ -3905,7 +4069,7 @@ else:
                         dst_m['carried_from'] = mv_src
                         cash_all[mv_src] = src_m
                         cash_all[mv_dst] = dst_m
-                        save_cash_data(cash_all)
+                        save_cash_data(cash_all, allow_shrink=True)
 
                         # تحديث ربط عُهد السواقين بالسندات المنقولة
                         drv = load_drivers_data()
@@ -3930,7 +4094,7 @@ else:
                 st.warning("التراجع بيرجّع حركات الصندوق وربط عُهد السواقين زي ما كانوا لحظة قبل النقل، وأي سند اتسجل بعد النقل هيتمسح.")
                 rb_ok = st.checkbox("أؤكد التراجع عن آخر نقل", key="rb_confirm_chk")
                 if st.button("↩️ تراجع عن آخر نقل", key="rb_exec_btn", disabled=not rb_ok, use_container_width=True):
-                    save_cash_data(_bk['data'])
+                    save_cash_data(_bk['data'], allow_shrink=True)
                     if _bk.get('drivers_data') is not None:
                         save_drivers_data(_bk['drivers_data'])
                     save_cloud_store('cashbox_data_backup_before_move', {})
@@ -4268,6 +4432,9 @@ else:
                         st.rerun()
 
                 with col_auto2:
+                    _post_msg = st.session_state.pop(f"sal_post_msg_{b_name}", None)
+                    if _post_msg:
+                        st.success(_post_msg)
                     source_options = [f"رواتب شهر ({month_selected}) الحالي", f"رواتب شهر ({prev_month_label}) السابق"]
 
                     src_choice = st.selectbox(
@@ -4364,7 +4531,14 @@ else:
                             m_cash[target_trans_key] = c_trans
                             all_cash[month_selected] = m_cash
                             save_cash_data(all_cash)
-                            st.success(f"تم اعتماد وتخصيم {amt_to_deduct:,.2f} ر.س كـ سند صرف (#{v_code}) بـ فرع ({b_name}) بنجاح!")
+                            _paid_before = sum(float(v.get('amount', 0) or 0) for v in posted_vouchers)
+                            _net_due = float(target_df_branch['الراتب الأساسي'].sum()) - float(target_df_branch['الخصومات'].sum())
+                            _rem_after = _net_due - (_paid_before + float(amt_to_deduct))
+                            st.session_state[f"sal_post_msg_{b_name}"] = (
+                                f"تم خصم {amt_to_deduct:,.2f} ر.س من الصندوق (سند #{v_code}) لفرع ({b_name}) | "
+                                f"المستحق بعد الخصومات: {_net_due:,.2f} | إجمالي المخصوم من الصندوق: {(_paid_before + float(amt_to_deduct)):,.2f} | "
+                                f"🔴 الباقي: {_rem_after:,.2f} ر.س"
+                            )
                             st.rerun()
 
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'المتبقي', 'الملاحظات']
@@ -4423,6 +4597,24 @@ else:
                 s_col3.metric("إجمالي الدفعة 2", f"{b_tot_p2:,.0f} ر.س")
                 s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
                 s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
+
+                cash_paid_branch = 0.0
+                for _v in existing_vouchers:
+                    _vp = str(_v.get('party', ''))
+                    if "سداد رواتب ودفعات" not in _vp:
+                        continue
+                    if not (f"فرع ({b_name})" in _vp or b_name in _vp):
+                        continue
+                    if "شهر (" in _vp and f"شهر ({month_selected})" not in _vp:
+                        continue
+                    cash_paid_branch += float(_v.get('amount', 0) or 0)
+                net_due_branch = b_tot_req - b_tot_ded
+                st.markdown(f"#### 🏦 حالة الصرف من الصندوق لفرع ({b_name}):")
+                k1, k2, k3, k4 = st.columns(4)
+                k1.metric("المستحق بعد الخصومات", f"{net_due_branch:,.0f} ر.س")
+                k2.metric("المخصوم من الصندوق", f"{cash_paid_branch:,.0f} ر.س")
+                k3.metric("مجهز بالجدول ولم يُخصم بعد", f"{max(0.0, (b_tot_p1 + b_tot_p2) - cash_paid_branch):,.0f} ر.س")
+                k4.metric("🔴 الباقي بعد الصندوق", f"{net_due_branch - cash_paid_branch:,.0f} ر.س")
 
     elif selected_option == 'دليل الموظفين' and st.session_state.user_role == "admin":
         st.subheader('👤 دليل الموظفين والملفات الإدارية')
