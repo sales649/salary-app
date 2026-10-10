@@ -1902,6 +1902,13 @@ else:
                     "label": f"{c_key} | [المتبقي بها: {rem_amt:,.2f} ر.س] | {c_val['notes']}"
                 })
 
+        # فروق الفواتير الزائدة عن العُهدة (بتتسجل على رصيد السائق كرصيد سالب، من غير أي حركة في الصندوق)
+        excess_total = sum(
+            float(pd.to_numeric(r.get('excess_amt', 0), errors='coerce') or 0)
+            for r in saman_records if r.get('type') == 'زيادة_فواتير'
+        )
+        net_rem = tot_open_rem - excess_total
+
         tot_given = sum(c["given_amt"] for c in custodies_dict.values())
         tot_spent = sum(c["spent_total"] for c in custodies_dict.values())
 
@@ -1920,7 +1927,7 @@ else:
         m1, m2, m3 = st.columns(3)
         m1.metric("إجمالي العُهد المسلمة لـ سمان السواق", f"{tot_given:,.2f} ر.س")
         m2.metric("إجمالي المصروفات المصفاة بالفواتير", f"{tot_spent:,.2f} ر.س")
-        m3.metric("🔴 المتبقي بذمته حالياً (المُرحّل)", f"{tot_open_rem:,.2f} ر.س")
+        m3.metric("🔴 المتبقي بذمته حالياً (المُرحّل)", f"{net_rem:,.2f} ر.س")
 
         st.divider()
 
@@ -1937,11 +1944,11 @@ else:
                     c_rem_val = float(target_obj["rem"])
 
                     spent_val = st.number_input(
-                        f"إجمالي الفواتير / المصاريف (المتبقي في العُهدة المختارة {c_rem_val:,.2f} ر.س | إجمالي المتبقي بذمة السائق {tot_open_rem:,.2f} ر.س):",
+                        f"إجمالي الفواتير / المصاريف (المتبقي في العُهدة المختارة {c_rem_val:,.2f} ر.س | إجمالي المتبقي بذمة السائق {net_rem:,.2f} ر.س):",
                         min_value=1.0, value=min(215.0, c_rem_val), step=10.0
                     )
                     notes_val = st.text_input("ملاحظات / مصاريف الفاتورة (بنزين، ديزل، صيانة...):")
-                    st.caption("لو الفواتير أكبر من العُهدة المختارة، الفرق بيتخصم تلقائياً من باقي عُهد السائق المفتوحة (الأقدم أولاً). ولو زادت عن كل المتبقي بذمته، الزيادة بتتصرف له من الصندوق بسند صرف. ولو أقل، الباقي بيفضل على السائق.")
+                    st.caption("لو الفواتير أكبر من العُهدة المختارة، الفرق بيتخصم من باقي عُهد السائق المفتوحة (الأقدم أولاً). ولو زادت عن كل المتبقي بذمته، الفرق بيتسجّل رصيد سالب على السائق من غير أي خصم من الصندوق. ولو أقل، الباقي بيفضل على السائق.")
                     btn_confirm_settle = st.form_submit_button("تأكيد خصم الفاتورة وتعديل الرصيد التراكمي", use_container_width=True)
 
                     if btn_confirm_settle and spent_val > 0:
@@ -1981,28 +1988,19 @@ else:
 
                         excess_msg = ""
                         if left > 0.005:
-                            # الفواتير زادت عن كل المتبقي بذمة السائق: الزيادة تتصرف له من الصندوق
-                            ex_id = _next_id()
-                            cash_code, cash_box = post_custody_cash_voucher(
-                                month_selected, st.session_state.get('user_role'), "سمان السواق", left,
-                                f"تعويض فواتير زائدة عن العُهد: {notes_val}", ex_id,
-                                party="تعويض سائق (فواتير زائدة عن العُهدة) - سمان السواق"
-                            )
+                            # الفواتير زادت عن كل المتبقي بذمة السائق: الفرق يتسجل رصيد سالب عليه (بدون أي حركة في الصندوق)
                             drivers_data.append({
-                                "id": ex_id,
-                                "type": "تعويض_زيادة",
+                                "id": _next_id(),
+                                "type": "زيادة_فواتير",
                                 "driver_name": "سمان السواق",
                                 "date": now_str,
                                 "given_amt": 0.0,
                                 "spent_amt": 0.0,
                                 "excess_amt": left,
-                                "notes": f"تعويض زيادة فواتير ({left:,.2f} ر.س) صُرفت للسائق من الصندوق: {notes_val}",
-                                "status": "تعويض",
-                                "cash_voucher_code": cash_code,
-                                "cash_box": cash_box,
-                                "cash_month": month_selected
+                                "notes": f"فرق فواتير زائدة عن العُهدة ({left:,.2f} ر.س) - رصيد سالب على السائق: {notes_val}",
+                                "status": "فرق_زيادة"
                             })
-                            excess_msg = f" والزيادة ({left:,.2f} ر.س) اتصرفت للسائق من الصندوق بسند {cash_code}."
+                            excess_msg = f" والفرق ({left:,.2f} ر.س) اتسجّل رصيد سالب على السائق (بدون خصم من الصندوق)."
 
                         save_drivers_data(drivers_data)
                         st.success(f"تم خصم الفواتير ({spent_val:,.2f} ر.س): " + "، ".join(summary_parts) + "." + excess_msg)
@@ -2012,7 +2010,7 @@ else:
 
         with col_right:
             st.markdown("### 🚚 1. تسليم عُهدة جديدة لـ (سمان السواق):")
-            st.warning(f"💡 بجِراب السائق متبقي سابق عليه بـ ({tot_open_rem:,.2f} ر.س).")
+            st.warning(f"💡 بجِراب السائق متبقي سابق عليه بـ ({net_rem:,.2f} ر.س)." + (" (رصيد سالب = السائق صرف زيادة عن العُهد وليه فرق)" if net_rem < 0 else ""))
 
             with st.form("form_give_saman_fixed"):
                 st.text_input("اسم السائق:", value="سمان السواق", disabled=True)
@@ -2033,7 +2031,7 @@ else:
                         "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
                         "given_amt": new_amt,
                         "spent_amt": 0.0,
-                        "rem_amt": tot_open_rem + new_amt,
+                        "rem_amt": net_rem + new_amt,
                         "notes": new_notes,
                         "status": "مفتوحة",
                         "cash_voucher_code": cash_code,
@@ -2061,7 +2059,7 @@ else:
                     with ck1: st.markdown(f"#### #{rec_id}")
                     with ck2:
                         st.markdown(f"🚚 **سمان السواق**  📅 {rec_date}")
-                        st.caption(f"المسلم: **{rec_given:,.2f} ر.س**  | المصروف: **{rec_spent:,.2f} ر.س**")
+                        st.caption(f"المسلم: **{rec_given:,.2f} ر.س**  | المصروف: **{rec_spent:,.2f} ر.س**" + (f"  | فرق زيادة: **{float(rec.get('excess_amt', 0) or 0):,.2f} ر.س**" if rec.get('excess_amt') else ""))
                     with ck3:
                         st.markdown(f"ملاحظات: {rec_notes}")
                     with ck4:
