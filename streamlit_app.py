@@ -3857,7 +3857,7 @@ else:
                     st.caption(f"بعد النقل: رصيد أول ({mv_dst}) هيتحول تلقائياً لرصيد آخر ({mv_src}) (للصندوقين)، وأي عُهد سواقين مربوطة بسندات منقولة بتتحدّث لوحدها.")
                     mv_ok = st.checkbox("أؤكد نقل الحركات دي (وفيه نسخة احتياطية تلقائية قبل النقل)", key="mv_confirm_chk")
                     if st.button("🚚 تنفيذ النقل", key="mv_exec_btn", disabled=not mv_ok, use_container_width=True):
-                        save_cloud_store('cashbox_data_backup_before_move', {'timestamp': get_ksa_now_str(), 'data': json.loads(json.dumps(cash_all))})
+                        save_cloud_store('cashbox_data_backup_before_move', {'timestamp': get_ksa_now_str(), 'data': json.loads(json.dumps(cash_all)), 'drivers_data': json.loads(json.dumps(load_drivers_data()))})
                         dst_m = cash_all.get(mv_dst)
                         if not isinstance(dst_m, dict):
                             dst_m = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
@@ -3921,6 +3921,23 @@ else:
 
                         st.session_state['mv_done_msg'] = f"تم نقل {len(to_move)} حركة من ({mv_src}) إلى ({mv_dst}) بنجاح، ورصيد أول ({mv_dst}) اتحدّث."
                         st.rerun()
+
+            st.markdown("---")
+            st.markdown("##### ↩️ التراجع عن آخر نقل")
+            _bk = fetch_cloud_store('cashbox_data_backup_before_move', {})
+            if isinstance(_bk, dict) and _bk.get('data'):
+                st.caption(f"آخر نسخة قبل نقل محفوظة بتاريخ: {_bk.get('timestamp', '')}")
+                st.warning("التراجع بيرجّع حركات الصندوق وربط عُهد السواقين زي ما كانوا لحظة قبل النقل، وأي سند اتسجل بعد النقل هيتمسح.")
+                rb_ok = st.checkbox("أؤكد التراجع عن آخر نقل", key="rb_confirm_chk")
+                if st.button("↩️ تراجع عن آخر نقل", key="rb_exec_btn", disabled=not rb_ok, use_container_width=True):
+                    save_cash_data(_bk['data'])
+                    if _bk.get('drivers_data') is not None:
+                        save_drivers_data(_bk['drivers_data'])
+                    save_cloud_store('cashbox_data_backup_before_move', {})
+                    st.session_state['mv_done_msg'] = "تم التراجع عن آخر نقل ورجّعت البيانات زي ما كانت."
+                    st.rerun()
+            else:
+                st.caption("مفيش نسخة قبل نقل محفوظة حالياً.")
 
     elif selected_option == 'الإغلاق السنوي' and st.session_state.user_role == "admin":
         st.subheader('🏁 شاشة الإغلاق المالي السنوي وفتح سنة جديدة')
