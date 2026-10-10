@@ -38,12 +38,12 @@ def send_telegram_summary_report():
         month_selected = st.session_state.get('month_selected', 'سبتمبر 2026')
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
 
-        tot_in_main = sum(t['amount'] for t in current_m_cash.get('transactions', []) if 'قبض' in t['type'])
-        tot_out_main = sum(t['amount'] for t in current_m_cash.get('transactions', []) if 'صرف' in t['type'])
+        tot_in_main = sum(t.get('amount', 0) for t in current_m_cash.get('transactions', []) if 'قبض' in t.get('type', ''))
+        tot_out_main = sum(t.get('amount', 0) for t in current_m_cash.get('transactions', []) if 'صرف' in t.get('type', ''))
         net_main_now = current_m_cash.get('opening', 0.0) + tot_in_main - tot_out_main
 
-        tot_in_acc = sum(t['amount'] for t in current_m_cash.get('acc_transactions', []) if 'قبض' in t['type'])
-        tot_out_acc = sum(t['amount'] for t in current_m_cash.get('acc_transactions', []) if 'صرف' in t['type'])
+        tot_in_acc = sum(t.get('amount', 0) for t in current_m_cash.get('acc_transactions', []) if 'قبض' in t.get('type', ''))
+        tot_out_acc = sum(t.get('amount', 0) for t in current_m_cash.get('acc_transactions', []) if 'صرف' in t.get('type', ''))
         net_acc_now = current_m_cash.get('acc_opening', 0.0) + tot_in_acc - tot_out_acc
 
         drivers_db_list = load_drivers_data()
@@ -879,6 +879,63 @@ def load_last_selected_month():
 def save_last_selected_month(month_name):
     save_cloud_store('last_selected_month', {'last_month': month_name})
 
+AR_MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر']
+
+def current_month_label():
+    """اسم الشهر الحالي بتوقيت السعودية (مثال: أكتوبر 2026)."""
+    n = get_ksa_now()
+    return f"{AR_MONTHS[n.month - 1]} {n.year}"
+
+def month_label_to_ym(label):
+    """يحوّل 'أكتوبر 2026' إلى (2026, 10) أو None لو الصيغة غير مفهومة."""
+    try:
+        parts = str(label).split()
+        y = int(re.search(r"\d{4}", str(label)).group())
+        return (y, AR_MONTHS.index(parts[0]) + 1)
+    except Exception:
+        return None
+
+def ensure_month_in_list(months, label):
+    """يتأكد إن الشهر الحالي موجود في قائمة الشهور (ويرتبها زمنياً)."""
+    months = list(months)
+    if label not in months:
+        months.append(label)
+    return sorted(months, key=lambda m: month_label_to_ym(m) or (9999, 99))
+
+def ensure_month_initialized(month_label):
+    """أول ما الشهر يتفتح (جديد وفاضي) يترحّل له رصيد آخر الشهر اللي قبله تلقائياً كرصيد أول المدة."""
+    try:
+        all_cash = load_cash_data()
+        if not isinstance(all_cash, dict):
+            return
+        m = all_cash.get(month_label)
+        is_blank = (m is None) or (
+            isinstance(m, dict) and not m.get('transactions') and not m.get('acc_transactions')
+            and not m.get('opening') and not m.get('acc_opening')
+            and not m.get('opening_manual') and not m.get('carried_from')
+        )
+        if not is_blank:
+            return
+        months = st.session_state.get('months_list', [])
+        if month_label not in months or months.index(month_label) == 0:
+            return
+        prev_label = months[months.index(month_label) - 1]
+        pm = all_cash.get(prev_label)
+        open_main = open_acc = 0.0
+        if isinstance(pm, dict):
+            def _net(box, op_key):
+                tl = [t for t in pm.get(box, []) if isinstance(t, dict)]
+                tin = sum(float(t.get('amount', 0) or 0) for t in tl if 'قبض' in str(t.get('type', '')))
+                tout = sum(float(t.get('amount', 0) or 0) for t in tl if 'صرف' in str(t.get('type', '')))
+                return float(pm.get(op_key, 0.0) or 0.0) + tin - tout
+            open_main = _net('transactions', 'opening')
+            open_acc = _net('acc_transactions', 'acc_opening')
+        all_cash[month_label] = {'opening': open_main, 'transactions': [], 'acc_opening': open_acc,
+                                 'acc_transactions': [], 'carried_from': prev_label}
+        save_cash_data(all_cash)
+    except Exception:
+        pass
+
 def load_monthly_payroll_store():
     return fetch_cloud_store('monthly_payroll_store_v4', {})
 
@@ -995,6 +1052,7 @@ def opening_balance_dialog(month_name, target_box):
         sub_op = st.form_submit_button("💾 تثبيت الرصيد الافتتاحي")
         if sub_op:
             m_cash[active_opening_key] = new_opening_val
+            m_cash['opening_manual'] = True
             all_cash_db[month_name] = m_cash
             save_cash_data(all_cash_db)
             st.success("تم التثبيت السحابي!")
@@ -1087,7 +1145,7 @@ def driver_opening_balance_dialog(driver_name):
 def print_cash_voucher_dialog(v_item, month_name):
     st.write(f"طباعة المعاينة للسند رقم: **#{v_item.get('code', v_item['id'])}**")
     
-    is_rec = "قبض" in v_item['type']
+    is_rec = "قبض" in v_item.get('type', '')
     title_txt = "سند قبض نقدية" if is_rec else "سند صرف نقدية"
     color_accent = "#10B981" if is_rec else "#EF4444"
 
@@ -1266,8 +1324,8 @@ def quick_cash_voucher_dialog(default_type, month_name, target_box="main"):
                     m_cash['transactions'] = main_trans
 
                 else:
-                    rec_count = sum(1 for t in c_trans if "قبض" in t['type'])
-                    pay_count = sum(1 for t in c_trans if "صرف" in t['type'])
+                    rec_count = sum(1 for t in c_trans if "قبض" in t.get('type', ''))
+                    pay_count = sum(1 for t in c_trans if "صرف" in t.get('type', ''))
                     v_code = f"REC-{(rec_count + 1):03d}" if "قبض" in q_type else f"PAY-{(pay_count + 1):03d}"
                     
                     c_trans.append({
@@ -1338,7 +1396,7 @@ def print_stock_out_dialog(v_item):
             <div class="v-title">سند صرف مخزني (بضاعة / عينات) | رقم السند: #{v_item['code']}</div>
             <table>
                 <tr><th style="width:25%;">الفرع / المستلم:</th><td><strong>{v_item['destination']}</strong></td></tr>
-                <tr><th>نوع الإجراء:</th><td><strong>{v_item['type']}</strong></td></tr>
+                <tr><th>نوع الإجراء:</th><td><strong>{v_item.get('type', '')}</strong></td></tr>
                 <tr><th>اسم الصنف:</th><td><strong>{v_item['item_name']} (كود: {v_item['item_code']})</strong></td></tr>
                 <tr><th>الكمية المصروفة:</th><td style="font-size:16px; font-weight:bold; color:#DC2626;">{v_item['qty']} {v_item['unit']}</td></tr>
                 <tr><th>تاريخ الصرف:</th><td>{v_item['date']}</td></tr>
@@ -1451,8 +1509,8 @@ def print_inventory_report_dialog(df_inv):
 def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
     st.write(f"معاينة كشف الحساب لـ **{box_title}** ({period_txt}):")
     
-    tot_in = sum(t['amount'] for t in trans_list if 'قبض' in t['type'])
-    tot_out = sum(t['amount'] for t in trans_list if 'صرف' in t['type'])
+    tot_in = sum(t.get('amount', 0) for t in trans_list if 'قبض' in t.get('type', ''))
+    tot_out = sum(t.get('amount', 0) for t in trans_list if 'صرف' in t.get('type', ''))
     net_bal = tot_in - tot_out
 
     t_account_html = f"""
@@ -1478,14 +1536,14 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
                 <tbody>
     """
     for t in trans_list:
-        is_rec = 'قبض' in t['type']
+        is_rec = 'قبض' in t.get('type', '')
         rec_amt = f"{t['amount']:,.2f} ر.س" if is_rec else "-"
         pay_amt = f"{t['amount']:,.2f} ر.س" if not is_rec else "-"
         t_account_html += f"""
             <tr>
                 <td>#{t.get('code', t['id'])}</td>
                 <td>{t['date']}</td>
-                <td>{t['type']}</td>
+                <td>{t.get('type', '')}</td>
                 <td>{t['party']}</td>
                 <td style="color:#047857; font-weight:bold;">{rec_amt}</td>
                 <td style="color:#b91c1c; font-weight:bold;">{pay_amt}</td>
@@ -1629,13 +1687,17 @@ else:
         if 'months_list' not in st.session_state:
             st.session_state.months_list = ['أغسطس 2026', 'سبتمبر 2026', 'أكتوبر 2026', 'نوفمبر 2026', 'ديسمبر 2026']
             
-        saved_last_month = load_last_selected_month()
-        default_m_index = st.session_state.months_list.index(saved_last_month) if saved_last_month in st.session_state.months_list else 0
+        # الشهر الحالي بيتفتح تلقائياً (بتوقيت السعودية) عند أول دخول وعند بداية أي شهر جديد
+        _cur_month_label = current_month_label()
+        st.session_state.months_list = ensure_month_in_list(st.session_state.months_list, _cur_month_label)
+        if st.session_state.get('_auto_month_seen') != _cur_month_label:
+            st.session_state['_auto_month_seen'] = _cur_month_label
+            st.session_state['month_selected'] = _cur_month_label
+        if st.session_state.get('month_selected') not in st.session_state.months_list:
+            st.session_state['month_selected'] = _cur_month_label
 
-        month_selected = st.selectbox('الشهر الحالي:', st.session_state.months_list, index=default_m_index)
-
-        if month_selected != saved_last_month:
-            save_last_selected_month(month_selected)
+        month_selected = st.selectbox('الشهر الحالي:', st.session_state.months_list, key='month_selected')
+        ensure_month_initialized(month_selected)
 
         st.session_state['theme_mode'] = st.selectbox("نمط الألوان:", ["🌙 وضع ليلي", "☀️ وضع نهاري"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
 
@@ -2077,8 +2139,8 @@ else:
         current_m_cash = all_cash_db.get(month_selected, {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []})
 
         curr_trans_main = current_m_cash.get('transactions', [])
-        tot_in_main = sum(t['amount'] for t in curr_trans_main if 'قبض' in t['type'])
-        tot_out_main = sum(t['amount'] for t in curr_trans_main if 'صرف' in t['type'])
+        tot_in_main = sum(t.get('amount', 0) for t in curr_trans_main if 'قبض' in t.get('type', ''))
+        tot_out_main = sum(t.get('amount', 0) for t in curr_trans_main if 'صرف' in t.get('type', ''))
         net_main_now = current_m_cash.get('opening', 0.0) + tot_in_main - tot_out_main
 
         curr_trans_acc = current_m_cash.get('acc_transactions', [])
@@ -2747,8 +2809,8 @@ else:
 
         opening_bal = current_m_cash.get(active_opening_key, 0.0)
         curr_trans = current_m_cash.get(active_box_key, [])
-        tot_cash_in = sum(t['amount'] for t in curr_trans if 'قبض' in t['type'])
-        tot_cash_out = sum(t['amount'] for t in curr_trans if 'صرف' in t['type'])
+        tot_cash_in = sum(t.get('amount', 0) for t in curr_trans if 'قبض' in t.get('type', ''))
+        tot_cash_out = sum(t.get('amount', 0) for t in curr_trans if 'صرف' in t.get('type', ''))
         system_book_balance = opening_bal + tot_cash_in - tot_cash_out
 
         st.divider()
@@ -2880,69 +2942,104 @@ else:
                         st.rerun()
 
                 with col_auto2:
-                    if is_already_settled:
-                        last_v = already_settled_vouchers[-1]
-                        st.success(f"✅ **تم اعتماد وتخصيم دفعات فرع ({b_name}) كـ سند صرف بالصندوق بنجاح (سند رقم: #{last_v.get('code', last_v['id'])})!**")
-                        st.button(f"🔒 تم الاعتماد بالصندوق لـ {b_name}", key=f"dis_trf_btn_{b_name}", disabled=True, use_container_width=True)
+                    source_options = [f"رواتب شهر ({month_selected}) الحالي", f"رواتب شهر ({prev_month_label}) السابق"]
+
+                    src_choice = st.selectbox(
+                        "اختر مصدر الرواتب المراد خصمها بالصندوق:",
+                        source_options,
+                        key=f"src_choice_select_{b_name}_{month_selected}"
+                    )
+
+                    pay_choice = st.selectbox(
+                        "اختر الدفعة المراد خصمها بالصندوق:",
+                        ["إجمالي الدفعات معاً", "الدفعة الأولى فقط", "الدفعة الثانية فقط"],
+                        key=f"pay_choice_select_{b_name}_{month_selected}"
+                    )
+
+                    if "السابق" in src_choice:
+                        target_df_calc = get_payroll_for_month(prev_month_label)
+                        label_month_used = prev_month_label
                     else:
-                        source_options = [f"رواتب شهر ({month_selected}) الحالي", f"رواتب شهر ({prev_month_label}) السابق"]
+                        target_df_calc = st.session_state.payroll_df
+                        label_month_used = month_selected
 
-                        src_choice = st.selectbox(
-                            "اختر مصدر الرواتب المراد خصمها بالصندوق:",
-                            source_options,
-                            key=f"src_choice_select_{b_name}_{month_selected}"
-                        )
+                    target_df_branch = target_df_calc[target_df_calc['الفرع'] == b_name]
 
-                        pay_choice = st.selectbox(
-                            "اختر الدفعة المراد خصمها بالصندوق:",
-                            ["إجمالي الدفعات معاً", "الدفعة الأولى فقط", "الدفعة الثانية فقط"],
-                            key=f"pay_choice_select_{b_name}_{month_selected}"
-                        )
+                    if pay_choice == "الدفعة الأولى فقط":
+                        amt_to_deduct = target_df_branch['الدفعة 1'].sum()
+                    elif pay_choice == "الدفعة الثانية فقط":
+                        amt_to_deduct = target_df_branch['الدفعة 2'].sum()
+                    else:
+                        amt_to_deduct = target_df_branch['الدفعة المدفوعة'].sum()
 
-                        if "السابق" in src_choice:
-                            target_df_calc = get_payroll_for_month(prev_month_label)
-                            label_month_used = prev_month_label
-                        else:
-                            target_df_calc = st.session_state.payroll_df
-                            label_month_used = month_selected
+                    # الدفعات اللي اتصرفت قبل كده لنفس الفرع ونفس شهر الرواتب (كل دفعة بتتقفل لوحدها)
+                    def _pay_parts(party_txt):
+                        if "الدفعة الأولى فقط" in party_txt:
+                            return {1}
+                        if "الدفعة الثانية فقط" in party_txt:
+                            return {2}
+                        return {1, 2}
 
-                        target_df_branch = target_df_calc[target_df_calc['الفرع'] == b_name]
+                    posted_vouchers = []
+                    for v in existing_vouchers:
+                        v_party = str(v.get('party', ''))
+                        if "سداد رواتب ودفعات" not in v_party:
+                            continue
+                        if not (f"فرع ({b_name})" in v_party or b_name in v_party):
+                            continue
+                        if "شهر (" in v_party and f"شهر ({label_month_used})" not in v_party:
+                            continue
+                        if "شهر (" not in v_party and label_month_used != month_selected:
+                            continue
+                        posted_vouchers.append(v)
 
-                        if pay_choice == "الدفعة الأولى فقط":
-                            amt_to_deduct = target_df_branch['الدفعة 1'].sum()
-                        elif pay_choice == "الدفعة الثانية فقط":
-                            amt_to_deduct = target_df_branch['الدفعة 2'].sum()
-                        else:
-                            amt_to_deduct = target_df_branch['الدفعة المدفوعة'].sum()
+                    posted_parts = set()
+                    for v in posted_vouchers:
+                        posted_parts |= _pay_parts(str(v.get('party', '')))
 
-                        st.markdown(f"#### 💵 **إجمالي المبلغ المجهز للخصم بالصندوق:** `{amt_to_deduct:,.2f} ر.س`")
+                    choice_parts = {1} if pay_choice == "الدفعة الأولى فقط" else ({2} if pay_choice == "الدفعة الثانية فقط" else {1, 2})
+                    choice_blocked = bool(choice_parts & posted_parts)
 
-                        if amt_to_deduct > 0:
-                            if st.button(f'🚀 تأكيد خصم المبلغ ({amt_to_deduct:,.0f} ر.س) وإنشاء سند صرف بصندوق {month_selected}', key=f"confirm_trf_sal_btn_{b_name}", use_container_width=True):
-                                all_cash = load_cash_data()
-                                if month_selected not in all_cash:
-                                    all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
-                                
-                                m_cash = all_cash[month_selected]
-                                target_trans_key = 'transactions' if st.session_state.user_role == "admin" else 'acc_transactions'
-                                c_trans = m_cash.get(target_trans_key, [])
-                                
-                                v_code = f"PAY-SAL-{(len(c_trans) + 1):03d}"
-                                c_trans.append({
-                                    'id': len(c_trans) + 1,
-                                    'code': v_code,
-                                    'date': get_ksa_now_str(),
-                                    'type': 'سند صرف',
-                                    'party': f"سداد رواتب ودفعات ({pay_choice}) - شهر ({label_month_used}) - فرع ({b_name})",
-                                    'amount': amt_to_deduct,
-                                    'method': 'نقداً بالصندوق',
-                                    'notes': f"سند صرف آلي معمد لـ ({pay_choice}) بفرع {b_name}"
-                                })
-                                m_cash[target_trans_key] = c_trans
-                                all_cash[month_selected] = m_cash
-                                save_cash_data(all_cash)
-                                st.success(f"تم اعتماد وتخصيم {amt_to_deduct:,.2f} ر.س كـ سند صرف (#{v_code}) بـ فرع ({b_name}) بنجاح!")
-                                st.rerun()
+                    for v in posted_vouchers:
+                        parts_txt = "الدفعة الأولى" if _pay_parts(str(v.get('party', ''))) == {1} else ("الدفعة الثانية" if _pay_parts(str(v.get('party', ''))) == {2} else "إجمالي الدفعات")
+                        st.success(f"✅ تم خصم ({parts_txt}) من الصندوق لفرع ({b_name}) - سند رقم: #{v.get('code', v.get('id'))} بمبلغ {float(v.get('amount', 0)):,.2f} ر.س")
+
+                    st.markdown(f"#### 💵 **إجمالي المبلغ المجهز للخصم بالصندوق:** `{amt_to_deduct:,.2f} ر.س`")
+
+                    if choice_blocked:
+                        st.button(f"🔒 ({pay_choice}) تم اعتمادها بالصندوق لـ {b_name}", key=f"dis_trf_btn_{b_name}", disabled=True, use_container_width=True)
+                    elif amt_to_deduct > 0:
+                        if st.button(f'🚀 تأكيد خصم المبلغ ({amt_to_deduct:,.0f} ر.س) وإنشاء سند صرف بصندوق {month_selected}', key=f"confirm_trf_sal_btn_{b_name}", use_container_width=True):
+                            all_cash = load_cash_data()
+                            if month_selected not in all_cash:
+                                all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+
+                            m_cash = all_cash[month_selected]
+                            target_trans_key = 'transactions' if st.session_state.user_role == "admin" else 'acc_transactions'
+                            c_trans = m_cash.get(target_trans_key, [])
+
+                            used_codes = {str(t.get('code')) for t in c_trans if isinstance(t, dict)}
+                            seq = len(c_trans) + 1
+                            v_code = f"PAY-SAL-{seq:03d}"
+                            while v_code in used_codes:
+                                seq += 1
+                                v_code = f"PAY-SAL-{seq:03d}"
+
+                            c_trans.append({
+                                'id': len(c_trans) + 1,
+                                'code': v_code,
+                                'date': get_ksa_now_str(),
+                                'type': 'سند صرف',
+                                'party': f"سداد رواتب ودفعات ({pay_choice}) - شهر ({label_month_used}) - فرع ({b_name})",
+                                'amount': amt_to_deduct,
+                                'method': 'نقداً بالصندوق',
+                                'notes': f"سند صرف آلي معمد لـ ({pay_choice}) بفرع {b_name}"
+                            })
+                            m_cash[target_trans_key] = c_trans
+                            all_cash[month_selected] = m_cash
+                            save_cash_data(all_cash)
+                            st.success(f"تم اعتماد وتخصيم {amt_to_deduct:,.2f} ر.س كـ سند صرف (#{v_code}) بـ فرع ({b_name}) بنجاح!")
+                            st.rerun()
 
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'المتبقي', 'الملاحظات']
                 edited_b = st.data_editor(
@@ -3162,8 +3259,8 @@ else:
                             current_m_cash['transactions'] = main_trans
 
                         else:
-                            rec_cnt = sum(1 for t in curr_trans if "قبض" in t['type'])
-                            pay_cnt = sum(1 for t in curr_trans if "صرف" in t['type'])
+                            rec_cnt = sum(1 for t in curr_trans if "قبض" in t.get('type', ''))
+                            pay_cnt = sum(1 for t in curr_trans if "صرف" in t.get('type', ''))
                             v_code = f"REC-{(rec_cnt + 1):03d}" if "قبض" in trans_type else f"PAY-{(pay_cnt + 1):03d}"
                             
                             curr_trans.append({
@@ -3197,7 +3294,7 @@ else:
                 if cash_search:
                     filtered_cash = [t for t in filtered_cash if cash_search.lower() in t['party'].lower()]
                 if cash_filter_type != "جميع الحركات":
-                    filtered_cash = [t for t in filtered_cash if t['type'] == cash_filter_type]
+                    filtered_cash = [t for t in filtered_cash if t.get('type', '') == cash_filter_type]
 
                 if filtered_cash:
                     dates_set = []
@@ -3218,8 +3315,8 @@ else:
 
                     day_trans = [t for t in filtered_cash if t['date'].startswith(selected_day_page)][::-1]
 
-                    d_in = sum(t['amount'] for t in day_trans if 'قبض' in t['type'])
-                    d_out = sum(t['amount'] for t in day_trans if 'صرف' in t['type'])
+                    d_in = sum(t.get('amount', 0) for t in day_trans if 'قبض' in t.get('type', ''))
+                    d_out = sum(t.get('amount', 0) for t in day_trans if 'صرف' in t.get('type', ''))
                     d_net = d_in - d_out
 
                     st.info(f"📆 **حركة يوم ({selected_day_page}):** مقبوضات اليوم: `{d_in:,.2f} ر.س` | مصروفات اليوم: `{d_out:,.2f} ر.س` | صافي الحركة اليومية: `{d_net:,.2f} ر.س`")
@@ -3227,7 +3324,7 @@ else:
                     for t_idx, t_item in enumerate(day_trans):
                         real_idx = curr_trans.index(t_item)
                         
-                        is_rec = "قبض" in t_item['type']
+                        is_rec = "قبض" in t_item.get('type', '')
                         amt_cls = "amt-pos" if is_rec else "amt-neg"
                         t_sign = "+" if is_rec else "-"
                         border_c = "#10B981" if is_rec else "#EF4444"
@@ -3717,6 +3814,109 @@ else:
             use_container_width=True
         )
 
+        st.divider()
+        with st.expander("🔁 نقل حركات الصندوق من شهر لشهر (حسب تاريخ كل حركة)", expanded=False):
+            st.caption("بينقل الحركات اللي تاريخها داخل الشهر الهدف من الشهر المصدر (مثلاً حركات أكتوبر اللي اتسجلت غلط في سبتمبر). بياخد نسخة احتياطية تلقائية قبل النقل.")
+            if st.session_state.get('mv_done_msg'):
+                st.success(st.session_state.pop('mv_done_msg'))
+
+            _months = st.session_state.months_list
+            _cur = current_month_label()
+            _dst_idx = _months.index(_cur) if _cur in _months else 0
+            _src_idx = max(0, _dst_idx - 1)
+            mv_src = st.selectbox("من شهر (اللي اتسجلت فيه الحركات غلط):", _months, index=_src_idx, key="mv_src_month")
+            mv_dst = st.selectbox("إلى شهر (اللي المفروض تكون فيه):", _months, index=_dst_idx, key="mv_dst_month")
+
+            _ym = month_label_to_ym(mv_dst)
+            if mv_src == mv_dst or not _ym:
+                st.info("اختار شهرين مختلفين.")
+            else:
+                dst_prefix = f"{_ym[0]}-{_ym[1]:02d}"
+                cash_all = load_cash_data()
+                src_m = cash_all.get(mv_src, {}) if isinstance(cash_all, dict) else {}
+                box_names = {'transactions': 'الرئيسية (wahby)', 'acc_transactions': 'عُهدة المحاسب (omar)'}
+                to_move = []
+                for bk in ('transactions', 'acc_transactions'):
+                    for t in src_m.get(bk, []):
+                        if isinstance(t, dict) and str(t.get('date', ''))[:7] == dst_prefix:
+                            to_move.append((bk, t))
+
+                if not to_move:
+                    st.info(f"مفيش حركات في ({mv_src}) تاريخها داخل ({mv_dst}).")
+                else:
+                    st.markdown(f"**الحركات اللي هتتنقل من ({mv_src}) إلى ({mv_dst}): {len(to_move)} حركة**")
+                    st.dataframe(pd.DataFrame([{
+                        'الصندوق': box_names[bk], 'الكود': t.get('code', ''), 'التاريخ': t.get('date', ''),
+                        'النوع': t.get('type', ''), 'الجهة': t.get('party', ''), 'المبلغ': t.get('amount', 0)
+                    } for bk, t in to_move]), use_container_width=True, hide_index=True)
+                    st.caption(f"بعد النقل: رصيد أول ({mv_dst}) هيتحول تلقائياً لرصيد آخر ({mv_src}) (للصندوقين)، وأي عُهد سواقين مربوطة بسندات منقولة بتتحدّث لوحدها.")
+                    mv_ok = st.checkbox("أؤكد نقل الحركات دي (وفيه نسخة احتياطية تلقائية قبل النقل)", key="mv_confirm_chk")
+                    if st.button("🚚 تنفيذ النقل", key="mv_exec_btn", disabled=not mv_ok, use_container_width=True):
+                        save_cloud_store('cashbox_data_backup_before_move', {'timestamp': get_ksa_now_str(), 'data': json.loads(json.dumps(cash_all))})
+                        dst_m = cash_all.get(mv_dst)
+                        if not isinstance(dst_m, dict):
+                            dst_m = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+                        code_map = {}
+                        moved_ids = {(bk, id(t)) for bk, t in to_move}
+                        for bk in ('transactions', 'acc_transactions'):
+                            src_list = src_m.get(bk, [])
+                            dst_list = dst_m.get(bk, [])
+                            used = {str(x.get('code')) for x in dst_list if isinstance(x, dict)}
+                            keep = []
+                            for t in src_list:
+                                if (bk, id(t)) in moved_ids:
+                                    old_code = str(t.get('code', ''))
+                                    new_code = old_code
+                                    if old_code in used:
+                                        mm = re.match(r"^(.*?)(\d+)$", old_code)
+                                        if mm:
+                                            num = int(mm.group(2))
+                                            while f"{mm.group(1)}{num:0{len(mm.group(2))}d}" in used:
+                                                num += 1
+                                            new_code = f"{mm.group(1)}{num:0{len(mm.group(2))}d}"
+                                    used.add(new_code)
+                                    t['code'] = new_code
+                                    code_map[(bk, old_code)] = new_code
+                                    dst_list.append(t)
+                                else:
+                                    keep.append(t)
+                            for i_, x in enumerate(keep, 1):
+                                if isinstance(x, dict):
+                                    x['id'] = i_
+                            for i_, x in enumerate(dst_list, 1):
+                                if isinstance(x, dict):
+                                    x['id'] = i_
+                            src_m[bk] = keep
+                            dst_m[bk] = dst_list
+
+                        def _closing(m, box, op_key):
+                            tl = [t for t in m.get(box, []) if isinstance(t, dict)]
+                            tin = sum(float(t.get('amount', 0) or 0) for t in tl if 'قبض' in str(t.get('type', '')))
+                            tout = sum(float(t.get('amount', 0) or 0) for t in tl if 'صرف' in str(t.get('type', '')))
+                            return float(m.get(op_key, 0.0) or 0.0) + tin - tout
+
+                        dst_m['opening'] = _closing(src_m, 'transactions', 'opening')
+                        dst_m['acc_opening'] = _closing(src_m, 'acc_transactions', 'acc_opening')
+                        dst_m['carried_from'] = mv_src
+                        cash_all[mv_src] = src_m
+                        cash_all[mv_dst] = dst_m
+                        save_cash_data(cash_all)
+
+                        # تحديث ربط عُهد السواقين بالسندات المنقولة
+                        drv = load_drivers_data()
+                        changed = False
+                        if isinstance(drv, list):
+                            for d in drv:
+                                if isinstance(d, dict) and d.get('cash_month') == mv_src and (d.get('cash_box'), str(d.get('cash_voucher_code'))) in code_map:
+                                    d['cash_voucher_code'] = code_map[(d.get('cash_box'), str(d.get('cash_voucher_code')))]
+                                    d['cash_month'] = mv_dst
+                                    changed = True
+                            if changed:
+                                save_drivers_data(drv)
+
+                        st.session_state['mv_done_msg'] = f"تم نقل {len(to_move)} حركة من ({mv_src}) إلى ({mv_dst}) بنجاح، ورصيد أول ({mv_dst}) اتحدّث."
+                        st.rerun()
+
     elif selected_option == 'الإغلاق السنوي' and st.session_state.user_role == "admin":
         st.subheader('🏁 شاشة الإغلاق المالي السنوي وفتح سنة جديدة')
         st.markdown("### ملخص الرواتب والدفعات الكلية بالسجلات:")
@@ -4046,69 +4246,104 @@ else:
                         st.rerun()
 
                 with col_auto2:
-                    if is_already_settled:
-                        last_v = already_settled_vouchers[-1]
-                        st.success(f"✅ **تم اعتماد وتخصيم دفعات فرع ({b_name}) كـ سند صرف بالصندوق بنجاح (سند رقم: #{last_v.get('code', last_v['id'])})!**")
-                        st.button(f"🔒 تم الاعتماد بالصندوق لـ {b_name}", key=f"dis_trf_btn_{b_name}", disabled=True, use_container_width=True)
+                    source_options = [f"رواتب شهر ({month_selected}) الحالي", f"رواتب شهر ({prev_month_label}) السابق"]
+
+                    src_choice = st.selectbox(
+                        "اختر مصدر الرواتب المراد خصمها بالصندوق:",
+                        source_options,
+                        key=f"src_choice_select_{b_name}_{month_selected}"
+                    )
+
+                    pay_choice = st.selectbox(
+                        "اختر الدفعة المراد خصمها بالصندوق:",
+                        ["إجمالي الدفعات معاً", "الدفعة الأولى فقط", "الدفعة الثانية فقط"],
+                        key=f"pay_choice_select_{b_name}_{month_selected}"
+                    )
+
+                    if "السابق" in src_choice:
+                        target_df_calc = get_payroll_for_month(prev_month_label)
+                        label_month_used = prev_month_label
                     else:
-                        source_options = [f"رواتب شهر ({month_selected}) الحالي", f"رواتب شهر ({prev_month_label}) السابق"]
+                        target_df_calc = st.session_state.payroll_df
+                        label_month_used = month_selected
 
-                        src_choice = st.selectbox(
-                            "اختر مصدر الرواتب المراد خصمها بالصندوق:",
-                            source_options,
-                            key=f"src_choice_select_{b_name}_{month_selected}"
-                        )
+                    target_df_branch = target_df_calc[target_df_calc['الفرع'] == b_name]
 
-                        pay_choice = st.selectbox(
-                            "اختر الدفعة المراد خصمها بالصندوق:",
-                            ["إجمالي الدفعات معاً", "الدفعة الأولى فقط", "الدفعة الثانية فقط"],
-                            key=f"pay_choice_select_{b_name}_{month_selected}"
-                        )
+                    if pay_choice == "الدفعة الأولى فقط":
+                        amt_to_deduct = target_df_branch['الدفعة 1'].sum()
+                    elif pay_choice == "الدفعة الثانية فقط":
+                        amt_to_deduct = target_df_branch['الدفعة 2'].sum()
+                    else:
+                        amt_to_deduct = target_df_branch['الدفعة المدفوعة'].sum()
 
-                        if "السابق" in src_choice:
-                            target_df_calc = get_payroll_for_month(prev_month_label)
-                            label_month_used = prev_month_label
-                        else:
-                            target_df_calc = st.session_state.payroll_df
-                            label_month_used = month_selected
+                    # الدفعات اللي اتصرفت قبل كده لنفس الفرع ونفس شهر الرواتب (كل دفعة بتتقفل لوحدها)
+                    def _pay_parts(party_txt):
+                        if "الدفعة الأولى فقط" in party_txt:
+                            return {1}
+                        if "الدفعة الثانية فقط" in party_txt:
+                            return {2}
+                        return {1, 2}
 
-                        target_df_branch = target_df_calc[target_df_calc['الفرع'] == b_name]
+                    posted_vouchers = []
+                    for v in existing_vouchers:
+                        v_party = str(v.get('party', ''))
+                        if "سداد رواتب ودفعات" not in v_party:
+                            continue
+                        if not (f"فرع ({b_name})" in v_party or b_name in v_party):
+                            continue
+                        if "شهر (" in v_party and f"شهر ({label_month_used})" not in v_party:
+                            continue
+                        if "شهر (" not in v_party and label_month_used != month_selected:
+                            continue
+                        posted_vouchers.append(v)
 
-                        if pay_choice == "الدفعة الأولى فقط":
-                            amt_to_deduct = target_df_branch['الدفعة 1'].sum()
-                        elif pay_choice == "الدفعة الثانية فقط":
-                            amt_to_deduct = target_df_branch['الدفعة 2'].sum()
-                        else:
-                            amt_to_deduct = target_df_branch['الدفعة المدفوعة'].sum()
+                    posted_parts = set()
+                    for v in posted_vouchers:
+                        posted_parts |= _pay_parts(str(v.get('party', '')))
 
-                        st.markdown(f"#### 💵 **إجمالي المبلغ المجهز للخصم بالصندوق:** `{amt_to_deduct:,.2f} ر.س`")
+                    choice_parts = {1} if pay_choice == "الدفعة الأولى فقط" else ({2} if pay_choice == "الدفعة الثانية فقط" else {1, 2})
+                    choice_blocked = bool(choice_parts & posted_parts)
 
-                        if amt_to_deduct > 0:
-                            if st.button(f'🚀 تأكيد خصم المبلغ ({amt_to_deduct:,.0f} ر.س) وإنشاء سند صرف بصندوق {month_selected}', key=f"confirm_trf_sal_btn_{b_name}", use_container_width=True):
-                                all_cash = load_cash_data()
-                                if month_selected not in all_cash:
-                                    all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
-                                
-                                m_cash = all_cash[month_selected]
-                                target_trans_key = 'transactions' if st.session_state.user_role == "admin" else 'acc_transactions'
-                                c_trans = m_cash.get(target_trans_key, [])
-                                
-                                v_code = f"PAY-SAL-{(len(c_trans) + 1):03d}"
-                                c_trans.append({
-                                    'id': len(c_trans) + 1,
-                                    'code': v_code,
-                                    'date': get_ksa_now_str(),
-                                    'type': 'سند صرف',
-                                    'party': f"سداد رواتب ودفعات ({pay_choice}) - شهر ({label_month_used}) - فرع ({b_name})",
-                                    'amount': amt_to_deduct,
-                                    'method': 'نقداً بالصندوق',
-                                    'notes': f"سند صرف آلي معمد لـ ({pay_choice}) بفرع {b_name}"
-                                })
-                                m_cash[target_trans_key] = c_trans
-                                all_cash[month_selected] = m_cash
-                                save_cash_data(all_cash)
-                                st.success(f"تم اعتماد وتخصيم {amt_to_deduct:,.2f} ر.س كـ سند صرف (#{v_code}) بـ فرع ({b_name}) بنجاح!")
-                                st.rerun()
+                    for v in posted_vouchers:
+                        parts_txt = "الدفعة الأولى" if _pay_parts(str(v.get('party', ''))) == {1} else ("الدفعة الثانية" if _pay_parts(str(v.get('party', ''))) == {2} else "إجمالي الدفعات")
+                        st.success(f"✅ تم خصم ({parts_txt}) من الصندوق لفرع ({b_name}) - سند رقم: #{v.get('code', v.get('id'))} بمبلغ {float(v.get('amount', 0)):,.2f} ر.س")
+
+                    st.markdown(f"#### 💵 **إجمالي المبلغ المجهز للخصم بالصندوق:** `{amt_to_deduct:,.2f} ر.س`")
+
+                    if choice_blocked:
+                        st.button(f"🔒 ({pay_choice}) تم اعتمادها بالصندوق لـ {b_name}", key=f"dis_trf_btn_{b_name}", disabled=True, use_container_width=True)
+                    elif amt_to_deduct > 0:
+                        if st.button(f'🚀 تأكيد خصم المبلغ ({amt_to_deduct:,.0f} ر.س) وإنشاء سند صرف بصندوق {month_selected}', key=f"confirm_trf_sal_btn_{b_name}", use_container_width=True):
+                            all_cash = load_cash_data()
+                            if month_selected not in all_cash:
+                                all_cash[month_selected] = {'opening': 0.0, 'transactions': [], 'acc_opening': 0.0, 'acc_transactions': []}
+
+                            m_cash = all_cash[month_selected]
+                            target_trans_key = 'transactions' if st.session_state.user_role == "admin" else 'acc_transactions'
+                            c_trans = m_cash.get(target_trans_key, [])
+
+                            used_codes = {str(t.get('code')) for t in c_trans if isinstance(t, dict)}
+                            seq = len(c_trans) + 1
+                            v_code = f"PAY-SAL-{seq:03d}"
+                            while v_code in used_codes:
+                                seq += 1
+                                v_code = f"PAY-SAL-{seq:03d}"
+
+                            c_trans.append({
+                                'id': len(c_trans) + 1,
+                                'code': v_code,
+                                'date': get_ksa_now_str(),
+                                'type': 'سند صرف',
+                                'party': f"سداد رواتب ودفعات ({pay_choice}) - شهر ({label_month_used}) - فرع ({b_name})",
+                                'amount': amt_to_deduct,
+                                'method': 'نقداً بالصندوق',
+                                'notes': f"سند صرف آلي معمد لـ ({pay_choice}) بفرع {b_name}"
+                            })
+                            m_cash[target_trans_key] = c_trans
+                            all_cash[month_selected] = m_cash
+                            save_cash_data(all_cash)
+                            st.success(f"تم اعتماد وتخصيم {amt_to_deduct:,.2f} ر.س كـ سند صرف (#{v_code}) بـ فرع ({b_name}) بنجاح!")
+                            st.rerun()
 
                 cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'المتبقي', 'الملاحظات']
                 edited_b = st.data_editor(
