@@ -897,6 +897,25 @@ def ensure_month_in_list(months, label):
         months.append(label)
     return sorted(months, key=lambda m: month_label_to_ym(m) or (9999, 99))
 
+def compute_saman_balance(drivers_data):
+    """رصيد سمان السواق الصافي (نفس حساب صفحة العُهد): المتبقي من العُهد المفتوحة ناقص فروق الفواتير الزائدة."""
+    if not isinstance(drivers_data, list):
+        return 0.0, 0.0
+    recs = [d for d in drivers_data if isinstance(d, dict) and ('سمان' in str(d.get('driver_name') or d.get('driver') or '') or d.get('driver_name') is None)]
+    cust = {}
+    for r in recs:
+        g = float(pd.to_numeric(r.get('given_amt', 0) or r.get('amount', 0), errors='coerce') or 0)
+        if g > 0 and r.get('type') != 'تصفية_جزئية':
+            cust[f"#{r.get('id')}"] = [g, 0.0]
+    for r in recs:
+        tid = r.get('target_custody_id')
+        s = float(pd.to_numeric(r.get('spent_amt', 0) or r.get('spent', 0), errors='coerce') or 0)
+        if tid and tid in cust and s > 0:
+            cust[tid][1] += s
+    open_rem = sum(max(0.0, g - s) for g, s in cust.values())
+    excess = sum(float(pd.to_numeric(r.get('excess_amt', 0), errors='coerce') or 0) for r in recs if r.get('type') == 'زيادة_فواتير')
+    return open_rem - excess, open_rem
+
 def run_daily_auto_backup(keep_days=30):
     """أول مرة حد يفتح البرنامج كل يوم: ياخد نسخة كاملة من كل البيانات السحابية ويحتفظ بآخر 30 يوم."""
     try:
@@ -2228,12 +2247,7 @@ else:
         total_company_cash = net_main_now + net_acc_now
 
         drivers_db_list = load_drivers_data()
-        if isinstance(drivers_db_list, list):
-            tot_g_main = sum(float(pd.to_numeric(d.get('given_amt', 0) or d.get('amount', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
-            tot_s_main = sum(float(pd.to_numeric(d.get('spent_amt', 0) or d.get('spent', 0), errors='coerce') or 0) for d in drivers_db_list if isinstance(d, dict))
-            open_driver_custody_sum = max(0.0, tot_g_main - tot_s_main)
-        else:
-            open_driver_custody_sum = 0.0
+        open_driver_custody_sum, _ = compute_saman_balance(drivers_db_list)
 
         audit_history = load_audit_data()
         last_audit = audit_history[-1] if audit_history else None
@@ -2258,8 +2272,8 @@ else:
                 st.markdown("#### عُهدة المحاسب (omar):")
                 st.metric("رصيد عُهدة omar", f"{net_acc_now:,.2f} ر.س")
             with c_box3:
-                st.markdown("#### 🚚 عُهد السواقين المترصدة:")
-                st.metric("إجمالي المتبقي باليد", f"{open_driver_custody_sum:,.2f} ر.س")
+                st.markdown("#### 🚚 عُهدة سمان السواق:")
+                st.metric("المتبقي بذمة سمان", f"{open_driver_custody_sum:,.2f} ر.س")
             with c_box4:
                 st.markdown("#### = إجمالي نقدية الشركة:")
                 st.metric("مجموع الصناديق", f"{total_company_cash:,.2f} ر.س")
@@ -2317,8 +2331,8 @@ else:
                 st.markdown("#### عُهدتك الحالية (omar):")
                 st.metric("الرصيد المتبقي بعُهدتك", f"{net_acc_now:,.2f} ر.س")
             with c_box2:
-                st.markdown("#### 🚚 عُهد السائقين المترصدة:")
-                st.metric("إجمالي المتبقي باليد", f"{open_driver_custody_sum:,.2f} ر.س")
+                st.markdown("#### 🚚 عُهدة سمان السواق:")
+                st.metric("المتبقي بذمة سمان", f"{open_driver_custody_sum:,.2f} ر.س")
 
             st.markdown("### ⚡ إجراءات خاطفة وسريعة (لوحة omar)")
             q_col1, q_col2, q_col3, q_col4 = st.columns(4)
