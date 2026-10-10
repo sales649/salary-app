@@ -1000,8 +1000,7 @@ def opening_balance_dialog(month_name, target_box):
             st.success("تم التثبيت السحابي!")
             st.rerun()
 
-@st.dialog("⚙️ تثبيت الرصيد الافتتاحي لذمة السائق")
-def post_custody_cash_voucher(month_name, user_role, driver_name, amount, notes, custody_id, method="نقداً بالصندوق"):
+def post_custody_cash_voucher(month_name, user_role, driver_name, amount, notes, custody_id, method="نقداً بالصندوق", party=None):
     """يسجل سند صرف في صندوق المستخدم الحالي (الأدمن: الخزينة الرئيسية، عمر: عُهدة المحاسب) مقابل تسليم عُهدة لسائق."""
     all_cash = load_cash_data()
     if not isinstance(all_cash, dict):
@@ -1026,7 +1025,7 @@ def post_custody_cash_voucher(month_name, user_role, driver_name, amount, notes,
         'code': v_code,
         'date': get_ksa_now_str(),
         'type': 'سند صرف',
-        'party': f"عُهدة سائق - {driver_name}",
+        'party': party or f"عُهدة سائق - {driver_name}",
         'amount': float(amount),
         'method': method,
         'notes': notes or "تسليم عُهدة نقدية",
@@ -1050,6 +1049,7 @@ def remove_custody_cash_voucher(month_name, box_key, v_code):
     save_cash_data(all_cash)
     return True
 
+@st.dialog("⚙️ تثبيت الرصيد الافتتاحي لذمة السائق")
 def driver_opening_balance_dialog(driver_name):
     drivers_db = load_drivers_data()
     
@@ -1936,26 +1936,76 @@ else:
                     target_obj = next((c for c in open_custodies_list if c["key"] == target_key), open_custodies_list[0])
                     c_rem_val = float(target_obj["rem"])
 
-                    spent_val = st.number_input(f"مبلغ الفاتورة / المصاريف المصفاة (الحد المتاح {c_rem_val:,.2f} ر.س):", min_value=1.0, value=min(215.0, c_rem_val), step=10.0)
+                    spent_val = st.number_input(
+                        f"إجمالي الفواتير / المصاريف (المتبقي في العُهدة المختارة {c_rem_val:,.2f} ر.س | إجمالي المتبقي بذمة السائق {tot_open_rem:,.2f} ر.س):",
+                        min_value=1.0, value=min(215.0, c_rem_val), step=10.0
+                    )
                     notes_val = st.text_input("ملاحظات / مصاريف الفاتورة (بنزين، ديزل، صيانة...):")
+                    st.caption("لو الفواتير أكبر من العُهدة المختارة، الفرق بيتخصم تلقائياً من باقي عُهد السائق المفتوحة (الأقدم أولاً). ولو زادت عن كل المتبقي بذمته، الزيادة بتتصرف له من الصندوق بسند صرف. ولو أقل، الباقي بيفضل على السائق.")
                     btn_confirm_settle = st.form_submit_button("تأكيد خصم الفاتورة وتعديل الرصيد التراكمي", use_container_width=True)
 
                     if btn_confirm_settle and spent_val > 0:
-                        new_id = len(drivers_data) + 1
-                        drivers_data.append({
-                            "id": new_id,
-                            "target_custody_id": target_key,
-                            "type": "تصفية_جزئية",
-                            "driver_name": "سمان السواق",
-                            "date": get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5],
-                            "given_amt": 0.0,
-                            "spent_amt": spent_val,
-                            "rem_amt": max(0.0, c_rem_val - spent_val),
-                            "notes": f"تصفية من {target_key}: {notes_val}",
-                            "status": "مصفاة_بالكامل" if (c_rem_val - spent_val) <= 0 else "مصفاة_جزئياً"
-                        })
+                        def _next_id():
+                            ids = [int(d.get('id')) for d in drivers_data if isinstance(d, dict) and str(d.get('id', '')).isdigit()]
+                            return (max(ids) if ids else 0) + 1
+
+                        now_str = get_ksa_now_str().split()[0] + " " + get_ksa_now_str().split()[1][:5]
+                        # ترتيب الخصم: العُهدة المختارة أولاً ثم باقي العُهد المفتوحة الأقدم فالأحدث
+                        others = sorted([c for c in open_custodies_list if c["key"] != target_key], key=lambda c: int(c["id"]) if str(c["id"]).isdigit() else 0)
+                        order = [target_obj] + others
+
+                        left = float(spent_val)
+                        summary_parts = []
+                        for c in order:
+                            if left <= 0:
+                                break
+                            portion = min(left, float(c["rem"]))
+                            if portion <= 0:
+                                continue
+                            is_spill = c["key"] != target_key
+                            c_rem_after = float(c["rem"]) - portion
+                            drivers_data.append({
+                                "id": _next_id(),
+                                "target_custody_id": c["key"],
+                                "type": "تصفية_جزئية",
+                                "driver_name": "سمان السواق",
+                                "date": now_str,
+                                "given_amt": 0.0,
+                                "spent_amt": portion,
+                                "rem_amt": max(0.0, c_rem_after),
+                                "notes": f"تصفية من {c['key']}: {notes_val}" + (f" (فرق فواتير مُرحّل من {target_key})" if is_spill else ""),
+                                "status": "مصفاة_بالكامل" if c_rem_after <= 0 else "مصفاة_جزئياً"
+                            })
+                            summary_parts.append(f"{portion:,.2f} من {c['key']}")
+                            left -= portion
+
+                        excess_msg = ""
+                        if left > 0.005:
+                            # الفواتير زادت عن كل المتبقي بذمة السائق: الزيادة تتصرف له من الصندوق
+                            ex_id = _next_id()
+                            cash_code, cash_box = post_custody_cash_voucher(
+                                month_selected, st.session_state.get('user_role'), "سمان السواق", left,
+                                f"تعويض فواتير زائدة عن العُهد: {notes_val}", ex_id,
+                                party="تعويض سائق (فواتير زائدة عن العُهدة) - سمان السواق"
+                            )
+                            drivers_data.append({
+                                "id": ex_id,
+                                "type": "تعويض_زيادة",
+                                "driver_name": "سمان السواق",
+                                "date": now_str,
+                                "given_amt": 0.0,
+                                "spent_amt": 0.0,
+                                "excess_amt": left,
+                                "notes": f"تعويض زيادة فواتير ({left:,.2f} ر.س) صُرفت للسائق من الصندوق: {notes_val}",
+                                "status": "تعويض",
+                                "cash_voucher_code": cash_code,
+                                "cash_box": cash_box,
+                                "cash_month": month_selected
+                            })
+                            excess_msg = f" والزيادة ({left:,.2f} ر.س) اتصرفت للسائق من الصندوق بسند {cash_code}."
+
                         save_drivers_data(drivers_data)
-                        st.success(f"تم خصم مبلغ ({spent_val:,.2f} ر.س) بنجاح من العُهدة {target_key}!")
+                        st.success(f"تم خصم الفواتير ({spent_val:,.2f} ر.س): " + "، ".join(summary_parts) + "." + excess_msg)
                         st.rerun()
             else:
                 st.info("لا توجد عُهد مفتوحة حالياً لـ سمان السواق بانتظار التصفية.")
