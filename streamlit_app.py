@@ -1757,6 +1757,11 @@ else:
                 st.session_state['current_view'] = 'حاسبة الخدمة'
                 st.rerun()
 
+            st.markdown('<div class="sidebar-section-title">💾 النسخ الاحتياطي ونقل الشهور</div>', unsafe_allow_html=True)
+            if st.button("💾 النسخ الاحتياطي / نقل حركات شهر", use_container_width=True, key="sb_backup_move_btn"):
+                st.session_state['current_view'] = 'النسخ الاحتياطي'
+                st.rerun()
+
         st.divider()
 
         if st.button("🚪 تسجيل الخروج", use_container_width=True):
