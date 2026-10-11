@@ -1117,6 +1117,18 @@ def ensure_month_in_list(months, label):
     months = list(months)
     if label not in months:
         months.append(label)
+    yms = [month_label_to_ym(m) for m in months if month_label_to_ym(m)]
+    if yms:
+        # نكمل أي شهور ناقصة بين أول شهر وآخر شهر (عشان ترحيل الأرصدة ما يقفزش شهر)
+        have = set(yms)
+        y, mth = min(yms)
+        ymax = max(yms)
+        while (y, mth) <= ymax:
+            if (y, mth) not in have:
+                months.append(f"{AR_MONTHS[mth - 1]} {y}")
+            mth += 1
+            if mth > 12:
+                mth, y = 1, y + 1
     return sorted(months, key=lambda m: month_label_to_ym(m) or (9999, 99))
 
 def compute_saman_balance(drivers_data):
@@ -2012,7 +2024,26 @@ else:
         if st.session_state.get('month_selected') not in st.session_state.months_list:
             st.session_state['month_selected'] = _cur_month_label
 
-        month_selected = st.selectbox('الشهر الحالي:', st.session_state.months_list, key='month_selected')
+        # اختيار السنة ثم الشهر (كل سنة شهورها بس)
+        def _yr(lbl):
+            _t = month_label_to_ym(lbl)
+            return _t[0] if _t else None
+        _all_months = st.session_state.months_list
+        _years = sorted({_yr(m) for m in _all_months if _yr(m)})
+        _cur_year = _yr(st.session_state['month_selected'])
+        _ysel = st.session_state.get('year_selected')
+        if _ysel is not None and _ysel != st.session_state.get('_last_year_sel') and _ysel in _years:
+            # المستخدم غيّر السنة: نختار شهر مناسب جواها (نفس رقم الشهر لو موجود، وإلا آخر شهر)
+            if _cur_year != _ysel:
+                _cands = [m for m in _all_months if _yr(m) == _ysel]
+                _same = [m for m in _cands if month_label_to_ym(m)[1] == (month_label_to_ym(st.session_state['month_selected']) or (0, 0))[1]]
+                st.session_state['month_selected'] = (_same or _cands)[-1]
+        else:
+            st.session_state['year_selected'] = _cur_year
+        st.selectbox('السنة:', _years, key='year_selected')
+        st.session_state['_last_year_sel'] = st.session_state['year_selected']
+        _months_in_year = [m for m in _all_months if _yr(m) == st.session_state['year_selected']]
+        month_selected = st.selectbox('الشهر الحالي:', _months_in_year, key='month_selected')
         ensure_month_initialized(month_selected)
         run_daily_auto_backup()
         _blk_msg = st.session_state.pop('cash_block_msg', None)
@@ -2545,13 +2576,28 @@ else:
                 st.info(f"🔍 **آخر جرد معتمد للصندوق ({last_audit['box_name']}):** بتاريخ **{last_audit['date']}** | حالة الجرد: **{diff_tag}** | ملاحظات: {last_audit.get('notes', 'لا يوجد')}")
 
             st.markdown("### مؤشرات الرواتب والعمالة")
+            # الفروع الثلاثة بس (مصنع الخرج + مستودع الخرج + مستودع الرياض)، من غير "رواتب متنوعة"
+            _home_branches = ['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض']
+            _hm_idx = st.session_state.months_list.index(month_selected)
+            _hm_prev = st.session_state.months_list[_hm_idx - 1] if _hm_idx > 0 else month_selected
+            _hm_opts = [_hm_prev, month_selected] if _hm_prev != month_selected else [month_selected]
+            _hm_pick = st.radio("📅 شهر الرواتب:", _hm_opts, horizontal=True, key=f"home_pay_month_{month_selected}")
+            _hm_df = st.session_state.payroll_df if _hm_pick == month_selected else get_payroll_for_month(_hm_pick)
+            _hm_df = _hm_df[_hm_df['الفرع'].isin(_home_branches)]
+            _h_emp = len(_hm_df)
+            _h_req = float(_hm_df['الراتب الأساسي'].sum())
+            _h_p1 = float(_hm_df['الدفعة 1'].sum())
+            _h_p2 = float(_hm_df['الدفعة 2'].sum())
+            _h_ded = float(_hm_df['الخصومات'].sum())
+            _h_rem = _h_req - (_h_p1 + _h_p2 + _h_ded)
+            st.caption(f"رواتب ({_hm_pick}) - مصنع الخرج + مستودع الخرج + مستودع الرياض فقط")
             st_col1, st_col2, st_col3, st_col4, st_col5, st_col6 = st.columns(6)
-            st_col1.metric("العمالة", f"{tot_emp} موظف")
-            st_col2.metric("الرواتب", f"{tot_req:,.0f}")
-            st_col3.metric("الدفعة 1", f"{tot_p1_all:,.0f}")
-            st_col4.metric("الدفعة 2", f"{tot_p2_all:,.0f}")
-            st_col5.metric("الخصومات", f"{tot_ded_all:,.0f}")
-            st_col6.metric("المتبقي", f"{tot_rem:,.0f}")
+            st_col1.metric("العمالة", f"{_h_emp} موظف")
+            st_col2.metric("الرواتب", f"{_h_req:,.0f}")
+            st_col3.metric("الدفعة 1", f"{_h_p1:,.0f}")
+            st_col4.metric("الدفعة 2", f"{_h_p2:,.0f}")
+            st_col5.metric("الخصومات", f"{_h_ded:,.0f}")
+            st_col6.metric("المتبقي", f"{_h_rem:,.0f}")
 
             st.markdown("### ⚡ إجراءات خاطفة وسريعة (لوحة wahby)")
             q_col1, q_col2, q_col3, q_col4, q_col5, q_col6, q_col7 = st.columns(7)
