@@ -882,8 +882,26 @@ st.markdown(f"""
         .pill-out {{ background: rgba(239,68,68,.16); color: #DC2626 !important; }}
         [data-testid="stMetricValue"] div, .amt-pos, .amt-neg {{ font-variant-numeric: tabular-nums; }}
 
+        /* قايمة الموبايل مخفية على الكمبيوتر */
+        .st-key-mobile_menu {{ display: none; }}
+
         /* ===== تحسين العرض على الموبايل ===== */
         @media (max-width: 768px) {{
+            /* على الموبايل: نخفي القايمة الجانبية تماماً ونستخدم زرار ☰ في أول الصفحة */
+            [data-testid="stSidebar"], [data-testid="stExpandSidebarButton"],
+            [data-testid="stSidebarCollapsedControl"], [data-testid="collapsedControl"] {{
+                display: none !important;
+            }}
+            .st-key-mobile_menu {{ display: block !important; margin-bottom: 6px; }}
+            html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], .main {{
+                overflow-x: hidden !important;
+                max-width: 100vw !important;
+            }}
+            [data-testid="stMainBlockContainer"] {{
+                padding-left: 0.6rem !important;
+                padding-right: 0.6rem !important;
+                max-width: 100vw !important;
+            }}
             .main .block-container {{
                 padding-left: 0.4rem !important;
                 padding-right: 0.4rem !important;
@@ -2007,10 +2025,9 @@ else:
         # ===== القايمة الجانبية: مجموعات منسدلة + أيقونات + تمييز الصفحة الحالية =====
         _cv = st.session_state.get('current_view', 'الرئيسية')
 
-        def _nav(label, view):
-            if st.button(label, key=f"nav_{view}", use_container_width=True, type=("primary" if _cv == view else "secondary")):
+        def _nav(label, view, prefix="nav"):
+            if st.button(label, key=f"{prefix}_{view}", use_container_width=True, type=("primary" if _cv == view else "secondary")):
                 st.session_state['current_view'] = view
-                st.session_state['_close_sb'] = True   # على الموبايل القايمة تتقفل بعد الاختيار
                 st.rerun()
 
         _nav("🏠 الرئيسية", 'الرئيسية')
@@ -2082,27 +2099,41 @@ else:
     def _on_theme_change():
         st.session_state['theme_mode'] = st.session_state['theme_sel']
 
-    # قفل القايمة الجانبية على الموبايل (أول فتح + بعد كل اختيار)
-    if not st.session_state.get('_sb_init'):
-        st.session_state['_sb_init'] = True
-        st.session_state['_close_sb'] = True
-    if st.session_state.pop('_close_sb', False):
-        components.html("""<script>
-        (function () {
-          try {
-            var w = window.parent, d = w.document;
-            if (w.innerWidth > 768) return;
-            var tries = 0;
-            var t = setInterval(function () {
-              tries++;
-              var sb = d.querySelector('[data-testid="stSidebar"]');
-              var btn = d.querySelector('[data-testid="stSidebarCollapseButton"] button') || d.querySelector('[data-testid="stSidebarCollapseButton"]');
-              if (sb && sb.getAttribute('aria-expanded') !== 'false' && btn) { btn.click(); clearInterval(t); }
-              if (tries > 15) clearInterval(t);
-            }, 200);
-          } catch (e) {}
-        })();
-        </script>""", height=0)
+    # ===== قايمة الموبايل: زرار ☰ في أول الصفحة بيفتح كل الأقسام، وبتتقفل لوحدها بعد الاختيار =====
+    # (على الكمبيوتر القايمة الجانبية العادية هي اللي بتظهر، وعلى الموبايل بتتخفي ويظهر الزرار ده)
+    def _on_month_mobile():
+        st.session_state['month_selected'] = st.session_state['month_mobile']
+
+    with st.container(key="mobile_menu"):
+        with st.popover("☰  القائمة", use_container_width=True):
+            st.markdown(f"**👤 المستخدم: {role_label}**")
+            st.session_state['month_mobile'] = month_selected
+            st.selectbox("الشهر الحالي", st.session_state.months_list, key="month_mobile", on_change=_on_month_mobile)
+            _nav("🏠 الرئيسية", 'الرئيسية', "m")
+            st.markdown("**🏦 الخزائن والصناديق**")
+            _nav("💵 حركة الصندوق", 'حركة الصندوق', "m")
+            _nav("🚚 عُهدة السواقين", 'عُهدة السواقين', "m")
+            _nav("🔍 جرد الخزينة", 'جرد الخزينة', "m")
+            st.markdown("**📦 المستودع والمخزن**")
+            _nav("📦 جرد وحركة المخزون", 'جرد وحركة المخزون', "m")
+            if st.session_state.user_role == "admin":
+                st.markdown("**📊 الرواتب والدفعات**")
+                _nav("✏️ إدخال الدفعات", 'إدخال الدفعات', "m")
+                _nav("📋 كشف مسير الرواتب", 'مسير الرواتب', "m")
+                _nav("🖨️ طباعة سندات الرواتب A4", 'طباعة السندات', "m")
+                st.markdown("**🏛️ الزكاة والضريبة**")
+                _nav("🏛️ تقرير القيمة المضافة", 'تقرير القيمة المضافة', "m")
+                st.markdown("**👤 الموارد البشرية**")
+                _nav("👥 دليل الموظفين", 'دليل الموظفين', "m")
+                _nav("📜 الخطابات والإنذارات", 'الخطابات الرسمية', "m")
+                _nav("🧮 حاسبة نهاية الخدمة", 'حاسبة الخدمة', "m")
+                st.markdown("**💾 النسخ الاحتياطي**")
+                _nav("💾 نسخ احتياطي ونقل حركات", 'النسخ الاحتياطي', "m")
+            if st.button("🚪 تسجيل الخروج", use_container_width=True, key="m_logout"):
+                st.session_state.app_started = False
+                st.session_state.user_role = None
+                st.query_params.clear()
+                st.rerun()
 
     tb1, tb2, tb3 = st.columns([3, 3, 1.3])
     with tb1:
