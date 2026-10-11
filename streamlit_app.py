@@ -295,9 +295,9 @@ def save_uploaded_sales_batches(data):
 
             # كروت ملخص العُهدة
             dc1, dc2, dc3 = st.columns(3)
-            dc1.metric(f"💰 إجمالي العُهد لـ ({selected_driver})", f"{total_given:,.2f} ر.س")
-            dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
-            dc3.metric("⚠️ المتبقي بذمة السائق", f"{net_remaining:,.2f} ر.س")
+            dc1.metric(f"💰 إجمالي العُهد لـ ({selected_driver})", f"{total_given:,.2f}")
+            dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f}")
+            dc3.metric("⚠️ المتبقي بذمة السائق", f"{net_remaining:,.2f}")
 
             st.divider()
             col_tabs1, col_tabs2 = st.columns([1.3, 1])
@@ -765,6 +765,44 @@ st.markdown(f"""
             font-weight: bold;
             font-size: 16px;
         }}
+
+        /* ===== أيقونات ماتيريال (ما تتأثرش بخط Cairo) ===== */
+        [data-testid="stIconMaterial"], .material-symbols-rounded, span[class*="material-symbols"] {{
+            font-family: 'Material Symbols Rounded' !important;
+            font-feature-settings: 'liga' !important;
+            direction: ltr !important;
+        }}
+
+        /* ===== القوائم المنسدلة والحقول (بدون خلفية بيضا) ===== */
+        [data-testid="stExpander"] details, [data-testid="stExpander"] summary, [data-testid="stExpanderDetails"] {{
+            background: {bg_card} !important;
+            color: {text_color} !important;
+        }}
+        [data-testid="stExpander"] summary:hover {{ background: {dropdown_hover} !important; }}
+        [data-baseweb="select"] > div, [data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"],
+        [data-testid="stNumberInput"] input, [data-testid="stTextInput"] input, textarea {{
+            background-color: {bg_card} !important;
+            color: {text_color} !important;
+            border-color: {border_color} !important;
+        }}
+        [data-baseweb="select"] svg {{ fill: {muted_color} !important; }}
+
+        /* ===== شاشة الدخول ===== */
+        .login-hero {{ text-align: center; padding: 36px 10px 14px; }}
+        .login-logo {{ width: 78px; height: 78px; border-radius: 20px; background: {accent}; color: {accent_ink} !important;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 32px !important; font-weight: 900 !important;
+            font-family: Arial, sans-serif !important; box-shadow: 0 10px 30px rgba(0,0,0,.25); }}
+        .login-title {{ font-size: 28px !important; font-weight: 900 !important; margin-top: 14px; text-align: center !important; }}
+        .login-sub {{ font-size: 14px !important; color: {muted_color} !important; text-align: center !important; margin-top: 2px; }}
+        [data-testid="stForm"] {{
+            background: {bg_card} !important;
+            border: 1px solid {border_color} !important;
+            border-radius: 16px !important;
+            padding: 22px !important;
+            box-shadow: 0 10px 30px rgba(0,0,0,.12);
+        }}
+        .login-form-title {{ font-size: 18px !important; font-weight: 800 !important; text-align: center !important; margin-bottom: 6px; }}
+        .login-foot {{ text-align: center !important; font-size: 12px !important; color: {muted_color} !important; margin-top: 10px; }}
 
         /* ===== القايمة الجانبية ===== */
         [data-testid="stSidebar"] [data-testid="stExpander"] {{
@@ -1860,35 +1898,35 @@ def edit_employee_dialog(emp_idx, month_name):
 # الشاشة الافتتاحية وواجهة المستخدم الموحدة
 if not st.session_state.get('app_started', False):
     st.markdown("""
-        <div class="welcome-card-lux">
-            <div class="logo-lux">5M</div>
-            <div class="title-company-royal">شركة ميم الخماسية للتصنيع</div>
-            <p style="color: #94A3B8 !important; font-size: 17px; margin-bottom: 20px;">النظام المحاسبي والإداري الموحد</p>
-            <hr style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.2); margin: 25px 0;">
+        <div class="login-hero">
+            <div class="login-logo">5M</div>
+            <div class="login-title">شركة ميم الخماسية للتصنيع</div>
+            <div class="login-sub">النظام المحاسبي والإداري الموحد</div>
         </div>
     """, unsafe_allow_html=True)
-    
+
     col_b1, col_b2, col_b3 = st.columns([1, 1.2, 1])
     with col_b2:
-        st.markdown("<h3 style='text-align:center;'>تسجيل الدخول:</h3>", unsafe_allow_html=True)
-        username_selected = st.selectbox("المستخدم:", ["wahby", "omar"], key="login_username_select")
-        pwd_input = st.text_input("كلمة المرور المطلوبة:", type="password", key="login_pwd")
-        
-        if st.button('الدخول للنظام', use_container_width=True):
+        with st.form("login_form", clear_on_submit=False):
+            st.markdown("<div class='login-form-title'>تسجيل الدخول</div>", unsafe_allow_html=True)
+            username_selected = st.selectbox("المستخدم", ["wahby", "omar"], key="login_username_select")
+            pwd_input = st.text_input("كلمة المرور", type="password", key="login_pwd", placeholder="اكتب كلمة المرور")
+            login_submitted = st.form_submit_button("الدخول للنظام", use_container_width=True)
+        st.markdown("<div class='login-foot'>🔒 اتصال آمن ببياناتك على السحابة</div>", unsafe_allow_html=True)
+
+        if login_submitted:
             if username_selected == "wahby" and pwd_input == ADMIN_PASSWORD:
                 st.session_state.app_started = True
                 st.session_state.user_role = "admin"
                 st.query_params["saved_role"] = "admin"
-                st.success("أهلاً بك (wahby)!")
                 st.rerun()
             elif username_selected == "omar" and pwd_input == USER_PASSWORD:
                 st.session_state.app_started = True
                 st.session_state.user_role = "accountant"
                 st.query_params["saved_role"] = "accountant"
-                st.success("أهلاً بك (omar)!")
                 st.rerun()
             else:
-                st.error("كلمة المرور غير صحيحة! يرجى إدخال كلمة المرور للوصول للنظام.")
+                st.error("كلمة المرور غير صحيحة. حاول تاني.")
 
 else:
     # 3. القائمة الجانبية الأصليّة المستقرة والكاملة 100%
@@ -2214,9 +2252,9 @@ else:
 
         # 2. كروت المبالغ الإحصائية الثلاثية
         m1, m2, m3 = st.columns(3)
-        m1.metric("إجمالي العُهد المسلمة لـ سمان السواق", f"{tot_given:,.2f} ر.س")
-        m2.metric("إجمالي المصروفات المصفاة بالفواتير", f"{tot_spent:,.2f} ر.س")
-        m3.metric("🔴 المتبقي بذمته حالياً (المُرحّل)", f"{net_rem:,.2f} ر.س")
+        m1.metric("إجمالي العُهد المسلمة لـ سمان السواق", f"{tot_given:,.2f}")
+        m2.metric("إجمالي المصروفات المصفاة بالفواتير", f"{tot_spent:,.2f}")
+        m3.metric("🔴 المتبقي بذمته حالياً (المُرحّل)", f"{net_rem:,.2f}")
 
         st.divider()
 
@@ -2397,13 +2435,13 @@ else:
         if st.session_state.user_role == "admin":
             c_box1, c_box2, c_box3, c_box4 = st.columns(4)
             with c_box1:
-                st.metric("رصيد الخزينة الرئيسية", f"{net_main_now:,.2f} ر.س")
+                st.metric("رصيد الخزينة الرئيسية", f"{net_main_now:,.2f}")
             with c_box2:
-                st.metric("رصيد عُهدة omar", f"{net_acc_now:,.2f} ر.س")
+                st.metric("رصيد عُهدة omar", f"{net_acc_now:,.2f}")
             with c_box3:
-                st.metric("المتبقي بذمة سمان", f"{open_driver_custody_sum:,.2f} ر.س")
+                st.metric("المتبقي بذمة سمان", f"{open_driver_custody_sum:,.2f}")
             with c_box4:
-                st.metric("مجموع الصناديق", f"{total_company_cash:,.2f} ر.س")
+                st.metric("مجموع الصناديق", f"{total_company_cash:,.2f}")
             if last_audit:
                 a_diff = last_audit['diff']
                 diff_tag = "🟢 مطابقة تامة" if a_diff == 0 else (f"🔴 عجز بقيمة ({abs(a_diff):,.2f} ر.س)" if a_diff < 0 else f"🔵 زيادة بقيمة ({a_diff:,.2f} ر.س)")
@@ -2412,11 +2450,11 @@ else:
             st.markdown("### مؤشرات الرواتب والعمالة")
             st_col1, st_col2, st_col3, st_col4, st_col5, st_col6 = st.columns(6)
             st_col1.metric("العمالة", f"{tot_emp} موظف")
-            st_col2.metric("الرواتب", f"{tot_req:,.0f} ر.س")
-            st_col3.metric("الدفعة 1", f"{tot_p1_all:,.0f} ر.س")
-            st_col4.metric("الدفعة 2", f"{tot_p2_all:,.0f} ر.س")
-            st_col5.metric("الخصومات", f"{tot_ded_all:,.0f} ر.س")
-            st_col6.metric("المتبقي", f"{tot_rem:,.0f} ر.س")
+            st_col2.metric("الرواتب", f"{tot_req:,.0f}")
+            st_col3.metric("الدفعة 1", f"{tot_p1_all:,.0f}")
+            st_col4.metric("الدفعة 2", f"{tot_p2_all:,.0f}")
+            st_col5.metric("الخصومات", f"{tot_ded_all:,.0f}")
+            st_col6.metric("المتبقي", f"{tot_rem:,.0f}")
 
             st.markdown("### ⚡ إجراءات خاطفة وسريعة (لوحة wahby)")
             q_col1, q_col2, q_col3, q_col4, q_col5, q_col6, q_col7 = st.columns(7)
@@ -2455,9 +2493,9 @@ else:
         else:
             c_box1, c_box2 = st.columns(2)
             with c_box1:
-                st.metric("الرصيد المتبقي بعُهدتك", f"{net_acc_now:,.2f} ر.س")
+                st.metric("الرصيد المتبقي بعُهدتك", f"{net_acc_now:,.2f}")
             with c_box2:
-                st.metric("المتبقي بذمة سمان", f"{open_driver_custody_sum:,.2f} ر.س")
+                st.metric("المتبقي بذمة سمان", f"{open_driver_custody_sum:,.2f}")
 
             st.markdown("### ⚡ إجراءات خاطفة وسريعة (لوحة omar)")
             q_col1, q_col2, q_col3, q_col4 = st.columns(4)
@@ -2921,9 +2959,9 @@ else:
 
             # كروت ملخص العُهدة
             dc1, dc2, dc3 = st.columns(3)
-            dc1.metric(f"💰 إجمالي العُهد المسلمة لـ ({selected_driver})", f"{total_given:,.2f} ر.س")
-            dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f} ر.س")
-            dc3.metric("⚠️ المتبقي الإجمالي بذمة السائق", f"{net_remaining:,.2f} ر.س")
+            dc1.metric(f"💰 إجمالي العُهد المسلمة لـ ({selected_driver})", f"{total_given:,.2f}")
+            dc2.metric("🧾 إجمالي الفواتير المصفاة", f"{total_settled:,.2f}")
+            dc3.metric("⚠️ المتبقي الإجمالي بذمة السائق", f"{net_remaining:,.2f}")
 
             st.divider()
 
@@ -3082,8 +3120,8 @@ else:
             st.markdown("### 📊 2. نتائج المطابقة والعجز/الزيادة:")
             diff_amount = actual_counted_cash - system_book_balance
 
-            st.metric("📖 الرصيد الدفتري المسجل بالنظام", f"{system_book_balance:,.2f} ر.س")
-            st.metric("💵 إجمالي النقدية الفعلي باليد", f"{actual_counted_cash:,.2f} ر.س")
+            st.metric("📖 الرصيد الدفتري المسجل بالنظام", f"{system_book_balance:,.2f}")
+            st.metric("💵 إجمالي النقدية الفعلي باليد", f"{actual_counted_cash:,.2f}")
 
             st.divider()
             if diff_amount == 0:
@@ -3252,7 +3290,7 @@ else:
                         parts_txt = "الدفعة الأولى" if _pay_parts(str(v.get('party', ''))) == {1} else ("الدفعة الثانية" if _pay_parts(str(v.get('party', ''))) == {2} else "إجمالي الدفعات")
                         st.success(f"✅ تم خصم ({parts_txt}) من الصندوق لفرع ({b_name}) - سند رقم: #{v.get('code', v.get('id'))} بمبلغ {float(v.get('amount', 0)):,.2f} ر.س")
 
-                    st.metric("💵 إجمالي المبلغ المجهز للخصم بالصندوق", f"{amt_to_deduct:,.2f} ر.س")
+                    st.metric("💵 إجمالي المبلغ المجهز للخصم بالصندوق", f"{amt_to_deduct:,.2f}")
 
                     # تحذير لو المبلغ أكبر من المستحق، وتنبيه لو السند موجود والجدول فاضي
                     _net_due_w = float(target_df_branch['الراتب الأساسي'].sum()) - float(target_df_branch['الخصومات'].sum())
@@ -3405,11 +3443,11 @@ else:
                 st.divider()
                 st.markdown(f"#### الملخص المالي لفرع ({b_name}):")
                 s_col1, s_col2, s_col3, s_col4, s_col5 = st.columns(5)
-                s_col1.metric("إجمالي الرواتب", f"{b_tot_req:,.0f} ر.س")
-                s_col2.metric("إجمالي الدفعة 1", f"{b_tot_p1:,.0f} ر.س")
-                s_col3.metric("إجمالي الدفعة 2", f"{b_tot_p2:,.0f} ر.س")
-                s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
-                s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
+                s_col1.metric("إجمالي الرواتب", f"{b_tot_req:,.0f}")
+                s_col2.metric("إجمالي الدفعة 1", f"{b_tot_p1:,.0f}")
+                s_col3.metric("إجمالي الدفعة 2", f"{b_tot_p2:,.0f}")
+                s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f}")
+                s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f}")
 
                 cash_paid_branch = 0.0
                 for _v in existing_vouchers:
@@ -3426,10 +3464,10 @@ else:
                 net_due_branch = b_tot_req - b_tot_ded
                 st.markdown(f"#### 🏦 حالة الصرف من الصندوق لفرع ({b_name}):")
                 k1, k2, k3, k4 = st.columns(4)
-                k1.metric("المستحق بعد الخصومات", f"{net_due_branch:,.0f} ر.س")
-                k2.metric("المخصوم من الصندوق", f"{cash_paid_branch:,.0f} ر.س")
-                k3.metric("مجهز بالجدول ولم يُخصم بعد", f"{max(0.0, (b_tot_p1 + b_tot_p2) - cash_paid_branch):,.0f} ر.س")
-                k4.metric("🔴 الباقي بعد الصندوق", f"{net_due_branch - cash_paid_branch:,.0f} ر.س")
+                k1.metric("المستحق بعد الخصومات", f"{net_due_branch:,.0f}")
+                k2.metric("المخصوم من الصندوق", f"{cash_paid_branch:,.0f}")
+                k3.metric("مجهز بالجدول ولم يُخصم بعد", f"{max(0.0, (b_tot_p1 + b_tot_p2) - cash_paid_branch):,.0f}")
+                k4.metric("🔴 الباقي بعد الصندوق", f"{net_due_branch - cash_paid_branch:,.0f}")
 
     # 9. موديول حركة الصندوق
     elif selected_option == 'حركة الصندوق':
@@ -3466,10 +3504,10 @@ else:
         net_cash_now = opening_bal + tot_cash_in - tot_cash_out
 
         c_m1, c_m2, c_m3, c_m4 = st.columns(4)
-        c_m1.metric("رصيد أول الشهر", f"{opening_bal:,.2f} ر.س")
-        c_m2.metric("🟢 المقبوضات", f"{tot_cash_in:,.2f} ر.س")
-        c_m3.metric("🔴 المصروفات", f"{tot_cash_out:,.2f} ر.س")
-        c_m4.metric("💵 المتبقي بالصندوق", f"{net_cash_now:,.2f} ر.س")
+        c_m1.metric("رصيد أول الشهر", f"{opening_bal:,.2f}")
+        c_m2.metric("🟢 المقبوضات", f"{tot_cash_in:,.2f}")
+        c_m3.metric("🔴 المصروفات", f"{tot_cash_out:,.2f}")
+        c_m4.metric("💵 المتبقي بالصندوق", f"{net_cash_now:,.2f}")
 
         st.divider()
 
@@ -4474,13 +4512,13 @@ else:
         st.markdown(f"### 📋 2. نموذج الإقرار الضريبي المعمد المطابق لهيئة الزكاة والضريبة والجمارك (ZATCA) - {vat_quarter}:")
 
         m_v1, m_v2, m_v3 = st.columns(3)
-        m_v1.metric("إجمالي ضريبة المبيعات (المخرجات)", f"{net_output_vat:,.2f} ر.س")
-        m_v2.metric("إجمالي ضريبة المشتريات (المدخلات)", f"{net_input_vat:,.2f} ر.س")
+        m_v1.metric("إجمالي ضريبة المبيعات (المخرجات)", f"{net_output_vat:,.2f}")
+        m_v2.metric("إجمالي ضريبة المشتريات (المدخلات)", f"{net_input_vat:,.2f}")
         
         if net_vat_payable >= 0:
-            m_v3.metric("🔴 صافي الضريبة المستحقة للسداد", f"{net_vat_payable:,.2f} ر.س")
+            m_v3.metric("🔴 صافي الضريبة المستحقة للسداد", f"{net_vat_payable:,.2f}")
         else:
-            m_v3.metric("🟢 صافي الضريبة المستحقة للاسترداد", f"{abs(net_vat_payable):,.2f} ر.س")
+            m_v3.metric("🟢 صافي الضريبة المستحقة للاسترداد", f"{abs(net_vat_payable):,.2f}")
 
         zatca_official_html = f"""
         <table class="zatca-table">
@@ -4859,11 +4897,11 @@ else:
                 st.divider()
                 st.markdown(f"#### الملخص المالي لفرع ({b_name}):")
                 s_col1, s_col2, s_col3, s_col4, s_col5 = st.columns(5)
-                s_col1.metric("إجمالي الرواتب", f"{b_tot_req:,.0f} ر.س")
-                s_col2.metric("إجمالي الدفعة 1", f"{b_tot_p1:,.0f} ر.س")
-                s_col3.metric("إجمالي الدفعة 2", f"{b_tot_p2:,.0f} ر.س")
-                s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f} ر.س")
-                s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f} ر.س")
+                s_col1.metric("إجمالي الرواتب", f"{b_tot_req:,.0f}")
+                s_col2.metric("إجمالي الدفعة 1", f"{b_tot_p1:,.0f}")
+                s_col3.metric("إجمالي الدفعة 2", f"{b_tot_p2:,.0f}")
+                s_col4.metric("إجمالي الخصومات", f"{b_tot_ded:,.0f}")
+                s_col5.metric("إجمالي المتبقي", f"{b_tot_rem:,.0f}")
 
                 cash_paid_branch = 0.0
                 for _v in existing_vouchers:
@@ -4878,10 +4916,10 @@ else:
                 net_due_branch = b_tot_req - b_tot_ded
                 st.markdown(f"#### 🏦 حالة الصرف من الصندوق لفرع ({b_name}):")
                 k1, k2, k3, k4 = st.columns(4)
-                k1.metric("المستحق بعد الخصومات", f"{net_due_branch:,.0f} ر.س")
-                k2.metric("المخصوم من الصندوق", f"{cash_paid_branch:,.0f} ر.س")
-                k3.metric("مجهز بالجدول ولم يُخصم بعد", f"{max(0.0, (b_tot_p1 + b_tot_p2) - cash_paid_branch):,.0f} ر.س")
-                k4.metric("🔴 الباقي بعد الصندوق", f"{net_due_branch - cash_paid_branch:,.0f} ر.س")
+                k1.metric("المستحق بعد الخصومات", f"{net_due_branch:,.0f}")
+                k2.metric("المخصوم من الصندوق", f"{cash_paid_branch:,.0f}")
+                k3.metric("مجهز بالجدول ولم يُخصم بعد", f"{max(0.0, (b_tot_p1 + b_tot_p2) - cash_paid_branch):,.0f}")
+                k4.metric("🔴 الباقي بعد الصندوق", f"{net_due_branch - cash_paid_branch:,.0f}")
 
     elif selected_option == 'دليل الموظفين' and st.session_state.user_role == "admin":
         st.subheader('👤 دليل الموظفين والملفات الإدارية')
