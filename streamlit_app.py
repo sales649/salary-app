@@ -848,24 +848,58 @@ august_payroll_data = [
 ]
 
 @st.cache_data(ttl=600)
+def _fetch_cloud_store_cached(key_name):
+    # لو القراءة فشلت بنرفع خطأ عشان الكاش ما يحفظش نتيجة فاضية غلط
+    response = supabase.table('app_stores').select('data_val').eq('store_key', key_name).execute()
+    if response.data and len(response.data) > 0:
+        return {'found': True, 'val': response.data[0]['data_val']}
+    return {'found': False, 'val': None}
+
 def fetch_cloud_store(key_name, default_data):
-    # قراءة طازجة من السحابة (الكاش العام بيتمسح مع كل حفظ) عشان كل مستخدم يشوف شغل التاني فوراً
     try:
-        response = supabase.table('app_stores').select('data_val').eq('store_key', key_name).execute()
-        if response.data and len(response.data) > 0:
-            return response.data[0]['data_val']
+        r = _fetch_cloud_store_cached(key_name)
+        if r['found']:
+            return r['val']
     except Exception:
         pass
     return default_data
 
+def fetch_cloud_store_strict(key_name):
+    """قراءة مباشرة بدون كاش. بترجع (نجحت؟, القيمة). لو فشلت ما نكتبش فوق البيانات."""
+    try:
+        response = supabase.table('app_stores').select('data_val').eq('store_key', key_name).execute()
+        if response.data and len(response.data) > 0:
+            return True, response.data[0]['data_val']
+        return True, None
+    except Exception:
+        return False, None
+
+def flash(kind, msg):
+    """رسالة بتفضل لحد ما تظهر حتى بعد st.rerun(). kind: success / warning / error"""
+    st.session_state.setdefault('_flash', []).append((kind, msg))
+
+def show_flashes():
+    for kind, msg in st.session_state.pop('_flash', []):
+        if kind == 'success':
+            st.success("✅ " + msg)
+        elif kind == 'warning':
+            st.warning("⚠️ " + msg)
+        else:
+            st.error("❌ " + msg)
+
 def save_cloud_store(key_name, data_val):
     session_key = f"cloud_cache_{key_name}"
     st.session_state[session_key] = data_val
-    fetch_cloud_store.clear()
     try:
-        supabase.table('app_stores').upsert({'store_key': key_name, 'data_val': data_val}).execute()
+        _fetch_cloud_store_cached.clear()
     except Exception:
         pass
+    try:
+        supabase.table('app_stores').upsert({'store_key': key_name, 'data_val': data_val}).execute()
+        return True
+    except Exception as e:
+        flash('error', f"فشل الحفظ في قاعدة البيانات ({key_name}) - الحركة ما اتسجلتش. جرّب تاني، ولو اتكرر ابعت الرسالة دي للمطور: {str(e)[:120]}")
+        return False
 
 def load_last_selected_month():
     val = fetch_cloud_store('last_selected_month', {'last_month': 'أغسطس 2026'})
@@ -930,7 +964,7 @@ def run_daily_auto_backup(keep_days=30):
         rows = supabase.table('app_stores').select('store_key,data_val').execute().data or []
         bundle = {
             r['store_key']: r['data_val'] for r in rows
-            if not str(r['store_key']).startswith('auto_backup_') and r['store_key'] != 'cashbox_data_backup_before_move'
+            if not str(r['store_key']).startswith(('auto_backup_', 'cashbox_hist_', 'cashbox_blocked_')) and r['store_key'] != 'cashbox_data_backup_before_move'
         }
         supabase.table('app_stores').upsert({'store_key': bk_key, 'data_val': {'timestamp': get_ksa_now_str(), 'stores': bundle}}).execute()
         old = supabase.table('app_stores').select('store_key').like('store_key', 'auto_backup_%').execute().data or []
@@ -978,29 +1012,30 @@ def load_monthly_payroll_store():
     return fetch_cloud_store('monthly_payroll_store_v4', {})
 
 def save_monthly_payroll_store(store_data):
-    save_cloud_store('monthly_payroll_store_v4', store_data)
+    return save_cloud_store('monthly_payroll_store_v4', store_data)
 
 def get_payroll_for_month(month_name):
-    store = load_monthly_payroll_store()
+    ok, store = fetch_cloud_store_strict('monthly_payroll_store_v4')
+    if not ok:
+        flash('error', "تعذر قراءة جدول الرواتب من قاعدة البيانات دلوقتي. اعمل تحديث للصفحة - ولا تحفظ أي تعديل قبل ما الجدول يظهر صح.")
+        return pd.DataFrame(august_payroll_data).assign(**{'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الخصومات': 0.0, 'الدفعة المدفوعة': 0.0})
+    if not isinstance(store, dict):
+        store = {}
     new_emp_dict = {m['م']: m for m in august_payroll_data if m['م'] >= 56}
-    
+
     if month_name in store and len(store[month_name]) > 0:
-        existing_list = store[month_name]
-        updated_list = []
-        existing_ids = set()
-        for item in existing_list:
-            m_id = item['م']
-            if m_id in new_emp_dict:
-                updated_list.append(new_emp_dict[m_id])
-            else:
-                updated_list.append(item)
-            existing_ids.add(m_id)
+        existing_list = list(store[month_name])
+        existing_ids = {item.get('م') for item in existing_list}
+        added = False
+        # الموظفين الموجودين بيتحفظوا زي ما هما (عشان الدفعات اللي اتصرفت ما تتمسحش)، والجداد بس بيتضافوا
         for m_id, new_m in new_emp_dict.items():
             if m_id not in existing_ids:
-                updated_list.append(new_m)
-        store[month_name] = updated_list
-        save_monthly_payroll_store(store)
-        return pd.DataFrame(updated_list)
+                existing_list.append(dict(new_m))
+                added = True
+        if added:
+            store[month_name] = existing_list
+            save_monthly_payroll_store(store)
+        return pd.DataFrame(existing_list)
     else:
         df_base = pd.DataFrame(august_payroll_data)
         if month_name != 'أغسطس 2026':
@@ -1015,9 +1050,14 @@ def get_payroll_for_month(month_name):
         return df_base
 
 def save_payroll_for_month(df, month_name):
-    store = load_monthly_payroll_store()
+    ok, store = fetch_cloud_store_strict('monthly_payroll_store_v4')
+    if not ok:
+        flash('error', "الحفظ اتوقف: مقدرتش أقرا جدول الرواتب الحالي من قاعدة البيانات، وخفت أكتب فوق بياناتك. جرّب تاني.")
+        return False
+    if not isinstance(store, dict):
+        store = {}
     store[month_name] = df.to_dict(orient='records')
-    save_monthly_payroll_store(store)
+    return save_monthly_payroll_store(store)
 
 def load_cash_data():
     return fetch_cloud_store('cashbox_data', {})
@@ -1068,11 +1108,10 @@ def save_cash_data(data, allow_shrink=False):
                     supabase.table('app_stores').upsert({'store_key': f"cashbox_blocked_{get_ksa_now().strftime('%Y%m%d_%H%M%S')}", 'data_val': old}).execute()
                 except Exception:
                     pass
-                st.session_state['cash_block_msg'] = "⛔ تم منع حفظ كان هيمسح حركات موجودة في الصندوق. البيانات الحالية محمية وما اتغيرتش، وفي نسخة منها محفوظة. ابعت للمطور اللي كنت بتعمله لحظتها."
+                flash('error', "تم منع حفظ كان هيمسح حركات موجودة في الصندوق. البيانات الحالية محمية وما اتغيرتش، وفي نسخة منها محفوظة. ابعت للمطور اللي كنت بتعمله لحظتها.")
                 return False
         _snapshot_cash(old)
-    save_cloud_store('cashbox_data', data)
-    return True
+    return bool(save_cloud_store('cashbox_data', data))
 
 def load_audit_data():
     return fetch_cloud_store('audit_history', [])
@@ -2013,6 +2052,7 @@ else:
 
     # 4. الواجهة الرئيسية الشاملة
     selected_option = st.session_state.get('current_view', 'الرئيسية')
+    show_flashes()
 # 🚚 موديول إدارة عُهدة السواقين المباشر (مضبوط الحسابات وتصحيح المتبقي لـ سمان)
     if st.session_state.get('current_view') in ['عُهدة السواقين', 'عُهد السواقين', 'عهدة السواقين']:
         drivers_data = load_drivers_data()
@@ -3000,16 +3040,34 @@ else:
         curr_m_idx = st.session_state.months_list.index(month_selected)
         prev_month_label = st.session_state.months_list[curr_m_idx - 1] if curr_m_idx > 0 else 'أغسطس 2026'
 
+        # شهر الرواتب منفصل عن شهر الصندوق: الرواتب بتتصرف غالباً في الشهر اللي بعده
+        payroll_month = st.radio(
+            "📅 شهر الرواتب اللي بتشتغل عليه:",
+            [prev_month_label, month_selected],
+            horizontal=True,
+            key=f"pay_month_view_{month_selected}"
+        )
+        if payroll_month == month_selected:
+            payroll_view_df = st.session_state.payroll_df
+        else:
+            payroll_view_df = get_payroll_for_month(payroll_month)
+        st.caption(f"جدول الرواتب المعروض: ({payroll_month}) | سندات الصرف بتتسجل في صندوق: ({month_selected})")
+
         t1, t2, t3, t4 = st.tabs(['مصنع الخرج', 'مستودع الخرج', 'مستودع الرياض', 'رواتب متنوعة'])
         branches = [('مصنع ميم الخماسية الخرج', t1), ('مستودع ميم الخماسية الخرج', t2), ('مستودع ميم الخماسية الرياض', t3), ('رواتب متنوعة', t4)]
         
         all_cash_db = load_cash_data()
-        current_month_cash = all_cash_db.get(month_selected, {'transactions': [], 'acc_transactions': []})
-        existing_vouchers = current_month_cash.get('transactions', []) + current_month_cash.get('acc_transactions', [])
+        existing_vouchers = []
+        for _cm, _cmv in (all_cash_db.items() if isinstance(all_cash_db, dict) else []):
+            if isinstance(_cmv, dict):
+                for _bk in ('transactions', 'acc_transactions'):
+                    for _t in (_cmv.get(_bk, []) or []):
+                        if isinstance(_t, dict):
+                            existing_vouchers.append({**_t, '_cash_month': _cm})
 
         for b_name, tab_obj in branches:
             with tab_obj:
-                df_b_curr = st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].copy()
+                df_b_curr = payroll_view_df[payroll_view_df['الفرع'] == b_name].copy()
 
                 already_settled_vouchers = [
                     v for v in existing_vouchers 
@@ -3020,42 +3078,30 @@ else:
                 col_auto1, col_auto2 = st.columns([1.3, 1.7])
                 with col_auto1:
                     if st.button(f'توزيع المتبقي كـ "دفعة 2" تلقائياً ({b_name})', key=f"auto_btn_{b_name}"):
-                        for idx, row in st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == b_name].iterrows():
+                        for idx, row in payroll_view_df[payroll_view_df['الفرع'] == b_name].iterrows():
                             req_s = row['الراتب الأساسي']
                             p1 = row.get('الدفعة 1', 0)
                             ded = row.get('الخصومات', 0)
                             rem_needed = max(0, req_s - (p1 + ded))
-                            st.session_state.payroll_df.loc[idx, 'الدفعة 2'] = rem_needed
-                            st.session_state.payroll_df.loc[idx, 'الدفعة المدفوعة'] = p1 + rem_needed
-                            st.session_state.payroll_df.loc[idx, 'المتبقي'] = 0.0
-                        save_payroll_for_month(st.session_state.payroll_df, month_selected)
-                        st.success("تم التوزيع وتصفير المتبقي!")
+                            payroll_view_df.loc[idx, 'الدفعة 2'] = rem_needed
+                            payroll_view_df.loc[idx, 'الدفعة المدفوعة'] = p1 + rem_needed
+                            payroll_view_df.loc[idx, 'المتبقي'] = 0.0
+                        if save_payroll_for_month(payroll_view_df, payroll_month):
+                            flash('success', f"تم توزيع المتبقي كدفعة 2 على رواتب ({b_name}) لشهر ({payroll_month}) وتصفير المتبقي. راجع الجدول وبعدها اعمل خصم الصندوق.")
                         st.rerun()
 
                 with col_auto2:
                     _post_msg = st.session_state.pop(f"sal_post_msg_{b_name}", None)
                     if _post_msg:
                         st.success(_post_msg)
-                    source_options = [f"رواتب شهر ({month_selected}) الحالي", f"رواتب شهر ({prev_month_label}) السابق"]
-
-                    src_choice = st.selectbox(
-                        "اختر مصدر الرواتب المراد خصمها بالصندوق:",
-                        source_options,
-                        key=f"src_choice_select_{b_name}_{month_selected}"
-                    )
-
                     pay_choice = st.selectbox(
                         "اختر الدفعة المراد خصمها بالصندوق:",
                         ["إجمالي الدفعات معاً", "الدفعة الأولى فقط", "الدفعة الثانية فقط"],
                         key=f"pay_choice_select_{b_name}_{month_selected}"
                     )
 
-                    if "السابق" in src_choice:
-                        target_df_calc = get_payroll_for_month(prev_month_label)
-                        label_month_used = prev_month_label
-                    else:
-                        target_df_calc = st.session_state.payroll_df
-                        label_month_used = month_selected
+                    target_df_calc = payroll_view_df
+                    label_month_used = payroll_month
 
                     target_df_branch = target_df_calc[target_df_calc['الفرع'] == b_name]
 
@@ -3083,7 +3129,7 @@ else:
                             continue
                         if "شهر (" in v_party and f"شهر ({label_month_used})" not in v_party:
                             continue
-                        if "شهر (" not in v_party and label_month_used != month_selected:
+                        if "شهر (" not in v_party and v.get('_cash_month') != label_month_used:
                             continue
                         posted_vouchers.append(v)
 
@@ -3098,7 +3144,20 @@ else:
                         parts_txt = "الدفعة الأولى" if _pay_parts(str(v.get('party', ''))) == {1} else ("الدفعة الثانية" if _pay_parts(str(v.get('party', ''))) == {2} else "إجمالي الدفعات")
                         st.success(f"✅ تم خصم ({parts_txt}) من الصندوق لفرع ({b_name}) - سند رقم: #{v.get('code', v.get('id'))} بمبلغ {float(v.get('amount', 0)):,.2f} ر.س")
 
-                    st.markdown(f"#### 💵 **إجمالي المبلغ المجهز للخصم بالصندوق:** `{amt_to_deduct:,.2f} ر.س`")
+                    st.metric("💵 إجمالي المبلغ المجهز للخصم بالصندوق", f"{amt_to_deduct:,.2f} ر.س")
+
+                    # تحذير لو المبلغ أكبر من المستحق، وتنبيه لو السند موجود والجدول فاضي
+                    _net_due_w = float(target_df_branch['الراتب الأساسي'].sum()) - float(target_df_branch['الخصومات'].sum())
+                    _posted_total_w = sum(float(v.get('amount', 0) or 0) for v in posted_vouchers)
+                    if not choice_blocked and amt_to_deduct > 0 and (_posted_total_w + float(amt_to_deduct)) > _net_due_w + 0.01:
+                        st.warning(f"⚠️ المبلغ ({amt_to_deduct:,.2f}) مع اللي اتصرف قبل كده ({_posted_total_w:,.2f}) أكبر من المستحق بعد الخصومات ({_net_due_w:,.2f}) بزيادة {(_posted_total_w + float(amt_to_deduct) - _net_due_w):,.2f} ر.س. راجع الأرقام قبل التأكيد.")
+                    _p1_vouchers = [v for v in posted_vouchers if 1 in _pay_parts(str(v.get('party', '')))]
+                    if 1 in posted_parts and float(target_df_branch['الدفعة 1'].sum()) == 0 and float(target_df_branch['الدفعة 2'].sum()) == 0:
+                        st.error(f"❌ فيه سند صرف للدفعة الأولى بمبلغ {_posted_total_w:,.2f} ر.س في الصندوق، لكن جدول الرواتب لشهر ({payroll_month}) مفيهوش أي دفعات. الأرقام في الجدول ناقصة - اكتب الدفعة 1 لكل موظف ثم اضغط حفظ التعديلات، عشان توزيع الدفعة 2 يطلع صح.")
+                    elif posted_vouchers and abs(_posted_total_w - float(target_df_branch['الدفعة المدفوعة'].sum())) > 1 and 1 in posted_parts and 2 not in posted_parts:
+                        _tbl_p1 = float(target_df_branch['الدفعة 1'].sum())
+                        if abs(_posted_total_w - _tbl_p1) > 1:
+                            st.warning(f"⚠️ مجموع الدفعة 1 في الجدول ({_tbl_p1:,.2f}) مختلف عن سند الصندوق ({_posted_total_w:,.2f}). فرق {abs(_posted_total_w - _tbl_p1):,.2f} ر.س.")
 
                     if choice_blocked:
                         st.button(f"🔒 ({pay_choice}) تم اعتمادها بالصندوق لـ {b_name}", key=f"dis_trf_btn_{b_name}", disabled=True, use_container_width=True)
@@ -3131,7 +3190,9 @@ else:
                             })
                             m_cash[target_trans_key] = c_trans
                             all_cash[month_selected] = m_cash
-                            save_cash_data(all_cash)
+                            if not save_cash_data(all_cash):
+                                show_flashes()
+                                st.stop()
                             _paid_before = sum(float(v.get('amount', 0) or 0) for v in posted_vouchers)
                             _net_due = float(target_df_branch['الراتب الأساسي'].sum()) - float(target_df_branch['الخصومات'].sum())
                             _rem_after = _net_due - (_paid_before + float(amt_to_deduct))
@@ -3142,10 +3203,24 @@ else:
                             )
                             st.rerun()
 
-                cols_rtl = ['م', 'الاسم', 'الوظيفة', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات', 'المتبقي', 'الملاحظات']
+                # الجدول من اليمين للشمال: الأعمدة معكوسة (مسلسل على أقصى اليمين)
+                cols_rtl = ['الحالة', 'الملاحظات', 'المتبقي', 'الخصومات', 'الدفعة 2', 'الدفعة 1', 'الراتب الأساسي', 'الوظيفة', 'الاسم', 'م']
+                def _row_status(r):
+                    _due = float(r.get('الراتب الأساسي', 0) or 0) - float(r.get('الخصومات', 0) or 0)
+                    _paid = float(r.get('الدفعة 1', 0) or 0) + float(r.get('الدفعة 2', 0) or 0)
+                    if _paid > _due + 0.01:
+                        return "⚠️ زيادة"
+                    if _due > 0 and abs(_paid - _due) <= 0.01:
+                        return "✅ مكتمل"
+                    if _paid > 0:
+                        return "🟡 جزئي"
+                    return "⏳ لم يُصرف"
+                df_b_curr['المتبقي'] = df_b_curr['الراتب الأساسي'] - df_b_curr['الخصومات'] - df_b_curr['الدفعة 1'] - df_b_curr['الدفعة 2']
+                df_b_curr['الحالة'] = [_row_status(_r) for _, _r in df_b_curr.iterrows()]
                 edited_b = st.data_editor(
                     df_b_curr[cols_rtl],
                     column_config={
+                        "الحالة": st.column_config.TextColumn("الحالة", disabled=True),
                         "م": st.column_config.NumberColumn("مسلسل", disabled=True),
                         "الاسم": st.column_config.TextColumn("اسم الموظف"),
                         "الوظيفة": st.column_config.TextColumn("الوظيفة"),
@@ -3158,30 +3233,37 @@ else:
                     },
                     use_container_width=True,
                     hide_index=True,
-                    key=f"ed_{b_name}_{month_selected}"
+                    key=f"ed_{b_name}_{payroll_month}"
                 )
+                _over = edited_b[(edited_b['الدفعة 1'] + edited_b['الدفعة 2'] + edited_b['الخصومات']) > (edited_b['الراتب الأساسي'] + 0.01)]
+                if len(_over) > 0:
+                    st.warning("⚠️ الدفعات + الخصومات أكبر من الراتب المستحق عند: " + "، ".join(
+                        f"{r['الاسم']} (زيادة {(r['الدفعة 1'] + r['الدفعة 2'] + r['الخصومات'] - r['الراتب الأساسي']):,.0f})" for _, r in _over.iterrows()))
                 
                 if st.button(f"حفظ التعديلات ({b_name})", key=f"btn_save_ed_{b_name}"):
                     for idx, row in edited_b.iterrows():
                         m_id = row['م']
-                        target_idx = st.session_state.payroll_df[st.session_state.payroll_df['م'] == m_id].index[0]
+                        target_idx = payroll_view_df[payroll_view_df['م'] == m_id].index[0]
                         p1 = row['الدفعة 1']
                         p2 = row['الدفعة 2']
                         ded = row['الخصومات']
                         sal = row['الراتب الأساسي']
                         tot_p = p1 + p2
-                        st.session_state.payroll_df.loc[target_idx, 'الاسم'] = row['الاسم']
-                        st.session_state.payroll_df.loc[target_idx, 'الوظيفة'] = row['الوظيفة']
-                        st.session_state.payroll_df.loc[target_idx, 'الراتب الأساسي'] = sal
-                        st.session_state.payroll_df.loc[target_idx, 'الخصومات'] = ded
-                        st.session_state.payroll_df.loc[target_idx, 'الدفعة 1'] = p1
-                        st.session_state.payroll_df.loc[target_idx, 'الدفعة 2'] = p2
-                        st.session_state.payroll_df.loc[target_idx, 'الدفعة المدفوعة'] = tot_p
-                        st.session_state.payroll_df.loc[target_idx, 'المتبقي'] = sal - (tot_p + ded)
-                        st.session_state.payroll_df.loc[target_idx, 'الملاحظات'] = row['الملاحظات']
+                        payroll_view_df.loc[target_idx, 'الاسم'] = row['الاسم']
+                        payroll_view_df.loc[target_idx, 'الوظيفة'] = row['الوظيفة']
+                        payroll_view_df.loc[target_idx, 'الراتب الأساسي'] = sal
+                        payroll_view_df.loc[target_idx, 'الخصومات'] = ded
+                        payroll_view_df.loc[target_idx, 'الدفعة 1'] = p1
+                        payroll_view_df.loc[target_idx, 'الدفعة 2'] = p2
+                        payroll_view_df.loc[target_idx, 'الدفعة المدفوعة'] = tot_p
+                        payroll_view_df.loc[target_idx, 'المتبقي'] = sal - (tot_p + ded)
+                        payroll_view_df.loc[target_idx, 'الملاحظات'] = row['الملاحظات']
                     
-                    save_payroll_for_month(st.session_state.payroll_df, month_selected)
-                    st.success("تم الحفظ بنجاح!")
+                    if save_payroll_for_month(payroll_view_df, payroll_month):
+                        if len(_over) > 0:
+                            flash('warning', f"تم الحفظ، لكن فيه {len(_over)} موظف دفعاته أكبر من المستحق: " + "، ".join(str(n) for n in _over['الاسم']))
+                        else:
+                            flash('success', f"تم حفظ تعديلات رواتب ({b_name}) لشهر ({payroll_month}).")
                     st.rerun()
 
                 b_tot_req = edited_b['الراتب الأساسي'].sum()
@@ -3206,7 +3288,9 @@ else:
                         continue
                     if not (f"فرع ({b_name})" in _vp or b_name in _vp):
                         continue
-                    if "شهر (" in _vp and f"شهر ({month_selected})" not in _vp:
+                    if "شهر (" in _vp and f"شهر ({payroll_month})" not in _vp:
+                        continue
+                    if "شهر (" not in _vp and _v.get('_cash_month') != payroll_month:
                         continue
                     cash_paid_branch += float(_v.get('amount', 0) or 0)
                 net_due_branch = b_tot_req - b_tot_ded
@@ -3996,6 +4080,45 @@ else:
                 st.info("النسخة دي مفيهاش بيانات صندوق.")
         else:
             st.info("مفيش نسخ للاسترجاع حالياً.")
+
+        st.divider()
+        st.markdown("#### 🛟 استرجاع جدول رواتب شهر من نسخة محفوظة")
+        st.caption("بيرجّع جدول رواتب شهر واحد بس (الدفعات والخصومات) من نسخة يومية. باقي الشهور والصندوق ما بيتلمسوش.")
+        try:
+            _pk = sorted([r['store_key'] for r in (supabase.table('app_stores').select('store_key').like('store_key', 'auto_backup_%').execute().data or [])], reverse=True)
+        except Exception:
+            _pk = []
+        if _pk:
+            _pk_sel = st.selectbox("اختار النسخة:", _pk, key="prs_snap_sel")
+            _prow = supabase.table('app_stores').select('data_val').eq('store_key', _pk_sel).execute().data
+            _pstore = ((_prow[0]['data_val'] or {}).get('stores') or {}).get('monthly_payroll_store_v4') if _prow else None
+            if isinstance(_pstore, dict) and _pstore:
+                _summ = []
+                for _mn, _rows in _pstore.items():
+                    try:
+                        _summ.append({'الشهر': _mn, 'مجموع الدفعة 1': sum(float(r.get('الدفعة 1', 0) or 0) for r in _rows), 'مجموع الدفعة 2': sum(float(r.get('الدفعة 2', 0) or 0) for r in _rows), 'عدد الموظفين': len(_rows)})
+                    except Exception:
+                        pass
+                st.dataframe(pd.DataFrame(_summ), use_container_width=True, hide_index=True)
+                _pm_sel = st.selectbox("الشهر المراد استرجاعه:", list(_pstore.keys()), key="prs_month_sel")
+                _prs_ok = st.checkbox("أؤكد استرجاع جدول الشهر ده من النسخة", key="prs_confirm_chk")
+                if st.button("↩️ استرجاع جدول الرواتب", key="prs_exec_btn", disabled=not _prs_ok, use_container_width=True):
+                    _ok, _cur = fetch_cloud_store_strict('monthly_payroll_store_v4')
+                    if not _ok:
+                        st.error("❌ تعذر قراءة الرواتب الحالية، الاسترجاع اتوقف.")
+                    else:
+                        _cur = _cur if isinstance(_cur, dict) else {}
+                        if _cur.get(_pm_sel):
+                            save_cloud_store(f"payroll_before_restore_{get_ksa_now().strftime('%Y%m%d_%H%M%S')}", _cur)
+                        _cur[_pm_sel] = _pstore[_pm_sel]
+                        if save_monthly_payroll_store(_cur):
+                            st.success(f"✅ تم استرجاع جدول رواتب ({_pm_sel}) من النسخة {_pk_sel}.")
+                        else:
+                            show_flashes()
+            else:
+                st.info("النسخة دي مفيهاش بيانات رواتب.")
+        else:
+            st.info("مفيش نسخ يومية لسه.")
 
         st.divider()
         with st.expander("🔁 نقل حركات الصندوق من شهر لشهر (حسب تاريخ كل حركة)", expanded=False):
