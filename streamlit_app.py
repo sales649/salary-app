@@ -375,60 +375,68 @@ def save_uploaded_sales_batches(data):
                 st.info(f"لا توجد تصفيات سابقة مسجلة لـ ({selected_driver}).")
                 
 if 'theme_mode' not in st.session_state:
-    st.session_state['theme_mode'] = '🌙 وضع ليلي'
+    st.session_state['theme_mode'] = '🌗 تلقائي'
 
-if '🌙' in st.session_state['theme_mode']:
-    bg_app = "#0B132B"
-    bg_card = "#1C2541"
-    bg_sidebar = "#1C2541"
-    text_color = "#FFFFFF"
-    border_color = "#D97706"
-    btn_sidebar_bg = "linear-gradient(135deg, #1C2541 0%, #0B132B 100%)"
-    btn_sidebar_text = "#F59E0B"
-    header_bg = "#0B132B"
-    dialog_bg = "#1C2541"
-    dialog_text = "#FFFFFF"
-    btn_main_bg = "linear-gradient(135deg, #1C2541 0%, #0B132B 100%)"
-    btn_main_text = "#FFFFFF"
-    file_uploader_bg = "#1C2541"
-    file_uploader_text = "#FFFFFF"
-    dropdown_bg = "#1C2541"
-    dropdown_text = "#F59E0B"
-    dropdown_hover = "#0B132B"
-    
-    stars_css = """
-        body, .stApp, [data-testid="stHeader"] {
-            background-color: #0B132B !important;
-            background-image: 
-                radial-gradient(2px 2px at 20px 30px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(2px 2px at 40px 70px, #f59e0b, rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 90px 40px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(2px 2px at 160px 120px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(1.5px 1.5px at 230px 190px, #f59e0b, rgba(0,0,0,0)),
-                radial-gradient(2px 2px at 300px 80px, #ffffff, rgba(0,0,0,0));
-            background-repeat: repeat;
-            background-size: 350px 350px;
-        }
-    """
+_tm_now = st.session_state['theme_mode']
+if '🌗' in _tm_now:
+    _is_night = not (6 <= get_ksa_now().hour < 18)   # نهاري من 6 الصبح لـ 6 المغرب، وليلي بعد كده
 else:
-    bg_app = "#F8FAFC"
+    _is_night = '🌙' in _tm_now
+
+if _is_night:
+    bg_app = "#0B1220"
+    bg_card = "#121B2E"
+    bg_sidebar = "#0F1729"
+    text_color = "#E6EBF5"
+    muted_color = "#8D9BB8"
+    border_color = "#24324D"
+    accent = "#5B9BFF"
+    accent_ink = "#06142B"
+    accent_hover = "#7FB2FF"
+    btn_sidebar_bg = "#121B2E"
+    btn_sidebar_text = "#E6EBF5"
+    header_bg = "#0B1220"
+    dialog_bg = "#121B2E"
+    dialog_text = "#E6EBF5"
+    btn_main_bg = "#5B9BFF"
+    btn_main_text = "#06142B"
+    file_uploader_bg = "#121B2E"
+    file_uploader_text = "#E6EBF5"
+    dropdown_bg = "#121B2E"
+    dropdown_text = "#E6EBF5"
+    dropdown_hover = "#1D2A47"
+    color_scheme = "dark"
+else:
+    bg_app = "#F4F6FB"
     bg_card = "#FFFFFF"
-    bg_sidebar = "#F1F5F9"
-    text_color = "#0F172A"
-    border_color = "#D97706"
-    btn_sidebar_bg = "linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)"
-    btn_sidebar_text = "#D97706"
-    header_bg = "#F8FAFC"
+    bg_sidebar = "#EAEFF8"
+    text_color = "#14213D"
+    muted_color = "#5C6B8A"
+    border_color = "#DEE4F0"
+    accent = "#1D4ED8"
+    accent_ink = "#FFFFFF"
+    accent_hover = "#1E40AF"
+    btn_sidebar_bg = "#FFFFFF"
+    btn_sidebar_text = "#14213D"
+    header_bg = "#F4F6FB"
     dialog_bg = "#FFFFFF"
-    dialog_text = "#0F172A"
-    btn_main_bg = "linear-gradient(135deg, #FFFFFF 0%, #F1F5F9 100%)"
-    btn_main_text = "#0B132B"
-    file_uploader_bg = "#F1F5F9"
-    file_uploader_text = "#0F172A"
+    dialog_text = "#14213D"
+    btn_main_bg = "#1D4ED8"
+    btn_main_text = "#FFFFFF"
+    file_uploader_bg = "#FFFFFF"
+    file_uploader_text = "#14213D"
     dropdown_bg = "#FFFFFF"
-    dropdown_text = "#D97706"
-    dropdown_hover = "#F1F5F9"
-    stars_css = ""
+    dropdown_text = "#14213D"
+    dropdown_hover = "#EAEFF8"
+    color_scheme = "light"
+
+stars_css = f"""
+        :root {{ color-scheme: {color_scheme}; --c-card: {bg_card}; --c-text: {text_color}; --c-border: {border_color}; --c-accent: {accent}; --c-muted: {muted_color}; }}
+        body, .stApp, [data-testid="stHeader"] {{
+            background-color: {bg_app} !important;
+            background-image: none !important;
+        }}
+"""
 
 pwa_manifest_json = json.dumps({
     "name": "5M Accounting System",
@@ -468,7 +476,7 @@ st.markdown(f"""
 
         [data-testid="stSidebar"] {{
             background-color: {bg_sidebar} !important;
-            border-left: 2px solid #D97706 !important;
+            border-left: 2px solid {border_color} !important;
         }}
 
         div[data-baseweb="popover"],
@@ -483,7 +491,7 @@ st.markdown(f"""
             color: {dropdown_text} !important;
             font-weight: 800 !important;
             font-size: 14px !important;
-            border-color: #D97706 !important;
+            border-color: {border_color} !important;
         }}
 
         li[role="option"]:hover, div[role="option"]:hover {{
@@ -499,6 +507,12 @@ st.markdown(f"""
             font-size: 0px !important;
             color: transparent !important;
         }}
+
+        button, input, textarea, select, [data-baseweb] *, [data-testid="stDataFrame"], [data-testid="stDataEditor"] {{
+            font-family: 'Cairo', sans-serif !important;
+        }}
+        [data-testid="stAlert"] {{ border-radius: 10px !important; font-weight: 700 !important; }}
+        [data-testid="stSidebar"] {{ box-shadow: none !important; }}
 
         .main .block-container {{
             padding-top: 0.2rem !important;
@@ -520,7 +534,7 @@ st.markdown(f"""
             font-size: 22px !important;
             font-weight: 900 !important;
             text-align: center !important;
-            color: #F59E0B !important;
+            color: {accent} !important;
             white-space: nowrap !important;
         }}
 
@@ -560,14 +574,14 @@ st.markdown(f"""
             margin: 0 auto !important;
             text-align: center !important;
             display: block !important;
-            text-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+            
         }}
 
         .sidebar-section-title {{
-            color: #F59E0B !important;
+            color: {accent} !important;
             font-size: 14px !important;
             font-weight: 900 !important;
-            border-bottom: 2px solid #D97706;
+            border-bottom: 2px solid {border_color};
             padding-bottom: 3px;
             margin-top: 14px;
             margin-bottom: 8px;
@@ -578,7 +592,7 @@ st.markdown(f"""
             width: 100% !important;
             background: {btn_sidebar_bg} !important;
             color: {btn_sidebar_text} !important;
-            border: 1px solid #D97706 !important;
+            border: 1px solid {border_color} !important;
             border-radius: 6px !important;
             font-weight: 800 !important;
             font-size: 13px !important;
@@ -589,14 +603,14 @@ st.markdown(f"""
         }}
 
         [data-testid="stSidebar"] .stButton>button:hover {{
-            background: #D97706 !important;
-            color: #FFFFFF !important;
+            background: {accent} !important;
+            color: {accent_ink} !important;
         }}
 
         div.stButton > button, div.stDownloadButton > button, [data-testid="stFormSubmitButton"] > button {{
             background: {btn_main_bg} !important;
             color: {btn_main_text} !important;
-            border: 1.5px solid #D97706 !important;
+            border: 1.5px solid {accent} !important;
             border-radius: 8px !important;
             font-weight: 900 !important;
             font-size: 13px !important;
@@ -606,9 +620,9 @@ st.markdown(f"""
         }}
 
         div.stButton > button:hover, div.stDownloadButton > button:hover {{
-            background: linear-gradient(135deg, #D97706 0%, #B45309 100%) !important;
+            background: {accent_hover} !important;
             color: #FFFFFF !important;
-            border-color: #F59E0B !important;
+            border-color: {accent_hover} !important;
         }}
 
         .cash-card-item {{
@@ -635,28 +649,28 @@ st.markdown(f"""
         }}
 
         .welcome-card-lux {{
-            background: linear-gradient(135deg, #0B132B 0%, #1E3A8A 100%);
+            background: {bg_card};
             border-radius: 20px;
             padding: 20px 15px;
             text-align: center !important;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
             margin-top: 5px;
-            border: 2px solid #D97706;
+            border: 2px solid {border_color};
         }}
 
         .title-company-royal {{
             font-size: 30px !important;
             font-weight: 900 !important;
-            color: #F59E0B !important;
-            text-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+            color: {accent} !important;
+            
             margin-top: 8px;
             margin-bottom: 8px;
             text-align: center !important;
         }}
 
         .company-header-inner {{
-            background: linear-gradient(135deg, {bg_card} 0%, {bg_app} 100%);
-            border: 2px solid #D97706;
+            background: {bg_card};
+            border: 2px solid {border_color};
             border-radius: 12px;
             padding: 6px 12px;
             text-align: center !important;
@@ -667,14 +681,14 @@ st.markdown(f"""
         .company-header-inner-title {{
             font-size: 20px !important;
             font-weight: 900 !important;
-            color: #F59E0B !important;
+            color: {accent} !important;
             margin: 0 !important;
             text-align: center !important;
         }}
 
         .company-header-inner-sub {{
             font-size: 12px !important;
-            color: #94A3B8 !important;
+            color: {muted_color} !important;
             margin: 0 !important;
         }}
 
@@ -690,7 +704,7 @@ st.markdown(f"""
 
         .date-badge-lux {{
             display: inline-block;
-            background: linear-gradient(135deg, #D97706 0%, #B45309 100%);
+            background: {accent_hover};
             color: #FFFFFF !important;
             padding: 2px 14px;
             border-radius: 20px;
@@ -719,10 +733,10 @@ st.markdown(f"""
             background-color: {bg_card};
         }}
         .zatca-table th {{
-            background-color: #1E3A8A;
-            color: #FFFFFF;
+            background-color: {accent};
+            color: {accent_ink};
             padding: 10px;
-            border: 1px solid #D97706;
+            border: 1px solid {border_color};
             text-align: center;
             font-weight: bold;
         }}
@@ -733,7 +747,7 @@ st.markdown(f"""
         }}
         .zatca-section-header {{
             background-color: #1C2541;
-            color: #F59E0B;
+            color: {accent};
             font-weight: bold;
             text-align: right !important;
             padding-right: 15px !important;
@@ -741,7 +755,7 @@ st.markdown(f"""
         }}
         .zatca-total-row {{
             background-color: #0F172A;
-            color: #F59E0B;
+            color: {accent};
             font-weight: bold;
             font-size: 14px;
         }}
@@ -750,6 +764,84 @@ st.markdown(f"""
             color: #FFFFFF;
             font-weight: bold;
             font-size: 16px;
+        }}
+
+        /* ===== القايمة الجانبية ===== */
+        [data-testid="stSidebar"] [data-testid="stExpander"] {{
+            border: 1px solid {border_color} !important;
+            border-radius: 10px !important;
+            background: {bg_card} !important;
+            margin-bottom: 8px !important;
+        }}
+        [data-testid="stSidebar"] [data-testid="stExpander"] summary {{
+            font-weight: 800 !important;
+            font-size: 14px !important;
+            padding: 8px 10px !important;
+        }}
+        [data-testid="stSidebar"] .stButton > button[kind="primary"],
+        [data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] {{
+            background: {accent} !important;
+            color: {accent_ink} !important;
+            border-color: {accent} !important;
+        }}
+        [data-testid="stSidebar"] .stButton > button {{ text-align: right !important; justify-content: flex-start !important; }}
+
+        /* ===== الشريط العلوي ===== */
+        .topbar-title {{ font-size: 24px !important; font-weight: 900 !important; line-height: 1.3 !important; color: {text_color} !important; }}
+        .topbar-sub {{ font-size: 12px !important; color: {muted_color} !important; font-weight: 600 !important; }}
+        .chip-row {{ display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; }}
+        .chip-ui {{ font-size: 12px !important; font-weight: 700 !important; padding: 4px 10px !important; border-radius: 999px; background: {bg_card}; border: 1px solid {border_color}; color: {muted_color} !important; }}
+        .chip-ok {{ color: #16A34A !important; border-color: #16A34A !important; }}
+
+        /* ===== آخر الحركات ===== */
+        .recent-wrap {{ background: {bg_card}; border: 1px solid {border_color}; border-radius: 12px; overflow-x: auto; }}
+        .recent-table {{ width: 100%; border-collapse: collapse; font-size: 13px; }}
+        .recent-table th {{ background: {bg_app}; color: {muted_color} !important; font-weight: 700; padding: 9px 12px; text-align: right; font-size: 12px; }}
+        .recent-table td {{ padding: 9px 12px; border-top: 1px solid {border_color}; text-align: right; font-variant-numeric: tabular-nums; }}
+        .recent-table tbody tr:nth-child(even) {{ background: rgba(128, 128, 128, 0.06); }}
+        .pill-ui {{ font-size: 12px; font-weight: 800; padding: 2px 10px; border-radius: 999px; }}
+        .pill-in {{ background: rgba(34,197,94,.16); color: #16A34A !important; }}
+        .pill-out {{ background: rgba(239,68,68,.16); color: #DC2626 !important; }}
+        [data-testid="stMetricValue"] div, .amt-pos, .amt-neg {{ font-variant-numeric: tabular-nums; }}
+
+        /* ===== تحسين العرض على الموبايل ===== */
+        @media (max-width: 768px) {{
+            .main .block-container {{
+                padding-left: 0.4rem !important;
+                padding-right: 0.4rem !important;
+                padding-top: 2.5rem !important;
+            }}
+            /* الأعمدة تتحط تحت بعض بدل ما تتزاحم */
+            [data-testid="stHorizontalBlock"] {{
+                flex-wrap: wrap !important;
+                gap: 0.4rem !important;
+            }}
+            [data-testid="stHorizontalBlock"] > [data-testid="stColumn"],
+            [data-testid="stHorizontalBlock"] > [data-testid="column"] {{
+                flex: 1 1 100% !important;
+                min-width: 100% !important;
+                width: 100% !important;
+            }}
+            [data-testid="stSidebar"] {{
+                min-width: 82vw !important;
+                max-width: 86vw !important;
+            }}
+            h1 {{ font-size: 22px !important; }}
+            h2, h3 {{ font-size: 18px !important; }}
+            h4, h5 {{ font-size: 15px !important; }}
+            p, label, span, li {{ font-size: 13px; }}
+            [data-testid="stMetricValue"] div {{ font-size: 18px !important; white-space: normal !important; }}
+            [data-testid="stMetricLabel"] label, [data-testid="stMetricLabel"] div {{ font-size: 12px !important; white-space: normal !important; }}
+            div.stButton > button, div.stDownloadButton > button {{ font-size: 12px !important; padding: 8px 6px !important; white-space: normal !important; }}
+            .stTabs [data-baseweb="tab-list"] {{ overflow-x: auto !important; flex-wrap: nowrap !important; gap: 2px !important; }}
+            .stTabs [data-baseweb="tab"] {{ font-size: 12px !important; padding: 6px 8px !important; white-space: nowrap !important; }}
+            [data-testid="stDataFrame"], [data-testid="stDataEditor"], [data-testid="stTable"] {{ max-width: 100% !important; overflow-x: auto !important; }}
+            .zatca-table {{ display: block; overflow-x: auto; font-size: 11px; }}
+            .cash-card-item {{ flex-wrap: wrap; gap: 4px; }}
+            .welcome-card-lux {{ padding: 14px 8px; }}
+            .title-company-royal {{ font-size: 22px !important; }}
+            .logo-lux {{ font-size: 38px; }}
+            iframe {{ max-width: 100% !important; }}
         }}
     </style>
 """, unsafe_allow_html=True)
@@ -1829,68 +1921,46 @@ else:
         if _blk_msg:
             st.error(_blk_msg)
 
-        st.session_state['theme_mode'] = st.selectbox("نمط الألوان:", ["🌙 وضع ليلي", "☀️ وضع نهاري"], index=0 if "🌙" in st.session_state['theme_mode'] else 1)
 
         st.divider()
 
-        # 1. زر الرئيسية المباشر الخارجي المميز
-        if st.button("🏠 الرئيسية", use_container_width=True):
-            st.session_state['current_view'] = 'الرئيسية'
-            st.rerun()
+        # ===== القايمة الجانبية: مجموعات منسدلة + أيقونات + تمييز الصفحة الحالية =====
+        _cv = st.session_state.get('current_view', 'الرئيسية')
 
-        # 2. قسم الخزائن والصناديق
-        st.markdown('<div class="sidebar-section-title">🏦 الخزائن والصناديق</div>', unsafe_allow_html=True)
-        if st.button("حركة الصندوق", use_container_width=True):
-            st.session_state['current_view'] = 'حركة الصندوق'
-            st.rerun()
-        if st.button("عُهدة السواقين", use_container_width=True):
-            st.session_state['current_view'] = 'عُهدة السواقين'
-            st.rerun()
-        if st.button("جرد الخزينة", use_container_width=True):
-            st.session_state['current_view'] = 'جرد الخزينة'
-            st.rerun()
+        def _nav(label, view):
+            if st.button(label, key=f"nav_{view}", use_container_width=True, type=("primary" if _cv == view else "secondary")):
+                st.session_state['current_view'] = view
+                st.rerun()
 
-        # 3. قسم إدارة المستودع والمخازن
-        st.markdown('<div class="sidebar-section-title">📦 إدارة المستودع والمخزن</div>', unsafe_allow_html=True)
-        if st.button("📦 جرد وحركة المخزون", use_container_width=True):
-            st.session_state['current_view'] = 'جرد وحركة المخزون'
-            st.rerun()
+        _nav("🏠 الرئيسية", 'الرئيسية')
 
-        # 4. قسم إدارة الرواتب والدفعات
+        _g_cash = ['حركة الصندوق', 'عُهدة السواقين', 'جرد الخزينة']
+        with st.expander("🏦 الخزائن والصناديق", expanded=_cv in _g_cash):
+            _nav("💵 حركة الصندوق", 'حركة الصندوق')
+            _nav("🚚 عُهدة السواقين", 'عُهدة السواقين')
+            _nav("🔍 جرد الخزينة", 'جرد الخزينة')
+
+        with st.expander("📦 المستودع والمخزن", expanded=_cv == 'جرد وحركة المخزون'):
+            _nav("📦 جرد وحركة المخزون", 'جرد وحركة المخزون')
+
         if st.session_state.user_role == "admin":
-            st.markdown('<div class="sidebar-section-title">📊 إدارة الرواتب والدفعات</div>', unsafe_allow_html=True)
-            if st.button("إدخال الدفعات", use_container_width=True):
-                st.session_state['current_view'] = 'إدخال الدفعات'
-                st.rerun()
-            if st.button("كشف مسير الرواتب", use_container_width=True):
-                st.session_state['current_view'] = 'مسير الرواتب'
-                st.rerun()
-            if st.button("🖨️ طباعة سندات الرواتب A4", use_container_width=True):
-                st.session_state['current_view'] = 'طباعة السندات'
-                st.rerun()
+            _g_pay = ['إدخال الدفعات', 'مسير الرواتب', 'طباعة السندات']
+            with st.expander("📊 الرواتب والدفعات", expanded=_cv in _g_pay):
+                _nav("✏️ إدخال الدفعات", 'إدخال الدفعات')
+                _nav("📋 كشف مسير الرواتب", 'مسير الرواتب')
+                _nav("🖨️ طباعة سندات الرواتب A4", 'طباعة السندات')
 
-            # 5. موديول ضريبة القيمة المضافة (ZATCA)
-            st.markdown('<div class="sidebar-section-title">🏛️ الزكاة والضريبة (ZATCA)</div>', unsafe_allow_html=True)
-            if st.button("🏛️ تقرير القيمة المضافة", use_container_width=True):
-                st.session_state['current_view'] = 'تقرير القيمة المضافة'
-                st.rerun()
+            with st.expander("🏛️ الزكاة والضريبة", expanded=_cv == 'تقرير القيمة المضافة'):
+                _nav("🏛️ تقرير القيمة المضافة", 'تقرير القيمة المضافة')
 
-           # قسم الموارد البشرية HR
-            st.markdown('<div class="sidebar-section-title">👤 الموارد البشرية (HR)</div>', unsafe_allow_html=True)
-            if st.button("دليل الموظفين", use_container_width=True):
-                st.session_state['current_view'] = 'دليل الموظفين'
-                st.rerun()
-            if st.button("📜 الخطابات والإنذارات الرسمية", use_container_width=True):
-                st.session_state['current_view'] = 'الخطابات الرسمية'
-                st.rerun()
-            if st.button("حاسبة نهاية الخدمة", use_container_width=True):
-                st.session_state['current_view'] = 'حاسبة الخدمة'
-                st.rerun()
+            _g_hr = ['دليل الموظفين', 'الخطابات الرسمية', 'حاسبة الخدمة']
+            with st.expander("👤 الموارد البشرية", expanded=_cv in _g_hr):
+                _nav("👥 دليل الموظفين", 'دليل الموظفين')
+                _nav("📜 الخطابات والإنذارات", 'الخطابات الرسمية')
+                _nav("🧮 حاسبة نهاية الخدمة", 'حاسبة الخدمة')
 
-            st.markdown('<div class="sidebar-section-title">💾 النسخ الاحتياطي ونقل الشهور</div>', unsafe_allow_html=True)
-            if st.button("💾 النسخ الاحتياطي / نقل حركات شهر", use_container_width=True, key="sb_backup_move_btn"):
-                st.session_state['current_view'] = 'النسخ الاحتياطي'
-                st.rerun()
+            with st.expander("💾 النسخ الاحتياطي", expanded=_cv == 'النسخ الاحتياطي'):
+                _nav("💾 نسخ احتياطي ونقل حركات", 'النسخ الاحتياطي')
 
         st.divider()
 
@@ -1917,16 +1987,37 @@ else:
     months_ar = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"]
     date_formatted = f"📅 {days_ar[(now_dt.weekday() + 1) % 7]}، {now_dt.day} {months_ar[now_dt.month - 1]} {now_dt.year} - {now_dt.strftime('%H:%M')}"
 
-    st.markdown(f"""
-        <div class="company-header-inner">
-            <div class="date-badge-lux">{date_formatted}</div>
-            <h1 class="company-header-inner-title">🏢 شركة ميم الخماسية للتصنيع</h1>
-            <p class="company-header-inner-sub">النظام المحاسبي والإداري الموحد</p>
-            <div style="margin-top: 4px;">
-                <span class="cloud-status-badge">🟢 متصل بالسحابة (Supabase) - البيانات محدثة ومؤمنة</span>
+    _PAGE_TITLES = {
+        'الرئيسية': '🏠 الرئيسية', 'حركة الصندوق': '💵 حركة الصندوق', 'عُهدة السواقين': '🚚 عُهدة السواقين',
+        'عُهد السواقين': '🚚 عُهدة السواقين', 'جرد الخزينة': '🔍 جرد الخزينة', 'جرد وحركة المخزون': '📦 المستودع والمخزون',
+        'إدخال الدفعات': '✏️ إدخال الدفعات', 'مسير الرواتب': '📋 كشف مسير الرواتب', 'طباعة السندات': '🖨️ طباعة سندات الرواتب',
+        'تقرير القيمة المضافة': '🏛️ تقرير القيمة المضافة', 'دليل الموظفين': '👥 دليل الموظفين',
+        'الخطابات الرسمية': '📜 الخطابات والإنذارات', 'حاسبة الخدمة': '🧮 حاسبة نهاية الخدمة', 'النسخ الاحتياطي': '💾 النسخ الاحتياطي'
+    }
+    _page_title = _PAGE_TITLES.get(st.session_state.get('current_view', 'الرئيسية'), '🏠 الرئيسية')
+    _THEME_OPTS = ["🌗 تلقائي", "🌙 ليلي", "☀️ نهاري"]
+    _cur_opt = next((o for o in _THEME_OPTS if o.split()[0] in st.session_state.get('theme_mode', '')), _THEME_OPTS[0])
+
+    def _on_theme_change():
+        st.session_state['theme_mode'] = st.session_state['theme_sel']
+
+    tb1, tb2, tb3 = st.columns([3, 3, 1.3])
+    with tb1:
+        st.markdown(f"""
+            <div class="topbar-title">{_page_title}</div>
+            <div class="topbar-sub">شركة ميم الخماسية للتصنيع - النظام المحاسبي والإداري</div>
+        """, unsafe_allow_html=True)
+    with tb2:
+        st.markdown(f"""
+            <div class="chip-row">
+                <span class="chip-ui">{date_formatted}</span>
+                <span class="chip-ui">🗓 {month_selected}</span>
+                <span class="chip-ui chip-ok">🟢 متصل بالسحابة</span>
             </div>
-        </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
+    with tb3:
+        st.selectbox("المظهر", _THEME_OPTS, index=_THEME_OPTS.index(_cur_opt), key="theme_sel",
+                     label_visibility="collapsed", on_change=_on_theme_change)
 
     def generate_pretty_html_pdf(df_subset, branch_name, payment_type="جميع الدفعات"):
         output = io.BytesIO()
@@ -2306,16 +2397,12 @@ else:
         if st.session_state.user_role == "admin":
             c_box1, c_box2, c_box3, c_box4 = st.columns(4)
             with c_box1:
-                st.markdown("#### الخزينة الرئيسية (wahbi):")
                 st.metric("رصيد الخزينة الرئيسية", f"{net_main_now:,.2f} ر.س")
             with c_box2:
-                st.markdown("#### عُهدة المحاسب (omar):")
                 st.metric("رصيد عُهدة omar", f"{net_acc_now:,.2f} ر.س")
             with c_box3:
-                st.markdown("#### 🚚 عُهدة سمان السواق:")
                 st.metric("المتبقي بذمة سمان", f"{open_driver_custody_sum:,.2f} ر.س")
             with c_box4:
-                st.markdown("#### = إجمالي نقدية الشركة:")
                 st.metric("مجموع الصناديق", f"{total_company_cash:,.2f} ر.س")
             if last_audit:
                 a_diff = last_audit['diff']
@@ -2368,10 +2455,8 @@ else:
         else:
             c_box1, c_box2 = st.columns(2)
             with c_box1:
-                st.markdown("#### عُهدتك الحالية (omar):")
                 st.metric("الرصيد المتبقي بعُهدتك", f"{net_acc_now:,.2f} ر.س")
             with c_box2:
-                st.markdown("#### 🚚 عُهدة سمان السواق:")
                 st.metric("المتبقي بذمة سمان", f"{open_driver_custody_sum:,.2f} ر.س")
 
             st.markdown("### ⚡ إجراءات خاطفة وسريعة (لوحة omar)")
@@ -2393,6 +2478,29 @@ else:
                 if st.button("🔍 جرد الخزينة", use_container_width=True, key="q_btn_audit_acc"):
                     st.session_state['current_view'] = 'جرد الخزينة'
                     st.rerun()
+
+        # ===== آخر الحركات (عرض فقط، ما بيغيّرش أي بيانات) =====
+        import html as _html
+        _recent_src = curr_trans_main if st.session_state.user_role == "admin" else curr_trans_acc
+        _recent = [t for t in (_recent_src or []) if isinstance(t, dict)][-6:][::-1]
+        st.markdown("### 🕘 آخر الحركات")
+        if _recent:
+            _rows_html = ""
+            for _t in _recent:
+                _is_in = 'قبض' in str(_t.get('type', ''))
+                _amt = float(pd.to_numeric(_t.get('amount', 0), errors='coerce') or 0)
+                _rows_html += (
+                    f"<tr><td>{_html.escape(str(_t.get('date', ''))[:16])}</td>"
+                    f"<td>{_html.escape(str(_t.get('code', '')))}</td>"
+                    f"<td><span class=\"pill-ui {'pill-in' if _is_in else 'pill-out'}\">{'قبض' if _is_in else 'صرف'}</span></td>"
+                    f"<td>{_html.escape(str(_t.get('party', ''))[:60])}</td>"
+                    f"<td class=\"{'amt-pos' if _is_in else 'amt-neg'}\">{'+' if _is_in else '-'}{_amt:,.2f}</td></tr>"
+                )
+            st.markdown(
+                "<div class=\"recent-wrap\"><table class=\"recent-table\"><thead><tr><th>التاريخ</th><th>الكود</th><th>النوع</th><th>البيان</th><th>المبلغ (ر.س)</th></tr></thead><tbody>"
+                + _rows_html + "</tbody></table></div>", unsafe_allow_html=True)
+        else:
+            st.info("لسه مفيش حركات مسجلة في الشهر ده.")
 # 📦 5. موديول إدارة المستودع والمخزون المطور المباشر والمتكامل 100%
     elif selected_option == 'جرد وحركة المخزون':
         st.subheader('📦 موديول إدارة المستودع وجرد المخزون التلقائي')
@@ -2590,17 +2698,17 @@ else:
                 # عرض جدول HTML مصمم بنظام الألوان الداكنة والوضوح الكامل 100%
                 html_table_custom = """
                 <div style="direction: rtl; text-align: right; margin-top: 10px; overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; background-color: #1C2541; border: 2px solid #D97706; border-radius: 8px;">
+                <table style="width: 100%; border-collapse: collapse; background-color: var(--c-card); border: 2px solid var(--c-border); border-radius: 8px;">
                     <thead>
-                        <tr style="background-color: #1E3A8A; color: #FFFFFF; font-weight: bold; font-size: 14px;">
-                            <th style="padding: 10px; border: 1px solid #334155; text-align: right; width: 20%;">كود الصنف / الباركود</th>
-                            <th style="padding: 10px; border: 1px solid #334155; text-align: right; width: 35%;">اسم الصنف بالكامل</th>
-                            <th style="padding: 10px; border: 1px solid #334155; text-align: center;">الوحدة</th>
-                            <th style="padding: 10px; border: 1px solid #334155; text-align: center;">الافتتاحي</th>
-                            <th style="padding: 10px; border: 1px solid #334155; text-align: center;">الوارد (+)</th>
-                            <th style="padding: 10px; border: 1px solid #334155; text-align: center;">المنصرف (-)</th>
-                            <th style="padding: 10px; border: 1px solid #334155; text-align: center;">الرصيد المتبقي</th>
-                            <th style="padding: 10px; border: 1px solid #334155; text-align: center;">الحد الأدنى</th>
+                        <tr style="background-color: #1E3A8A; color: var(--c-text); font-weight: bold; font-size: 14px;">
+                            <th style="padding: 10px; border: 1px solid var(--c-border); text-align: right; width: 20%;">كود الصنف / الباركود</th>
+                            <th style="padding: 10px; border: 1px solid var(--c-border); text-align: right; width: 35%;">اسم الصنف بالكامل</th>
+                            <th style="padding: 10px; border: 1px solid var(--c-border); text-align: center;">الوحدة</th>
+                            <th style="padding: 10px; border: 1px solid var(--c-border); text-align: center;">الافتتاحي</th>
+                            <th style="padding: 10px; border: 1px solid var(--c-border); text-align: center;">الوارد (+)</th>
+                            <th style="padding: 10px; border: 1px solid var(--c-border); text-align: center;">المنصرف (-)</th>
+                            <th style="padding: 10px; border: 1px solid var(--c-border); text-align: center;">الرصيد المتبقي</th>
+                            <th style="padding: 10px; border: 1px solid var(--c-border); text-align: center;">الحد الأدنى</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2617,15 +2725,15 @@ else:
                         except: pass
 
                     html_table_custom += f"""
-                        <tr style="color: #FFFFFF; font-size: 13px; border-bottom: 1px solid #334155;">
-                            <td style="padding: 8px; border: 1px solid #334155; font-weight: bold; color: #F59E0B; text-align: right;">{display_code}</td>
-                            <td style="padding: 8px; border: 1px solid #334155; font-weight: bold; text-align: right; color: #FFFFFF;">{item['اسم_الصنف']}</td>
-                            <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{item.get('الوحدة','حبة/كرتونة')}</td>
-                            <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{c_init}</td>
-                            <td style="padding: 8px; border: 1px solid #334155; text-align: center; color: #10B981; font-weight: bold;">{c_in}</td>
-                            <td style="padding: 8px; border: 1px solid #334155; text-align: center; color: #EF4444; font-weight: bold;">{c_out}</td>
-                            <td style="padding: 8px; border: 1px solid #334155; text-align: center; font-weight: bold; color: #F59E0B; background-color: #0F172A; font-size: 14px;">{c_rem}</td>
-                            <td style="padding: 8px; border: 1px solid #334155; text-align: center;">{int(float(item.get('الحد_الأدنى', 10)))}</td>
+                        <tr style="color: var(--c-text); font-size: 13px; border-bottom: 1px solid var(--c-border);">
+                            <td style="padding: 8px; border: 1px solid var(--c-border); font-weight: bold; color: var(--c-accent); text-align: right;">{display_code}</td>
+                            <td style="padding: 8px; border: 1px solid var(--c-border); font-weight: bold; text-align: right; color: var(--c-text);">{item['اسم_الصنف']}</td>
+                            <td style="padding: 8px; border: 1px solid var(--c-border); text-align: center;">{item.get('الوحدة','حبة/كرتونة')}</td>
+                            <td style="padding: 8px; border: 1px solid var(--c-border); text-align: center;">{c_init}</td>
+                            <td style="padding: 8px; border: 1px solid var(--c-border); text-align: center; color: #10B981; font-weight: bold;">{c_in}</td>
+                            <td style="padding: 8px; border: 1px solid var(--c-border); text-align: center; color: #EF4444; font-weight: bold;">{c_out}</td>
+                            <td style="padding: 8px; border: 1px solid var(--c-border); text-align: center; font-weight: bold; color: var(--c-accent); background-color: #0F172A; font-size: 14px;">{c_rem}</td>
+                            <td style="padding: 8px; border: 1px solid var(--c-border); text-align: center;">{int(float(item.get('الحد_الأدنى', 10)))}</td>
                         </tr>
                     """
                 html_table_custom += "</tbody></table></div>"
@@ -3204,7 +3312,7 @@ else:
                             st.rerun()
 
                 # الجدول من اليمين للشمال: الأعمدة معكوسة (مسلسل على أقصى اليمين)
-                cols_rtl = ['الحالة', 'الملاحظات', 'المتبقي', 'الخصومات', 'الدفعة 2', 'الدفعة 1', 'الراتب الأساسي', 'الوظيفة', 'الاسم', 'م']
+                cols_rtl = ['الملاحظات', 'المتبقي', 'الخصومات', 'الدفعة 2', 'الدفعة 1', 'الراتب الأساسي', 'الوظيفة', 'الحالة', 'الاسم', 'م']
                 def _row_status(r):
                     _due = float(r.get('الراتب الأساسي', 0) or 0) - float(r.get('الخصومات', 0) or 0)
                     _paid = float(r.get('الدفعة 1', 0) or 0) + float(r.get('الدفعة 2', 0) or 0)
@@ -3220,15 +3328,15 @@ else:
                 edited_b = st.data_editor(
                     df_b_curr[cols_rtl],
                     column_config={
-                        "الحالة": st.column_config.TextColumn("الحالة", disabled=True),
-                        "م": st.column_config.NumberColumn("مسلسل", disabled=True),
+                        "الحالة": st.column_config.TextColumn("الحالة", disabled=True, width="small"),
+                        "م": st.column_config.NumberColumn("مسلسل", disabled=True, width="small"),
                         "الاسم": st.column_config.TextColumn("اسم الموظف"),
-                        "الوظيفة": st.column_config.TextColumn("الوظيفة"),
-                        "الراتب الأساسي": st.column_config.NumberColumn("الراتب المستحق", min_value=0, format="%d ر.س"),
-                        "الدفعة 1": st.column_config.NumberColumn("الدفعة 1", min_value=0, format="%d ر.س"),
-                        "الدفعة 2": st.column_config.NumberColumn("الدفعة 2", min_value=0, format="%d ر.س"),
-                        "الخصومات": st.column_config.NumberColumn("الخصومات", min_value=0, format="%d ر.س"),
-                        "المتبقي": st.column_config.NumberColumn("المتبقي", disabled=True, format="%d ر.س"),
+                        "الوظيفة": st.column_config.TextColumn("الوظيفة", width="small"),
+                        "الراتب الأساسي": st.column_config.NumberColumn("الراتب المستحق", min_value=0, format="%d", width="small"),
+                        "الدفعة 1": st.column_config.NumberColumn("الدفعة 1", min_value=0, format="%d", width="small"),
+                        "الدفعة 2": st.column_config.NumberColumn("الدفعة 2", min_value=0, format="%d", width="small"),
+                        "الخصومات": st.column_config.NumberColumn("الخصومات", min_value=0, format="%d", width="small"),
+                        "المتبقي": st.column_config.NumberColumn("المتبقي", disabled=True, format="%d", width="small"),
                         "الملاحظات": st.column_config.TextColumn("الملاحظات")
                     },
                     use_container_width=True,
@@ -4418,7 +4526,7 @@ else:
                 <tr class="zatca-total-row">
                     <td style="text-align:right;">6. إجمالي المبيعات وصافي ضريبة المخرجات</td>
                     <td>{(total_taxable_sales + total_zero_sales - total_sales_ret_net):,.2f}</td>
-                    <td style="color:#F59E0B; font-size:15px;">{net_output_vat:,.2f}</td>
+                    <td style="color:var(--c-accent); font-size:15px;">{net_output_vat:,.2f}</td>
                 </tr>
                 <tr><td colspan="3" class="zatca-section-header">ضريبة القيمة المضافة على المشتريات (المدخلات)</td></tr>
                 <tr>
@@ -4454,7 +4562,7 @@ else:
                 <tr class="zatca-total-row">
                     <td style="text-align:right;">12. إجمالي المشتريات وصافي ضريبة المدخلات</td>
                     <td>{(total_purch_net + total_purch_zero + calc_rcm_net - total_purch_ret_net):,.2f}</td>
-                    <td style="color:#F59E0B; font-size:15px;">{net_input_vat:,.2f}</td>
+                    <td style="color:var(--c-accent); font-size:15px;">{net_input_vat:,.2f}</td>
                 </tr>
                 <tr class="zatca-total-row">
                     <td style="text-align:right;">13. إجمالي ضريبة القيمة المضافة المستحقة للفترة الحالية</td>
