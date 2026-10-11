@@ -7,6 +7,10 @@ import re
 import csv
 import base64
 import requests
+import hmac
+import hashlib
+import time
+import streamlit.components.v1 as components
 
 # بيانات التليجرام
 TELEGRAM_BOT_TOKEN = "8826053948:AAEktJAhqt4QzMCQFYyByoDwCV7DdLiPgeE"
@@ -129,6 +133,29 @@ def get_ksa_now_str():
 
 ADMIN_PASSWORD = "admin5m"
 USER_PASSWORD = "user5m"
+
+# ===== دخول محفوظ بتوكن موقّع (بدل saved_role اللي كان أي حد يقدر يكتبه في الرابط) =====
+# لازم تضيف متغير APP_SECRET في Render (Environment). من غيره الدخول المحفوظ بيتعطل وبيطلب الباسورد كل مرة (أأمن).
+APP_SECRET = os.environ.get("APP_SECRET", "").strip()
+
+def make_auth_token(role, days=30):
+    if not APP_SECRET:
+        return ""
+    exp = int(time.time()) + days * 86400
+    sig = hmac.new(APP_SECRET.encode(), f"{role}|{exp}".encode(), hashlib.sha256).hexdigest()[:40]
+    return f"{role}.{exp}.{sig}"
+
+def verify_auth_token(tok):
+    try:
+        if not APP_SECRET or not tok:
+            return None
+        role, exp, sig = str(tok).split(".")
+        if role not in ("admin", "accountant") or int(exp) < time.time():
+            return None
+        good = hmac.new(APP_SECRET.encode(), f"{role}|{exp}".encode(), hashlib.sha256).hexdigest()[:40]
+        return role if hmac.compare_digest(sig, good) else None
+    except Exception:
+        return None
 
 # روابط الصور المباشرة الموحدة
 STAMP_IMG_URL = "https://raw.githubusercontent.com/sales649/salary-app/main/stamp.png"
@@ -406,6 +433,7 @@ if _is_night:
     dropdown_text = "#E6EBF5"
     dropdown_hover = "#1D2A47"
     color_scheme = "dark"
+    grid_filter = "filter: invert(0.9) hue-rotate(180deg);"
 else:
     bg_app = "#F4F6FB"
     bg_card = "#FFFFFF"
@@ -429,6 +457,7 @@ else:
     dropdown_text = "#14213D"
     dropdown_hover = "#EAEFF8"
     color_scheme = "light"
+    grid_filter = ""
 
 stars_css = f"""
         :root {{ color-scheme: {color_scheme}; --c-card: {bg_card}; --c-text: {text_color}; --c-border: {border_color}; --c-accent: {accent}; --c-muted: {muted_color}; }}
@@ -499,13 +528,17 @@ st.markdown(f"""
             color: #FFFFFF !important;
         }}
 
-        [data-testid="stSidebarCollapseButton"] span, 
-        [data-testid="stSidebarActionButton"] span,
-        [data-testid="stSidebarCollapseButton"]::after,
-        [data-testid="stSidebarHeader"] span,
-        [data-testid="stSidebarHeader"] div {{
-            font-size: 0px !important;
-            color: transparent !important;
+        [data-testid="stExpandSidebarButton"], [data-testid="stSidebarCollapsedControl"], [data-testid="collapsedControl"] {{
+            background: {accent} !important;
+            border-radius: 12px !important;
+            min-width: 44px !important;
+            min-height: 44px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }}
+        [data-testid="stExpandSidebarButton"] *, [data-testid="stSidebarCollapsedControl"] *, [data-testid="collapsedControl"] * {{
+            color: {accent_ink} !important;
         }}
 
         button, input, textarea, select, [data-baseweb] *, [data-testid="stDataFrame"], [data-testid="stDataEditor"] {{
@@ -766,6 +799,13 @@ st.markdown(f"""
             font-size: 16px;
         }}
 
+        /* ===== الجداول الأصلية: داكنة في الوضع الليلي ===== */
+        [data-testid="stDataFrame"], [data-testid="stDataEditor"] {{
+            {grid_filter}
+            border-radius: 10px !important;
+            overflow: hidden;
+        }}
+
         /* ===== أيقونات ماتيريال (ما تتأثرش بخط Cairo) ===== */
         [data-testid="stIconMaterial"], .material-symbols-rounded, span[class*="material-symbols"] {{
             font-family: 'Material Symbols Rounded' !important;
@@ -886,7 +926,7 @@ st.markdown(f"""
 
 # إدارة الدخول والجلسة مع التثبيت الدائم
 if 'app_started' not in st.session_state:
-    saved_role = st.query_params.get("saved_role", None)
+    saved_role = verify_auth_token(st.query_params.get("auth", None))
     if saved_role in ["admin", "accountant"]:
         st.session_state['app_started'] = True
         st.session_state['user_role'] = saved_role
@@ -1011,9 +1051,9 @@ def flash(kind, msg):
 def show_flashes():
     for kind, msg in st.session_state.pop('_flash', []):
         if kind == 'success':
-            st.success("✅ " + msg)
+            st.toast(msg, icon="✅")
         elif kind == 'warning':
-            st.warning("⚠️ " + msg)
+            st.toast(msg, icon="⚠️")
         else:
             st.error("❌ " + msg)
 
@@ -1693,8 +1733,9 @@ def print_inventory_report_dialog(df_inv):
 
     inv_report_html = f"""
     <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-    <style>
-        body {{ font-family: Arial, sans-serif; background-color: #fff; padding: 15px; color:#000; }}
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+        body {{ font-family: 'Cairo', Arial, sans-serif; background-color: #fff; padding: 15px; color:#000; }}
         .box {{ border: 2px solid #1E3A8A; border-radius: 8px; padding: 12px; position: relative; }}
         .header-logo {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 6px; }}
         table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }}
@@ -1771,8 +1812,9 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
 
     t_account_html = f"""
     <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-    <style>
-        body {{ font-family: Arial, sans-serif; background-color: #fff; padding: 10px; }}
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+        body {{ font-family: 'Cairo', Arial, sans-serif; background-color: #fff; padding: 10px; }}
         .box {{ border: 2px solid #1E3A8A; border-radius: 8px; padding: 12px; position: relative; }}
         table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }}
         th {{ background-color: #1E3A8A; color: white; padding: 6px; border: 1px solid #334155; }}
@@ -1918,12 +1960,12 @@ if not st.session_state.get('app_started', False):
             if username_selected == "wahby" and pwd_input == ADMIN_PASSWORD:
                 st.session_state.app_started = True
                 st.session_state.user_role = "admin"
-                st.query_params["saved_role"] = "admin"
+                st.query_params["auth"] = make_auth_token("admin")
                 st.rerun()
             elif username_selected == "omar" and pwd_input == USER_PASSWORD:
                 st.session_state.app_started = True
                 st.session_state.user_role = "accountant"
-                st.query_params["saved_role"] = "accountant"
+                st.query_params["auth"] = make_auth_token("accountant")
                 st.rerun()
             else:
                 st.error("كلمة المرور غير صحيحة. حاول تاني.")
@@ -1968,6 +2010,7 @@ else:
         def _nav(label, view):
             if st.button(label, key=f"nav_{view}", use_container_width=True, type=("primary" if _cv == view else "secondary")):
                 st.session_state['current_view'] = view
+                st.session_state['_close_sb'] = True   # على الموبايل القايمة تتقفل بعد الاختيار
                 st.rerun()
 
         _nav("🏠 الرئيسية", 'الرئيسية')
@@ -2039,6 +2082,28 @@ else:
     def _on_theme_change():
         st.session_state['theme_mode'] = st.session_state['theme_sel']
 
+    # قفل القايمة الجانبية على الموبايل (أول فتح + بعد كل اختيار)
+    if not st.session_state.get('_sb_init'):
+        st.session_state['_sb_init'] = True
+        st.session_state['_close_sb'] = True
+    if st.session_state.pop('_close_sb', False):
+        components.html("""<script>
+        (function () {
+          try {
+            var w = window.parent, d = w.document;
+            if (w.innerWidth > 768) return;
+            var tries = 0;
+            var t = setInterval(function () {
+              tries++;
+              var sb = d.querySelector('[data-testid="stSidebar"]');
+              var btn = d.querySelector('[data-testid="stSidebarCollapseButton"] button') || d.querySelector('[data-testid="stSidebarCollapseButton"]');
+              if (sb && sb.getAttribute('aria-expanded') !== 'false' && btn) { btn.click(); clearInterval(t); }
+              if (tries > 15) clearInterval(t);
+            }, 200);
+          } catch (e) {}
+        })();
+        </script>""", height=0)
+
     tb1, tb2, tb3 = st.columns([3, 3, 1.3])
     with tb1:
         st.markdown(f"""
@@ -2061,9 +2126,10 @@ else:
         output = io.BytesIO()
         html = f"""
         <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
-        <style>
+        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
             @page {{ size: A4 portrait; margin: 8mm; }}
-            body {{ font-family: Arial, sans-serif; background-color: #fff; margin: 0; }}
+            body {{ font-family: 'Cairo', Arial, sans-serif; background-color: #fff; margin: 0; }}
             .page {{ height: 275mm; page-break-after: always; display: flex; flex-direction: column; justify-content: space-between; }}
             .voucher-box {{ border: 2px solid #1E3A8A; border-radius: 8px; padding: 12px 18px; height: 128mm; box-sizing: border-box; position: relative; }}
             .header-logo-container {{ display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #1E3A8A; padding-bottom: 6px; }}
