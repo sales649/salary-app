@@ -3240,6 +3240,28 @@ else:
                     st.warning("⚠️ الدفعات + الخصومات أكبر من الراتب المستحق عند: " + "، ".join(
                         f"{r['الاسم']} (زيادة {(r['الدفعة 1'] + r['الدفعة 2'] + r['الخصومات'] - r['الراتب الأساسي']):,.0f})" for _, r in _over.iterrows()))
                 
+                # معاينة حية بالألوان (بتتحدث فوراً وانت بتكتب، قبل ما تدوس حفظ)
+                def _live_status(r):
+                    _due = float(r.get('الراتب الأساسي', 0) or 0) - float(r.get('الخصومات', 0) or 0)
+                    _paid = float(r.get('الدفعة 1', 0) or 0) + float(r.get('الدفعة 2', 0) or 0)
+                    if _paid > _due + 0.01:
+                        return "⚠️ زيادة"
+                    if _due > 0 and abs(_paid - _due) <= 0.01:
+                        return "✅ مكتمل"
+                    if _paid > 0:
+                        return "🟡 جزئي"
+                    return "⏳ لم يُصرف"
+                _pv = edited_b[['م', 'الاسم', 'الراتب الأساسي', 'الدفعة 1', 'الدفعة 2', 'الخصومات']].copy().fillna(0)
+                _pv['المتبقي'] = _pv['الراتب الأساسي'] - _pv['الخصومات'] - _pv['الدفعة 1'] - _pv['الدفعة 2']
+                _pv['الحالة'] = [_live_status(_r) for _, _r in _pv.iterrows()]
+                _pv = _pv[['الحالة', 'المتبقي', 'الخصومات', 'الدفعة 2', 'الدفعة 1', 'الراتب الأساسي', 'الاسم', 'م']]
+                def _pv_color(_r):
+                    _c = {"✅ مكتمل": "rgba(46,160,67,0.30)", "🟡 جزئي": "rgba(210,153,34,0.30)", "⚠️ زيادة": "rgba(248,81,73,0.35)"}.get(_r['الحالة'], "rgba(128,128,128,0.10)")
+                    return [f"background-color: {_c}"] * len(_r)
+                with st.expander(f"👁️ معاينة ملونة حية للحالة ({b_name}) - مكتمل 🟢 / جزئي 🟡 / زيادة 🔴", expanded=True):
+                    st.caption("الحالة والمتبقي في الجدول اللي فوق بتتحدث بعد الحفظ، أما المعاينة دي فبتتحدث فوراً وانت بتكتب.")
+                    st.dataframe(_pv.style.apply(_pv_color, axis=1).format({'المتبقي': '{:,.0f}', 'الخصومات': '{:,.0f}', 'الدفعة 2': '{:,.0f}', 'الدفعة 1': '{:,.0f}', 'الراتب الأساسي': '{:,.0f}'}), use_container_width=True, hide_index=True)
+
                 if st.button(f"حفظ التعديلات ({b_name})", key=f"btn_save_ed_{b_name}"):
                     for idx, row in edited_b.iterrows():
                         m_id = row['م']
