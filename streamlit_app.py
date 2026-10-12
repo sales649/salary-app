@@ -1403,21 +1403,38 @@ def set_employee_status(emp_id, status, from_month, to_month=None):
         return n
     return _apply_to_store(mut)
 
-def terminate_employee(emp_id, last_month):
-    """آخر شهر عمل بيفضل بالحالة (منتهي خدمته). الشهور بعده بتتشال لو ما فيهاش دفعات، وإلا بتتعلم منتهي."""
+def _term_deduction(salary, last_day):
+    """خصم الأيام اللي بعد آخر يوم عمل في شهره (أساس 30 يوم). آخر يوم في الشهر = من غير خصم."""
+    import calendar
+    if last_day.day >= calendar.monthrange(last_day.year, last_day.month)[1]:
+        return 0.0
+    worked = min(last_day.day, 30)
+    return round(float(salary or 0) / 30.0 * (30 - worked), 2)
+
+def terminate_employee(emp_id, last_day):
+    """إنهاء خدمة بآخر يوم عمل فعلي: شهر آخر يوم بيفضل بالحالة 'منتهي خدمته' ومستحقه بالأيام اللي اشتغلها،
+    والشهور بعده بتتشال لو ما فيهاش دفعات (ولو فيها دفعات بتتعلم منتهي)."""
+    last_month = f"{AR_MONTHS[last_day.month - 1]} {last_day.year}"
     def mut(store):
         removed = kept = 0
+        deducted = 0.0
         for mk in _store_months_from(store, last_month):
             rows = store[mk]
             if mk == last_month:
                 for r in rows:
                     if r.get('م') == emp_id:
+                        old = float(r.get('خصم إنهاء', 0) or 0)
+                        new = _term_deduction(r.get('الراتب الأساسي', 0), last_day)
+                        r['الخصومات'] = max(float(r.get('الخصومات', 0) or 0) - old + new, 0.0)
+                        r['خصم إنهاء'] = new
                         r['حالة الموظف'] = 'منتهي خدمته'
+                        _recalc_row(r)
+                        deducted = new
                 continue
             new_rows = []
             for r in rows:
                 if r.get('م') == emp_id:
-                    paid = float(r.get('الدفعة 1', 0) or 0) + float(r.get('الدفعة 2', 0) or 0) + float(r.get('الخصومات', 0) or 0)
+                    paid = float(r.get('الدفعة 1', 0) or 0) + float(r.get('الدفعة 2', 0) or 0)
                     if paid > 0:
                         r['حالة الموظف'] = 'منتهي خدمته'
                         new_rows.append(r)
@@ -1427,7 +1444,7 @@ def terminate_employee(emp_id, last_month):
                 else:
                     new_rows.append(r)
             store[mk] = new_rows
-        return removed, kept
+        return removed, kept, deducted
     return _apply_to_store(mut)
 
 def reinstate_employee(emp_id, from_month):
@@ -1447,6 +1464,11 @@ def reinstate_employee(emp_id, from_month):
             for r in store[mk]:
                 if r.get('م') == emp_id:
                     r['حالة الموظف'] = 'على رأس العمل'
+                    _td = float(r.get('خصم إنهاء', 0) or 0)
+                    if _td:
+                        r['الخصومات'] = max(float(r.get('الخصومات', 0) or 0) - _td, 0.0)
+                        r['خصم إنهاء'] = 0.0
+                        _recalc_row(r)
                     found = True
                     n += 1
             if not found and src_row is not None:
@@ -2336,19 +2358,19 @@ def employee_move_dialog(emp_idx, month_name):
             st.rerun()
 
     elif kind == "إنهاء خدمة / استبعاد":
-        _opts = months[1:] if len(months) > 1 else months
-        _di = _opts.index(month_name) if month_name in _opts else 0
-        rm = st.selectbox("هيختفي من كشف شهر (وكل الشهور اللي بعده):", _opts, index=_di, key=f"mv_rm_{emp_id}")
-        _ri = months.index(rm)
-        lm = months[_ri - 1] if _ri > 0 else rm
-        st.caption(f"آخر شهر عمل له: ({lm}). بيفضل ظاهر فيه بعلامة ⛔ منتهي خدمته، ومش هيظهر من ({rm}) وبعده.")
+        last_day = st.date_input("آخر يوم عمل فعلي:", get_ksa_now().date(), key=f"mv_ld_{emp_id}")
+        _lm = f"{AR_MONTHS[last_day.month - 1]} {last_day.year}"
+        _sal = float(emp['الراتب الأساسي'])
+        _ded = _term_deduction(_sal, last_day)
+        st.info(f"آخر شهر عمل له: ({_lm}) | مستحقه في الشهر ده: {_sal - _ded:,.0f} ر.س من {_sal:,.0f} (خصم {_ded:,.0f} عن الأيام اللي بعد آخر يوم). "
+                f"ومش هيظهر في أي شهر بعد {_lm}.")
         note = st.text_input("السبب:", key=f"mv_note_{emp_id}")
-        st.warning("الموظف ما بيتمسحش من البرنامج: بيفضل ظاهر في الشهور اللي اشتغلها. وبيتشال بس من الشهور اللي بعد آخر شهر لو ما فيهاش دفعات.")
+        st.warning("الموظف ما بيتمسحش من البرنامج: بيفضل ظاهر في الشهور اللي اشتغلها. لو آخر يوم له كان قبل شهر معين، اختار تاريخ في الشهر اللي قبله وهيختفي من اللي بعده.")
         if st.button("⛔ تأكيد إنهاء الخدمة", key=f"mv_go_{emp_id}", type="primary"):
-            ok, res = terminate_employee(emp_id, lm)
+            ok, res = terminate_employee(emp_id, last_day)
             if ok:
-                _log_emp_move({'م': emp_id, 'الاسم': emp['الاسم'], 'النوع': 'إنهاء خدمة', 'من شهر': lm, 'ملاحظة': note})
-                flash('success', f"اتنهت خدمة {emp['الاسم']} (آخر شهر: {lm}). اتشال من {res[0]} شهر وفضل في {res[1]} شهر فيها دفعات.")
+                _log_emp_move({'م': emp_id, 'الاسم': emp['الاسم'], 'النوع': 'إنهاء خدمة', 'من شهر': _lm, 'آخر يوم': str(last_day), 'ملاحظة': note})
+                flash('success', f"اتنهت خدمة {emp['الاسم']} (آخر يوم: {last_day}). مستحق {_lm}: {_sal - res[2]:,.0f}. اتشال من {res[0]} شهر وفضل في {res[1]} شهر فيها دفعات.")
             else:
                 flash('error', "ما اتنهتش الخدمة: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
             st.rerun()
