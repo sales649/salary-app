@@ -4362,7 +4362,7 @@ else:
         _cmi = st.session_state.months_list.index(month_selected)
         _prev_lbl = st.session_state.months_list[_cmi - 1] if _cmi > 0 else 'أغسطس 2026'
         # رواتب سبتمبر بتتصرف في أكتوبر: نختار شهر الرواتب اللي عايزين نطبع كشفه
-        sheet_pm = st.radio("📅 كشف رواتب أي شهر؟", [_prev_lbl, month_selected], horizontal=True, key=f"sheet_pm_{sheet_pm}")
+        sheet_pm = st.radio("📅 كشف رواتب أي شهر؟", [_prev_lbl, month_selected], horizontal=True, key=f"sheet_pm_{month_selected}")
         _sheet_src = st.session_state.payroll_df if sheet_pm == month_selected else get_payroll_for_month(sheet_pm)
         filter_sheet = st.selectbox('اختر الفرع للكشف:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
         df_sheet = _sheet_src if 'جميع الفروع' in filter_sheet else _sheet_src[_sheet_src['الفرع'] == filter_sheet]
