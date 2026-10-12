@@ -1253,7 +1253,7 @@ def _fresh_row(r):
     n = dict(r)
     sal = float(n.get('الراتب الأساسي', 0) or 0)
     n.update({'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الخصومات': 0.0, 'الدفعة المدفوعة': 0.0,
-              'المتبقي': sal, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': '', 'خصم إجازة': 0.0})
+              'المتبقي': sal, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': '', 'خصم إجازة': 0.0, 'خصم إنهاء': 0.0})
     if n.get('حالة الموظف') == 'إجازة':
         n['حالة الموظف'] = 'على رأس العمل'
     n.setdefault('حالة الموظف', 'على رأس العمل')
@@ -1472,10 +1472,23 @@ def reinstate_employee(emp_id, from_month):
                     found = True
                     n += 1
             if not found and src_row is not None:
-                store[mk].append(_fresh_row(src_row) | {'حالة الموظف': 'على رأس العمل'})
+                store[mk].append(_fresh_row(src_row) | {'حالة الموظف': 'على رأس العمل', 'خصم إنهاء': 0.0})
                 n += 1
         return n
     return _apply_to_store(mut)
+
+def load_terminated_archive(current_df):
+    """المنتهي خدمتهم اللي مش ظاهرين في كشف الشهر الحالي: آخر ظهور لكل موظف في أي شهر."""
+    ok, store = fetch_cloud_store_strict('monthly_payroll_store_v4')
+    if not ok or not isinstance(store, dict):
+        return []
+    latest = {}
+    for mk in sorted([k for k in store if month_label_to_ym(k) and isinstance(store[k], list)], key=month_label_to_ym):
+        for r in store[mk]:
+            if r.get('م') is not None:
+                latest[r['م']] = (mk, r)
+    here = set(current_df['م'].tolist()) if (current_df is not None and 'م' in current_df.columns) else set()
+    return [(mk, r) for _id, (mk, r) in latest.items() if r.get('حالة الموظف') == 'منتهي خدمته' and _id not in here]
 
 def add_employee_everywhere(row, from_month):
     """موظف جديد: بيتضاف لشهر البداية والشهور الموجودة بعده."""
@@ -2399,6 +2412,22 @@ def employee_move_dialog(emp_idx, month_name):
                 else:
                     flash('error', "ما اترجعش: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
                 st.rerun()
+
+@st.dialog("↩️ رجوع موظف للعمل")
+def reinstate_archived_dialog(emp_id, name):
+    months = st.session_state.months_list
+    cur = st.session_state.get('current_active_month')
+    st.write(f"إرجاع **{name}** للعمل")
+    fm = st.selectbox("يرجع من شهر:", months, index=months.index(cur) if cur in months else 0, key=f"arch_fm_{emp_id}")
+    note = st.text_input("ملاحظة:", key=f"arch_note_{emp_id}")
+    if st.button("✅ تأكيد الرجوع", key=f"arch_go_{emp_id}", type="primary"):
+        ok, n = reinstate_employee(emp_id, fm)
+        if ok:
+            _log_emp_move({'م': emp_id, 'الاسم': name, 'النوع': 'رجوع للعمل', 'من شهر': fm, 'ملاحظة': note})
+            flash('success', f"رجع {name} للعمل من شهر {fm} ({n} شهر).")
+        else:
+            flash('error', "ما اترجعش: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
+        st.rerun()
 
 # الشاشة الافتتاحية وواجهة المستخدم الموحدة
 if not st.session_state.get('app_started', False):
@@ -3931,7 +3960,7 @@ else:
                 def _row_status(r):
                     _due = float(r.get('الراتب الأساسي', 0) or 0) - float(r.get('الخصومات', 0) or 0)
                     _paid = float(r.get('الدفعة 1', 0) or 0) + float(r.get('الدفعة 2', 0) or 0)
-                    _badge = {'إجازة': '🏖️ إجازة', 'إجازة مفتوحة': '🏖️ إجازة', 'موقوف': '⏸️ موقوف', 'منتهي خدمته': '⛔ منتهي'}.get(r.get('حالة الموظف', 'على رأس العمل'), '')
+                    _badge = {'إجازة': 'إجازة', 'إجازة مفتوحة': 'إجازة', 'موقوف': 'موقوف', 'منتهي خدمته': 'منتهي'}.get(r.get('حالة الموظف', 'على رأس العمل'), '')
                     if _badge and _due <= 0.01 and _paid == 0:
                         return _badge + " (لا مستحق)"
                     if _paid > _due + 0.01:
@@ -4318,18 +4347,65 @@ else:
         _EMP_ICON = {'على رأس العمل': '', 'إجازة': '🏖️ إجازة', 'إجازة مفتوحة': '🏖️ إجازة مفتوحة', 'موقوف': '⏸️ موقوف', 'منتهي خدمته': '⛔ منتهي خدمته'}
         def _st_badge(_r):
             _s = _r.get('حالة الموظف', 'على رأس العمل')
-            return f"`{_EMP_ICON.get(_s, _s)}`" if _EMP_ICON.get(_s, _s) else ""
+            return f" — **[{_s}]**" if _s and _s != 'على رأس العمل' else ""
         _sc = st.session_state.payroll_df['حالة الموظف'].value_counts() if 'حالة الموظف' in st.session_state.payroll_df.columns else {}
+        def _kpi(_col, _label, _val, _color):
+            _col.markdown(
+                f'<div style="background:var(--c-card);border:1px solid var(--c-border);border-right:6px solid {_color};border-radius:12px;padding:12px 16px;">'
+                f'<div style="color:var(--c-muted) !important;font-weight:700;font-size:14px;">{_label}</div>'
+                f'<div style="color:var(--c-text) !important;font-weight:900;font-size:30px;line-height:1.3;">{_val}</div></div>',
+                unsafe_allow_html=True)
         _k1, _k2, _k3, _k4 = st.columns(4)
-        _k1.metric("على رأس العمل", int(_sc.get('على رأس العمل', 0)))
-        _k2.metric("🏖️ إجازة", int(_sc.get('إجازة', 0)) + int(_sc.get('إجازة مفتوحة', 0)))
-        _k3.metric("⏸️ موقوف", int(_sc.get('موقوف', 0)))
-        _k4.metric("⛔ منتهي خدمته", int(_sc.get('منتهي خدمته', 0)))
+        _kpi(_k1, "على رأس العمل", int(_sc.get('على رأس العمل', 0)), "#16a34a")
+        _kpi(_k2, "في إجازة", int(_sc.get('إجازة', 0)) + int(_sc.get('إجازة مفتوحة', 0)), "#d97706")
+        _kpi(_k3, "موقوف", int(_sc.get('موقوف', 0)), "#6b7280")
+        _kpi(_k4, "منتهي خدمته", int(_sc.get('منتهي خدمته', 0)), "#dc2626")
+        with st.expander("🗄️ أرشيف المنتهي خدمتهم (مش ظاهرين في كشف الشهر ده)"):
+            _arch = load_terminated_archive(st.session_state.payroll_df)
+            if not _arch:
+                st.caption("مفيش موظفين منتهي خدمتهم برّه كشف الشهر ده.")
+            for _mk, _r in _arch:
+                _a1, _a2, _a3, _a4 = st.columns([2.2, 1.6, 1.4, 1.2])
+                _a1.write(f"👤 **{_r['الاسم']}** ({_r.get('الوظيفة', '')})")
+                _a2.write(f"{_r.get('الفرع', '')}")
+                _a3.write(f"آخر شهر: {_mk}")
+                if _a4.button("↩️ رجوع", key=f"btn_arch_{_r['م']}", help="رجوع للعمل"):
+                    reinstate_archived_dialog(int(_r['م']), _r['الاسم'])
         with st.expander("📜 سجل حركات الموظفين (تعيين / نقل / إجازة / إيقاف / إنهاء خدمة)"):
             _mv = load_emp_moves()
             if _mv:
-                _mvdf = pd.DataFrame(_mv[::-1])
-                st.dataframe(_mvdf, use_container_width=True, hide_index=True)
+                from html import escape as _esc
+                def _mv_color(_t):
+                    if 'إجازة' in _t:
+                        return '#d97706'
+                    if 'رجوع' in _t or _t == 'تعيين':
+                        return '#16a34a'
+                    return {'نقل': '#2563eb', 'تغيير راتب': '#7c3aed', 'إيقاف': '#6b7280', 'إنهاء خدمة': '#dc2626'}.get(_t, '#6b7280')
+                def _mv_det(_m):
+                    _ps = []
+                    for _k in ('من', 'إلى', 'الفرع', 'من شهر', 'آخر يوم', 'ملاحظة'):
+                        _v = _m.get(_k)
+                        if _v not in (None, ''):
+                            if isinstance(_v, (int, float)):
+                                _v = f"{_v:,.0f}"
+                            _ps.append(f"{_k}: {_v}")
+                    return " | ".join(_ps)
+                _td = "padding:8px;border-bottom:1px solid var(--c-border);color:var(--c-text) !important;text-align:right;"
+                _th = "padding:8px;border-bottom:2px solid var(--c-border);color:var(--c-muted) !important;text-align:right;font-weight:800;"
+                _body = ""
+                for _m in _mv[::-1][:60]:
+                    _t = str(_m.get('النوع', ''))
+                    _badge = f'<span style="background:{_mv_color(_t)};color:#fff !important;padding:2px 10px;border-radius:999px;font-weight:700;white-space:nowrap;">{_esc(_t)}</span>'
+                    _body += (f'<tr><td style="{_td}">{_esc(str(_m.get("وقت التسجيل", "")))}</td>'
+                              f'<td style="{_td}"><b>{_esc(str(_m.get("الاسم", "")))}</b></td>'
+                              f'<td style="{_td}">{_badge}</td>'
+                              f'<td style="{_td}">{_esc(_mv_det(_m))}</td>'
+                              f'<td style="{_td}">{_esc(str(_m.get("بواسطة", "")))}</td></tr>')
+                st.markdown(
+                    '<div dir="rtl" style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:14px;">'
+                    f'<thead><tr><th style="{_th}">الوقت</th><th style="{_th}">الموظف</th><th style="{_th}">الحركة</th><th style="{_th}">التفاصيل</th><th style="{_th}">بواسطة</th></tr></thead>'
+                    f'<tbody>{_body}</tbody></table></div>', unsafe_allow_html=True)
+                st.caption("آخر 60 حركة، الأحدث فوق.")
             else:
                 st.caption("لسه ما فيش حركات متسجلة.")
         
@@ -4348,6 +4424,18 @@ else:
                 if _b2.button("🔄", key=f"btn_s_mv_{e_row['م']}", help="حركة: نقل / إجازة / إيقاف / إنهاء خدمة"):
                     employee_move_dialog(e_idx, month_selected)
                 st.divider()
+            _kw = search_kw.lower()
+            _hits = [(_mk, _r) for _mk, _r in load_terminated_archive(st.session_state.payroll_df)
+                     if _kw in str(_r.get('الاسم', '')).lower() or _kw in str(_r.get('الوظيفة', '')).lower()]
+            if _hits:
+                st.write("منتهي خدمتهم (من الأرشيف):")
+                for _mk, _r in _hits:
+                    _s1, _s2, _s3, _s4 = st.columns([2.2, 1.6, 1.4, 1.2])
+                    _s1.write(f"👤 **{_r['الاسم']}** ({_r.get('الوظيفة', '')}) — **[منتهي خدمته]**")
+                    _s2.write(f"{_r.get('الفرع', '')}")
+                    _s3.write(f"آخر شهر: {_mk}")
+                    if _s4.button("↩️ رجوع", key=f"btn_sarch_{_r['م']}", help="رجوع للعمل"):
+                        reinstate_archived_dialog(int(_r['م']), _r['الاسم'])
         else:
             cnt_factory = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مصنع ميم الخماسية الخرج'])
             cnt_wh_kh = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مستودع ميم الخماسية الخرج'])
