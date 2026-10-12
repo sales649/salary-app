@@ -516,6 +516,44 @@ stars_css = f"""
         }}
 """
 
+# ===== العلامة المائية (شعار 5M كبير باهت + شبكة نقاط ناعمة) =====
+if 'wm_level' not in st.session_state:
+    st.session_state['wm_level'] = '🖼️ خفيف'
+_wm_lv = st.session_state['wm_level']
+_wm_css = ""
+if 'بدون' not in _wm_lv:
+    _wm_col = "#9DB8FF" if _is_night else "#1D4ED8"
+    _wm_op = (0.05 if _is_night else 0.06) if 'خفيف' in _wm_lv else (0.09 if _is_night else 0.10)
+    _wm_dot = _wm_op * 0.7
+    _col_enc = _wm_col.replace('#', '%23')
+    _logo_svg = (f"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 400'>"
+                 f"<rect x='14' y='14' width='372' height='372' rx='72' fill='none' stroke='{_col_enc}' stroke-width='14'/>"
+                 f"<text x='200' y='262' font-family='Cairo,Arial Black,Arial,sans-serif' font-size='190' font-weight='900' "
+                 f"text-anchor='middle' fill='{_col_enc}'>5M</text></svg>")
+    _hso = f"{_wm_op*0.9:.3f}"
+    _hex_svg = (f"<svg xmlns='http://www.w3.org/2000/svg' width='52' height='90' viewBox='0 0 52 90'>"
+                f"<g fill='none' stroke='{_col_enc}' stroke-opacity='{_hso}' stroke-width='1.2'>"
+                f"<polygon points='26,0 52,15 52,45 26,60 0,45 0,15'/><line x1='26' y1='60' x2='26' y2='90'/></g>"
+                f"<g fill='{_col_enc}' fill-opacity='{_wm_op*1.6:.3f}'><circle cx='26' cy='0' r='2.2'/><circle cx='0' cy='45' r='2.2'/><circle cx='52' cy='45' r='2.2'/></g></svg>")
+    _wm_css = f"""
+        .stApp {{ isolation: isolate; }}
+        .stApp::before {{
+            content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+            background-image: url("data:image/svg+xml;utf8,{_hex_svg}");
+            background-repeat: repeat; background-size: 78px 135px;
+            -webkit-mask-image: radial-gradient(ellipse at 20% 85%, #000 0%, rgba(0,0,0,.55) 55%, rgba(0,0,0,.35) 100%);
+            mask-image: radial-gradient(ellipse at 20% 85%, #000 0%, rgba(0,0,0,.55) 55%, rgba(0,0,0,.35) 100%);
+        }}
+        .stApp::after {{
+            content: ""; position: fixed; left: 2vw; bottom: 2vh; width: min(34vw, 420px); aspect-ratio: 1/1;
+            z-index: -1; pointer-events: none;
+            background: url("data:image/svg+xml;utf8,{_logo_svg}") no-repeat center / contain;
+            opacity: {_wm_op:.3f};
+        }}
+        @media (max-width: 768px) {{ .stApp::after {{ width: 46vw; opacity: {_wm_op*0.7:.3f}; }} }}
+        @media print {{ .stApp::before, .stApp::after {{ display: none !important; }} }}
+"""
+
 pwa_manifest_json = json.dumps({
     "name": "5M Accounting System",
     "short_name": "5M",
@@ -537,6 +575,7 @@ st.markdown(f"""
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
 
         {stars_css}
+        {_wm_css}
 
         html, body, .stApp, [data-testid="stAppViewContainer"] {{
             direction: rtl !important;
@@ -2698,6 +2737,12 @@ else:
     with tb3:
         st.selectbox("المظهر", _THEME_OPTS, index=_THEME_OPTS.index(_cur_opt), key="theme_sel",
                      label_visibility="collapsed", on_change=_on_theme_change)
+        _WM_OPTS = ["🖼️ خفيف", "🖼️ متوسط", "⛔ بدون علامة"]
+        def _on_wm_change():
+            st.session_state['wm_level'] = st.session_state['wm_sel']
+        st.selectbox("العلامة المائية", _WM_OPTS,
+                     index=_WM_OPTS.index(st.session_state['wm_level']) if st.session_state['wm_level'] in _WM_OPTS else 0,
+                     key="wm_sel", label_visibility="collapsed", on_change=_on_wm_change)
 
     def generate_pretty_html_pdf(df_subset, branch_name, payment_type="جميع الدفعات", pay_month=None):
         _pm = pay_month or month_selected
