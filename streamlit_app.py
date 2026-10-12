@@ -921,7 +921,11 @@ st.markdown(f"""
         /* نص الزراير الزرقا لازم يبان: كان بياخد لون النص العام */
         .main div.stButton > button *, .main div.stDownloadButton > button *, .main [data-testid="stFormSubmitButton"] > button *,
         [data-testid="stMain"] div.stButton > button *, [data-testid="stMain"] div.stDownloadButton > button *, [data-testid="stMain"] [data-testid="stFormSubmitButton"] > button *,
-        div[role="dialog"] div.stButton > button *, div[role="dialog"] [data-testid="stFormSubmitButton"] > button * {{ color: {btn_main_text} !important; }}
+        div[role="dialog"] div.stButton > button *, div[role="dialog"] [data-testid="stFormSubmitButton"] > button *,
+        div[role="dialog"] div.stDownloadButton button *, div[role="dialog"] [data-testid="stDownloadButton"] button *,
+        div[role="dialog"] button[data-testid="stBaseButton-primary"] *, div[role="dialog"] button[data-testid="stBaseButton-secondary"] *,
+        [data-testid="stMain"] [data-testid="stDownloadButton"] button *, .main [data-testid="stDownloadButton"] button *,
+        [data-testid="stMain"] button[data-testid="stBaseButton-primary"] *, [data-testid="stMain"] button[data-testid="stBaseButton-secondary"] * {{ color: {btn_main_text} !important; }}
         [data-testid="stSidebar"] .stButton > button[kind="primary"] *, [data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] *,
         [data-testid="stSidebar"] .stButton > button:hover * {{ color: {accent_ink} !important; }}
 
