@@ -128,6 +128,55 @@ st.set_page_config(page_title='5M Accounting ERP', layout='wide', page_icon='�
 def get_ksa_now():
     return datetime.utcnow() + timedelta(hours=3)
 
+def with_print_btn(html_str):
+    """يضيف زرار 'طباعة مباشرة' فوق أي مستند معروض: بيفتح نافذة طباعة المتصفح على المستند فقط من غير تنزيل."""
+    bar = ('<div class="no-print-bar" style="position:sticky;top:0;z-index:99;text-align:center;padding:6px 0;background:#ffffff;border-bottom:1px solid #cbd5e1;direction:rtl;">'
+           '<button onclick="window.focus();window.print();" style="background:#1D4ED8;color:#ffffff;border:0;border-radius:8px;padding:9px 28px;'
+           'font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;">🖨️ طباعة مباشرة</button>'
+           '<span style="color:#475569;font-size:12px;margin-right:10px;">(ولو عايز ملف PDF اختار «حفظ كـ PDF» من نافذة الطباعة)</span></div>'
+           '<style>@media print{.no-print-bar{display:none !important;}}</style>')
+    s = add_doc_stamp(str(html_str))
+    m = re.search(r"<body[^>]*>", s, flags=re.I)
+    if m:
+        return s[:m.end()] + bar + s[m.end():]
+    return bar + s
+
+_DOC_TS_JS = ("<script>(function(){function f(){var d=new Date();var p=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit',"
+              "hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(d),o={};p.forEach(function(x){o[x.type]=x.value});if(o.hour==='24'){o.hour='00';}"
+              "var t=o.day+'-'+o.month+'-'+o.year+' \u2022 '+o.hour+':'+o.minute;document.querySelectorAll('.doc-ts').forEach(function(e){e.textContent=t;});}"
+              "f();window.addEventListener('beforeprint',f);})();</script>")
+
+def _stamp_chip():
+    """التاريخ والوقت (بتوقيت الرياض) بشكل مختصر؛ الـ JS بيحدّثه وقت الفتح والطباعة."""
+    n = get_ksa_now()
+    return f'<span class="doc-ts">{n.strftime("%d-%m-%Y")} \u2022 {n.strftime("%H:%M")}</span>'
+
+def add_doc_stamp(html_str):
+    """يضيف سطر 'تاريخ ووقت الإصدار' أنيق في آخر أي مستند HTML (ويتخطى لو فيه تاريخ جوه المستند)."""
+    s = str(html_str)
+    if 'class="doc-ts"' in s:
+        return s if 'beforeprint' in s else s.replace('</body>', _DOC_TS_JS + '</body>', 1) if '</body>' in s else s + _DOC_TS_JS
+    foot = ('<div style="text-align:center;margin:12px 20px 6px;padding-top:5px;border-top:1px dashed #cbd5e1;font-size:11px;'
+            'color:#64748b;direction:rtl;font-family:Cairo,Arial,sans-serif;">تاريخ ووقت الإصدار: <b>' + _stamp_chip() + '</b></div>' + _DOC_TS_JS)
+    k = s.lower().rfind('</body>')
+    return (s[:k] + foot + s[k:]) if k != -1 else s + foot
+
+def _dl_with_stamp(*a, **k):
+    """أي ملف HTML بيتنزّل من البرنامج (سندات، كشوف، خطابات) بيتختم بتاريخ ووقت الإصدار."""
+    try:
+        if k.get('mime') == 'text/html' and 'data' in k:
+            d = k['data']
+            raw = d.getvalue() if hasattr(d, 'getvalue') else d
+            txt = raw.decode('utf-8') if isinstance(raw, (bytes, bytearray)) else str(raw)
+            k['data'] = add_doc_stamp(txt).encode('utf-8')
+    except Exception:
+        pass
+    return _orig_download_button(*a, **k)
+
+_orig_download_button = getattr(st.download_button, '_orig', st.download_button)
+_dl_with_stamp._orig = _orig_download_button
+st.download_button = _dl_with_stamp
+
 def get_ksa_now_str():
     return get_ksa_now().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -1838,7 +1887,7 @@ def print_cash_voucher_dialog(v_item, month_name):
         </div>
     </body></html>
     """
-    st.components.v1.html(voucher_html, height=420, scrolling=True)
+    st.components.v1.html(with_print_btn(voucher_html), height=420, scrolling=True)
     st.download_button(
         label="🖨️ تنزيل السند المباشر للطباعة (HTML / PDF)",
         data=voucher_html.encode('utf-8'),
@@ -2061,7 +2110,7 @@ def print_stock_out_dialog(v_item):
         </div>
     </body></html>
     """
-    st.components.v1.html(stock_html, height=420, scrolling=True)
+    st.components.v1.html(with_print_btn(stock_html), height=420, scrolling=True)
     st.download_button(
         label="🖨️ تنزيل سند الصرف المخزني (HTML / PDF)",
         data=stock_html.encode('utf-8'),
@@ -2136,7 +2185,7 @@ def print_inventory_report_dialog(df_inv):
         </div>
     </body></html>
     """
-    st.components.v1.html(inv_report_html, height=420, scrolling=True)
+    st.components.v1.html(with_print_btn(inv_report_html), height=420, scrolling=True)
     st.download_button(
         label="🖨️ تنزيل تقرير جرد المخزون (A4 HTML)",
         data=inv_report_html.encode('utf-8'),
@@ -2213,7 +2262,7 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
         </div>
     </body></html>
     """
-    st.components.v1.html(t_account_html, height=400, scrolling=True)
+    st.components.v1.html(with_print_btn(t_account_html), height=400, scrolling=True)
     st.download_button(
         label="📄 تنزيل كشف الحساب المقابل (A4 HTML)",
         data=t_account_html.encode('utf-8'),
@@ -2661,7 +2710,8 @@ else:
             .header-en {{ text-align: left; font-size: 11px; color: #1E3A8A; font-weight: bold; width: 38%; }}
             .header-logo {{ text-align: center; width: 24%; font-size: 38px; font-weight: 900; color: #DC2626; }}
             .header-ar {{ text-align: right; font-size: 12px; color: #1E3A8A; font-weight: bold; width: 38%; }}
-            .voucher-title {{ text-align: center; font-size: 15px; font-weight: bold; color: #1E3A8A; margin: 6px 0; background: #f1f5f9; padding: 5px; }}
+            .voucher-title {{ display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 15px; font-weight: bold; color: #1E3A8A; margin: 6px 0; background: #f1f5f9; padding: 5px 8px; }}
+            .stamp-chip {{ font-size: 11px; font-weight: 700; color: #475569; background: #fff; border: 1px solid #cbd5e1; border-radius: 999px; padding: 1px 10px; white-space: nowrap; }}
             .info-table {{ width: 100%; border-collapse: collapse; margin-top: 8px; }}
             .info-table td, .info-table th {{ padding: 8px; font-size: 13px; border: 1px solid #cbd5e1; text-align: right; }}
             .info-table th {{ background-color: #f8fafc; color: #1E3A8A; }}
@@ -2695,7 +2745,7 @@ else:
                     <div class="header-logo">5M</div>
                     <div class="header-ar">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
                 </div>
-                <div class="voucher-title">سند صرف {payment_type} - شهر ({_pm}) | رقم السند: #{v1['م']:03d}</div>
+                <div class="voucher-title"><span>سند صرف {payment_type} - شهر ({_pm}) | رقم السند: #{v1['م']:03d}</span><span class="stamp-chip">{_stamp_chip()}</span></div>
                 <table class="info-table">
                     <tr><th>اسم الموظف</th><td><strong>{v1['الاسم']}</strong></td><th>الفرع المحدد</th><td><strong>{v1['الفرع']}</strong></td></tr>
                     <tr><th>الراتب الأساسي</th><td>{v1['الراتب الأساسي']:,.0f} ر.س</td><th>تفاصيل الدفعات المسجلة</th><td>دفعة (1): {v1['الدفعة 1']:,.0f} ر.س | دفعة (2): {v1['الدفعة 2']:,.0f} ر.س</td></tr>
@@ -2741,7 +2791,7 @@ else:
                         <div class="header-logo">5M</div>
                         <div class="header-ar">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
                     </div>
-                    <div class="voucher-title">سند صرف {payment_type} - شهر ({_pm}) | رقم السند: #{v2['م']:03d}</div>
+                    <div class="voucher-title"><span>سند صرف {payment_type} - شهر ({_pm}) | رقم السند: #{v2['م']:03d}</span><span class="stamp-chip">{_stamp_chip()}</span></div>
                     <table class="info-table">
                         <tr><th>اسم الموظف</th><td><strong>{v2['الاسم']}</strong></td><th>الفرع المحدد</th><td><strong>{v2['الفرع']}</strong></td></tr>
                         <tr><th>الراتب الأساسي</th><td>{v2['الراتب الأساسي']:,.0f} ر.س</td><th>تفاصيل الدفعات المسجلة</th><td>دفعة (1): {v2['الدفعة 1']:,.0f} ر.س | دفعة (2): {v2['الدفعة 2']:,.0f} ر.س</td></tr>
@@ -3381,7 +3431,7 @@ else:
                         </tr>
                     """
                 html_table_custom += "</tbody></table></div>"
-                st.components.v1.html(html_table_custom, height=380, scrolling=True)
+                st.components.v1.html(with_print_btn(html_table_custom), height=380, scrolling=True)
             else:
                 st.info("المستودع فارغ حالياً (0 أصناف). ارفع تقرير الوعلان أو أضف سند إدخال بضاعة للبدء.")
 
@@ -4605,7 +4655,7 @@ else:
         </body>
         </html>
         """
-        st.components.v1.html(sheet_html, height=400, scrolling=True)
+        st.components.v1.html(with_print_btn(sheet_html), height=400, scrolling=True)
         st.download_button(
             label=f"📄 فتح وتحميل ملف كشف مسير {filter_sheet} (HTML / PDF) 🖨️",
             data=sheet_html.encode('utf-8'),
@@ -4642,7 +4692,7 @@ else:
         st.caption(f"عدد السندات: {len(df_print)}")
         
         pdf_bytes = generate_pretty_html_pdf(df_print, selected_b, pay_type_select, print_pm)
-        st.components.v1.html(pdf_bytes.getvalue().decode('utf-8'), height=400, scrolling=True)
+        st.components.v1.html(with_print_btn(pdf_bytes.getvalue().decode('utf-8')), height=400, scrolling=True)
         st.download_button(
             label=f"📄 تنزيل ملف سندات ({pay_type_select}) - {selected_b} للطباعة 🖨️",
             data=pdf_bytes,
@@ -4823,7 +4873,7 @@ else:
                 </body></html>
                 """
 
-                st.components.v1.html(letter_full_html, height=540, scrolling=True)
+                st.components.v1.html(with_print_btn(letter_full_html), height=540, scrolling=True)
 
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
@@ -4882,7 +4932,7 @@ else:
 
                     with col_arc4:
                         if st.button("🖨️ طباعة الخطاب", key=f"print_arc_l_{idx_l}"):
-                            st.components.v1.html(l_item['html_data'], height=500, scrolling=True)
+                            st.components.v1.html(with_print_btn(l_item['html_data']), height=500, scrolling=True)
 
                         if st.button("🗑️ حذف", key=f"del_arc_l_{idx_l}"):
                             letters_archive.remove(l_item)
@@ -5812,7 +5862,7 @@ else:
         </body>
         </html>
         """
-        st.components.v1.html(sheet_html, height=400, scrolling=True)
+        st.components.v1.html(with_print_btn(sheet_html), height=400, scrolling=True)
         st.download_button(
             label=f"📄 فتح وتحميل ملف كشف مسير {filter_sheet} (HTML / PDF) 🖨️",
             data=sheet_html.encode('utf-8'),
@@ -5832,7 +5882,7 @@ else:
         df_print = st.session_state.payroll_df if selected_b == 'جميع الفروع' else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == selected_b]
         
         pdf_bytes = generate_pretty_html_pdf(df_print, selected_b, pay_type_select)
-        st.components.v1.html(pdf_bytes.getvalue().decode('utf-8'), height=400, scrolling=True)
+        st.components.v1.html(with_print_btn(pdf_bytes.getvalue().decode('utf-8')), height=400, scrolling=True)
         st.download_button(
             label=f"📄 تنزيل ملف سندات ({pay_type_select}) - {selected_b} للطباعة 🖨️",
             data=pdf_bytes,
