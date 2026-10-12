@@ -1338,7 +1338,8 @@ def _log_emp_move(rec):
     if not ok:
         return False
     v = v if isinstance(v, list) else []
-    rec = dict(rec)
+    # أرقام pandas/numpy (زي int64) مش بتتحفظ JSON: نحوّلها لأرقام بايثون عادية
+    rec = {k: (v.item() if hasattr(v, 'item') else v) for k, v in dict(rec).items()}
     rec['وقت التسجيل'] = get_ksa_now_str()
     rec['بواسطة'] = {'admin': 'wahby', 'accountant': 'omar'}.get(st.session_state.get('user_role'), '')
     v.append(rec)
@@ -4366,17 +4367,36 @@ else:
         _sheet_src = st.session_state.payroll_df if sheet_pm == month_selected else get_payroll_for_month(sheet_pm)
         filter_sheet = st.selectbox('اختر الفرع للكشف:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
         df_sheet = _sheet_src if 'جميع الفروع' in filter_sheet else _sheet_src[_sheet_src['الفرع'] == filter_sheet]
+        sheet_type = st.radio("🧾 نوع الكشف:", ["الدفعتين معًا", "الدفعة الأولى فقط", "الدفعة الثانية فقط"], horizontal=True, key="sheet_type_sel")
+        _single = sheet_type != "الدفعتين معًا"
+        _pcol = 'الدفعة 1' if 'الأولى' in sheet_type else 'الدفعة 2'
+        if _single:
+            _only_paid = st.checkbox("اعرض اللي استلموا الدفعة دي بس (يخفي اللي مبلغه صفر)", value=True, key="sheet_only_paid")
+            if _only_paid:
+                df_sheet = df_sheet[pd.to_numeric(df_sheet[_pcol], errors='coerce').fillna(0) > 0]
+        _title_sfx = f" - {sheet_type}" if _single else ""
+        if _single:
+            _csv_df = df_sheet[['م', 'الاسم', 'الوظيفة', 'الفرع', 'الراتب الأساسي', 'الخصومات', _pcol]]
+        else:
+            _csv_df = df_sheet
         
-        csv_payroll_bytes = df_sheet.to_csv(index=False).encode('utf-8-sig')
+        csv_payroll_bytes = _csv_df.to_csv(index=False).encode('utf-8-sig')
         st.download_button(
             label=f"📊 تصدير كشف المسير إلى Excel / CSV ({filter_sheet})",
             data=csv_payroll_bytes,
-            file_name=f"كشف_مسير_رواتب_{filter_sheet}_{sheet_pm}.csv",
+            file_name=f"كشف_مسير_رواتب_{filter_sheet}_{sheet_pm}{_title_sfx}.csv",
             mime="text/csv",
             use_container_width=True,
             key="btn_export_payroll_excel"
         )
         st.write("")
+
+        if _single:
+            _th_html = ("<th>م</th><th>اسم الموظف</th><th>الوظيفة</th><th>الفرع</th><th>الراتب المستحق</th><th>الخصومات</th>"
+                        f"<th>مبلغ {'الدفعة الأولى' if _pcol == 'الدفعة 1' else 'الدفعة الثانية'}</th><th>التوقيع / الاستلام</th>")
+        else:
+            _th_html = ("<th>م</th><th>اسم الموظف</th><th>الوظيفة</th><th>الفرع</th><th>الراتب المستحق</th><th>الدفعة 1</th><th>الدفعة 2</th>"
+                        "<th>الخصومات</th><th>إجمالي المصروف</th><th>المتبقي</th><th>التوقيع / الاستلام</th>")
 
         sheet_html = f"""
         <!DOCTYPE html>
@@ -4400,28 +4420,32 @@ else:
         <body>
             <div class="header">
                 <h2>🏢 شركة ميم الخماسية للتصنيع</h2>
-                <h3>كشف مسير الرواتب - {filter_sheet} ({sheet_pm})</h3>
+                <h3>كشف مسير الرواتب - {filter_sheet} ({sheet_pm}){_title_sfx}</h3>
             </div>
             <table>
                 <thead>
                     <tr>
-                        <th>م</th>
-                        <th>اسم الموظف</th>
-                        <th>الوظيفة</th>
-                        <th>الفرع</th>
-                        <th>الراتب المستحق</th>
-                        <th>الدفعة 1</th>
-                        <th>الدفعة 2</th>
-                        <th>الخصومات</th>
-                        <th>إجمالي المصروف</th>
-                        <th>المتبقي</th>
-                        <th>التوقيع / الاستلام</th>
+                        {_th_html}
                     </tr>
                 </thead>
                 <tbody>
         """
         for idx, r in df_sheet.iterrows():
-            sheet_html += f"""
+            if _single:
+                sheet_html += f"""
+                <tr>
+                    <td>{r['م']}</td>
+                    <td><strong>{r['الاسم']}</strong></td>
+                    <td>{r['الوظيفة']}</td>
+                    <td>{r['الفرع']}</td>
+                    <td>{r['الراتب الأساسي']:,.0f} ر.س</td>
+                    <td style="color:#b91c1c;">{r.get('الخصومات', 0):,.0f} ر.س</td>
+                    <td style="color:#047857; font-weight:bold;">{r.get(_pcol, 0):,.0f} ر.س</td>
+                    <td style="width: 120px;"></td>
+                </tr>
+                """
+            else:
+                sheet_html += f"""
                 <tr>
                     <td>{r['م']}</td>
                     <td><strong>{r['الاسم']}</strong></td>
@@ -4435,15 +4459,23 @@ else:
                     <td style="color:#b91c1c; font-weight:bold;">{r['المتبقي']:,.0f} ر.س</td>
                     <td style="width: 120px;"></td>
                 </tr>
-            """
-        sheet_html += f"""
-                </tbody>
-            </table>
-            <div class="totals-box">
+                """
+        if _single:
+            _totals_html = f"""
+                <span>عدد الموظفين: {len(df_sheet)}</span>
+                <span>إجمالي الرواتب: {df_sheet['الراتب الأساسي'].sum():,.0f} ر.س</span>
+                <span>إجمالي الخصومات: {df_sheet['الخصومات'].sum():,.0f} ر.س</span>
+                <span>إجمالي {'الدفعة الأولى' if _pcol == 'الدفعة 1' else 'الدفعة الثانية'}: {df_sheet[_pcol].sum():,.0f} ر.س</span>"""
+        else:
+            _totals_html = f"""
                 <span>إجمالي الرواتب: {df_sheet['الراتب الأساسي'].sum():,.0f} ر.س</span>
                 <span>إجمالي الخصومات: {df_sheet.get('الخصومات', pd.Series([0])).sum():,.0f} ر.س</span>
                 <span>إجمالي المصروف: {df_sheet['الدفعة المدفوعة'].sum():,.0f} ر.س</span>
-                <span>إجمالي المتبقي: {df_sheet['المتبقي'].sum():,.0f} ر.س</span>
+                <span>إجمالي المتبقي: {df_sheet['المتبقي'].sum():,.0f} ر.س</span>"""
+        sheet_html += f"""
+                </tbody>
+            </table>
+            <div class="totals-box">{_totals_html}
             </div>
             <div class="signatures">
                 <div>إعداد المحاسب المسؤول: <br><img src="{SIGN_IMG_URL}" style="width:90px;"></div>
@@ -4457,7 +4489,7 @@ else:
         st.download_button(
             label=f"📄 فتح وتحميل ملف كشف مسير {filter_sheet} (HTML / PDF) 🖨️",
             data=sheet_html.encode('utf-8'),
-            file_name=f"مسير_رواتب_{filter_sheet}_{sheet_pm}.html",
+            file_name=f"مسير_رواتب_{filter_sheet}_{sheet_pm}{_title_sfx}.html",
             mime="text/html",
             use_container_width=True
         )
@@ -4477,6 +4509,17 @@ else:
             
         _pdf_src = st.session_state.payroll_df if print_pm == month_selected else get_payroll_for_month(print_pm)
         df_print = _pdf_src if selected_b == 'جميع الفروع' else _pdf_src[_pdf_src['الفرع'] == selected_b]
+        # طباعة سند موظف واحد أو كام موظف بس (مثلاً بعد تعديل سند) بدل ما تطبع الكل
+        _names = {int(r['م']): f"{int(r['م'])} - {r['الاسم']}" for _, r in df_print.iterrows()}
+        emp_pick = st.multiselect("👤 اطبع سند موظف / موظفين معينين (سيبها فاضية لطباعة الكل):", list(_names.keys()),
+                                  format_func=lambda k: _names.get(k, str(k)), key=f"print_emp_{print_pm}_{selected_b}")
+        if emp_pick:
+            df_print = df_print[df_print['م'].astype(int).isin(emp_pick)]
+        elif pay_type_select != 'جميع الدفعات (السند الشامل)':
+            _pc = 'الدفعة 1' if 'الأولى' in pay_type_select else 'الدفعة 2'
+            if st.checkbox("اخفي اللي دفعته صفر (مفيش له سند)", value=True, key="print_hide_zero"):
+                df_print = df_print[pd.to_numeric(df_print[_pc], errors='coerce').fillna(0) > 0]
+        st.caption(f"عدد السندات: {len(df_print)}")
         
         pdf_bytes = generate_pretty_html_pdf(df_print, selected_b, pay_type_select, print_pm)
         st.components.v1.html(pdf_bytes.getvalue().decode('utf-8'), height=400, scrolling=True)
