@@ -554,6 +554,25 @@ if 'بدون' not in _wm_lv:
         @media print {{ .stApp::before, .stApp::after {{ display: none !important; }} }}
 """
 
+# ===== شريط الهوية في الهيدر الفاضي فوق الصفحة =====
+_h = get_ksa_now().hour
+_greet = "صباح الخير ☀️" if 5 <= _h < 12 else ("مساء الخير 🌤️" if 12 <= _h < 18 else "مساء النور 🌙")
+_hdr_css = f"""
+        [data-testid="stHeader"]::before {{
+            content: "{_greet}   ✦   ميم الخماسية للتصنيع   ✦   5M";
+            position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+            font-family: 'Cairo', sans-serif; font-weight: 700; font-size: clamp(11px, 1.6vw, 15px);
+            letter-spacing: .3px; white-space: nowrap; pointer-events: none; direction: rtl;
+            color: {accent}; opacity: .85;
+        }}
+        [data-testid="stHeader"]::after {{
+            content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; pointer-events: none;
+            background: linear-gradient(90deg, transparent 0%, {accent} 50%, transparent 100%); opacity: .55;
+        }}
+        @media (max-width: 768px) {{ [data-testid="stHeader"]::before {{ font-size: 10.5px; }} }}
+        @media print {{ [data-testid="stHeader"]::before, [data-testid="stHeader"]::after {{ display: none !important; }} }}
+"""
+
 pwa_manifest_json = json.dumps({
     "name": "5M Accounting System",
     "short_name": "5M",
@@ -576,6 +595,7 @@ st.markdown(f"""
 
         {stars_css}
         {_wm_css}
+        {_hdr_css}
 
         html, body, .stApp, [data-testid="stAppViewContainer"] {{
             direction: rtl !important;
