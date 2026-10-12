@@ -864,6 +864,18 @@ st.markdown(f"""
         }}
         [data-testid="stSidebar"] .stButton > button {{ text-align: right !important; justify-content: flex-start !important; }}
 
+        /* نوافذ الحوار: خلفية ونص من نفس الثيم (كان النص فاتح على خلفية بيضا) */
+        div[role="dialog"] {{ background: {dialog_bg} !important; border: 1px solid {border_color} !important; }}
+        div[role="dialog"] h1, div[role="dialog"] h2, div[role="dialog"] h3, div[role="dialog"] p,
+        div[role="dialog"] label, div[role="dialog"] li, div[role="dialog"] [data-testid="stMarkdownContainer"] * {{ color: {dialog_text} !important; }}
+        div[role="dialog"] [data-testid="stAlert"] * {{ color: {dialog_text} !important; }}
+        /* نص الزراير الزرقا لازم يبان: كان بياخد لون النص العام */
+        .main div.stButton > button *, .main div.stDownloadButton > button *, .main [data-testid="stFormSubmitButton"] > button *,
+        [data-testid="stMain"] div.stButton > button *, [data-testid="stMain"] div.stDownloadButton > button *, [data-testid="stMain"] [data-testid="stFormSubmitButton"] > button *,
+        div[role="dialog"] div.stButton > button *, div[role="dialog"] [data-testid="stFormSubmitButton"] > button * {{ color: {btn_main_text} !important; }}
+        [data-testid="stSidebar"] .stButton > button[kind="primary"] *, [data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] *,
+        [data-testid="stSidebar"] .stButton > button:hover * {{ color: {accent_ink} !important; }}
+
         /* ===== الشريط العلوي ===== */
         .topbar-title {{ font-size: 24px !important; font-weight: 900 !important; line-height: 1.3 !important; color: {text_color} !important; }}
         .topbar-sub {{ font-size: 12px !important; color: {muted_color} !important; font-weight: 600 !important; }}
@@ -1214,7 +1226,7 @@ def load_monthly_payroll_store():
 def save_monthly_payroll_store(store_data):
     return save_cloud_store('monthly_payroll_store_v4', store_data)
 
-EMP_STATUSES = ['على رأس العمل', 'إجازة', 'موقوف', 'منتهي خدمته']
+EMP_STATUSES = ['على رأس العمل', 'إجازة', 'إجازة مفتوحة', 'موقوف', 'منتهي خدمته']
 EMP_BRANCHES = ['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة']
 
 def _norm_status(df):
@@ -1241,11 +1253,38 @@ def _fresh_row(r):
     n = dict(r)
     sal = float(n.get('الراتب الأساسي', 0) or 0)
     n.update({'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الخصومات': 0.0, 'الدفعة المدفوعة': 0.0,
-              'المتبقي': sal, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': ''})
+              'المتبقي': sal, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': '', 'خصم إجازة': 0.0})
     if n.get('حالة الموظف') == 'إجازة':
         n['حالة الموظف'] = 'على رأس العمل'
     n.setdefault('حالة الموظف', 'على رأس العمل')
     return n
+
+def _parse_d(s):
+    try:
+        return datetime.strptime(str(s)[:10], '%Y-%m-%d').date()
+    except Exception:
+        return None
+
+def _leave_days_in_month(y, m, d_from, d_to=None):
+    """عدد أيام الإجازة اللي بتقع جوه الشهر (d_to=None يعني إجازة مفتوحة لآخر الشهر)."""
+    import calendar
+    first = datetime(y, m, 1).date()
+    last = datetime(y, m, calendar.monthrange(y, m)[1]).date()
+    a = max(d_from, first)
+    b = min(d_to, last) if d_to else last
+    return max((b - a).days + 1, 0)
+
+def _apply_open_leave_month(r, month_label):
+    """شهر جديد لموظف في إجازة مفتوحة (بدون راتب): بيتخصم بالأيام من بداية الإجازة أو أول الشهر."""
+    ym = month_label_to_ym(month_label)
+    start = _parse_d(r.get('بداية الإجازة'))
+    if not ym or not start:
+        return
+    days = _leave_days_in_month(ym[0], ym[1], start, None)
+    amt = round(float(r.get('الراتب الأساسي', 0) or 0) / 30.0 * min(days, 30), 2)
+    r['خصم إجازة'] = amt
+    r['الخصومات'] = amt
+    _recalc_row(r)
 
 def get_payroll_for_month(month_name):
     ok, store = fetch_cloud_store_strict('monthly_payroll_store_v4')
@@ -1271,6 +1310,9 @@ def get_payroll_for_month(month_name):
         else:
             # الشهر الجديد بيتبني من كشف الشهر اللي قبله: المنتهي خدمته بيطلع، والنقل والراتب بيتنقلوا معاه
             rows = [_fresh_row(r) for r in store[prev] if r.get('حالة الموظف') != 'منتهي خدمته']
+            for _r in rows:
+                if _r.get('حالة الموظف') == 'إجازة مفتوحة':
+                    _apply_open_leave_month(_r, month_name)
             df_base = pd.DataFrame(rows)
         df_base = _norm_status(df_base)
         store[month_name] = df_base.to_dict(orient='records')
@@ -1436,25 +1478,62 @@ def leave_days_by_month(d_from, d_to):
         d += timedelta(days=1)
     return out
 
-def apply_leave(emp_id, d_from, d_to, unpaid):
-    """يعلّم الشهور بحالة إجازة، ولو بدون راتب يخصم (الراتب ÷ 30 × الأيام) في كل شهر."""
-    per_month = leave_days_by_month(d_from, d_to)
+def apply_leave(emp_id, d_from, d_to, unpaid, open_ended=False):
+    """إجازة بمرتب / بدون مرتب بتاريخ نهاية / بدون مرتب مفتوحة (بدون تاريخ نهاية).
+    الخصم = الراتب ÷ 30 × الأيام (بحد أقصى 30 يوم في الشهر)، وبيتسجل في 'خصم إجازة' عشان نقدر نعدله لما يرجع."""
     def mut(store):
         report = []
-        for lbl, days in per_month.items():
+        if open_ended:
+            spans = [(lbl, None) for lbl in _store_months_from(store, f"{AR_MONTHS[d_from.month - 1]} {d_from.year}")]
+        else:
+            spans = list(leave_days_by_month(d_from, d_to).items())
+        for lbl, _d in spans:
             if lbl not in store:
-                report.append((lbl, days, None))
+                report.append((lbl, _d, None))
+                continue
+            ym = month_label_to_ym(lbl)
+            days = _leave_days_in_month(ym[0], ym[1], d_from, None if open_ended else d_to)
+            if days <= 0:
                 continue
             for r in store[lbl]:
                 if r.get('م') == emp_id:
-                    r['حالة الموظف'] = 'إجازة'
+                    r['حالة الموظف'] = 'إجازة مفتوحة' if open_ended else 'إجازة'
+                    if open_ended:
+                        r['بداية الإجازة'] = str(d_from)
                     amt = 0.0
                     if unpaid:
-                        amt = round(float(r.get('الراتب الأساسي', 0) or 0) / 30.0 * days, 2)
+                        amt = round(float(r.get('الراتب الأساسي', 0) or 0) / 30.0 * min(days, 30), 2)
+                        r['خصم إجازة'] = float(r.get('خصم إجازة', 0) or 0) + amt
                         r['الخصومات'] = float(r.get('الخصومات', 0) or 0) + amt
                         _recalc_row(r)
                     report.append((lbl, days, amt))
         return report
+    return _apply_to_store(mut)
+
+def end_open_leave(emp_id, return_date):
+    """رجوع من إجازة مفتوحة: شهر الرجوع بيتخصم بالأيام لحد يوم قبل الرجوع، والشهور بعده بتتشال منها الخصم."""
+    def mut(store):
+        out = []
+        ret_ym = (return_date.year, return_date.month)
+        for mk in _store_months_from(store, 'يناير 2000'):
+            ym = month_label_to_ym(mk)
+            for r in store[mk]:
+                if r.get('م') != emp_id or r.get('حالة الموظف') != 'إجازة مفتوحة':
+                    continue
+                if ym < ret_ym:
+                    continue
+                start = _parse_d(r.get('بداية الإجازة'))
+                old = float(r.get('خصم إجازة', 0) or 0)
+                new = 0.0
+                if ym == ret_ym and start:
+                    days = _leave_days_in_month(ym[0], ym[1], start, return_date - timedelta(days=1))
+                    new = round(float(r.get('الراتب الأساسي', 0) or 0) / 30.0 * min(days, 30), 2)
+                r['الخصومات'] = max(float(r.get('الخصومات', 0) or 0) - old + new, 0.0)
+                r['خصم إجازة'] = new
+                r['حالة الموظف'] = 'على رأس العمل'
+                _recalc_row(r)
+                out.append((mk, old, new))
+        return out
     return _apply_to_store(mut)
 
 def load_cash_data():
@@ -2205,33 +2284,43 @@ def employee_move_dialog(emp_idx, month_name):
 
     elif kind == "إجازة":
         today = get_ksa_now().date()
-        c1, c2 = st.columns(2)
-        d_from = c1.date_input("من تاريخ:", today, key=f"mv_lf_{emp_id}")
-        d_to = c2.date_input("إلى تاريخ:", today, key=f"mv_lt_{emp_id}")
-        unpaid = st.checkbox("بدون راتب (يتخصم من الراتب: الراتب ÷ 30 × الأيام)", value=False, key=f"mv_unpaid_{emp_id}")
-        if d_to < d_from:
-            st.error("تاريخ النهاية قبل البداية.")
+        ltype = st.radio("نوع الإجازة:", ["بمرتب (بتاريخ نهاية)", "بدون مرتب (بتاريخ نهاية)", "بدون مرتب - مفتوحة (من غير تاريخ نهاية)"], key=f"mv_ltype_{emp_id}")
+        open_ended = ltype.startswith("بدون مرتب - مفتوحة")
+        unpaid = ltype.startswith("بدون مرتب")
+        sal = float(emp['الراتب الأساسي'])
+        if open_ended:
+            d_from = st.date_input("بداية الإجازة:", today, key=f"mv_lf_{emp_id}")
+            d_to = None
+            st.info("إجازة مفتوحة: بتتخصم بالأيام (الراتب ÷ 30) من تاريخ البداية، وبتكمّل تلقائي في كل شهر جديد لحد ما تسجّل رجوعه (من «رجوع للعمل»).")
+            valid = True
         else:
-            per = leave_days_by_month(d_from, d_to)
-            sal = float(emp['الراتب الأساسي'])
-            st.info("الأيام: " + "، ".join(f"{k}: {v} يوم" for k, v in per.items()) +
-                    (f" | الخصم المتوقع: {sum(per.values()) * sal / 30.0:,.0f} ر.س" if unpaid else " | بمرتب: بدون خصم"))
-            note = st.text_input("ملاحظة (نوع الإجازة مثلاً):", key=f"mv_note_{emp_id}")
-            if st.button("✅ تسجيل الإجازة", key=f"mv_go_{emp_id}", type="primary"):
-                ok, rep = apply_leave(emp_id, d_from, d_to, unpaid)
-                if ok:
-                    _log_emp_move({'م': emp_id, 'الاسم': emp['الاسم'], 'النوع': 'إجازة بدون راتب' if unpaid else 'إجازة بمرتب',
-                                   'من': str(d_from), 'إلى': str(d_to), 'ملاحظة': note})
-                    miss = [r[0] for r in rep if r[2] is None]
-                    msg = f"اتسجلت إجازة {emp['الاسم']}."
-                    if unpaid:
-                        msg += " الخصم: " + "، ".join(f"{r[0]} = {r[2]:,.0f}" for r in rep if r[2] is not None)
-                    if miss:
-                        msg += " (شهور لسه ما اتفتحتش: " + "، ".join(miss) + " - اخصمها يدوي لما تتفتح)"
-                    flash('warning' if miss else 'success', msg)
-                else:
-                    flash('error', "ما اتسجلتش الإجازة: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
-                st.rerun()
+            c1, c2 = st.columns(2)
+            d_from = c1.date_input("من تاريخ:", today, key=f"mv_lf_{emp_id}")
+            d_to = c2.date_input("إلى تاريخ:", today, key=f"mv_lt_{emp_id}")
+            valid = d_to >= d_from
+            if not valid:
+                st.error("تاريخ النهاية قبل البداية.")
+            else:
+                per = leave_days_by_month(d_from, d_to)
+                st.info("الأيام: " + "، ".join(f"{k}: {v} يوم" for k, v in per.items()) +
+                        (f" | الخصم المتوقع: {sum(min(v, 30) for v in per.values()) * sal / 30.0:,.0f} ر.س" if unpaid else " | بمرتب: بدون خصم"))
+        note = st.text_input("ملاحظة (اختياري):", key=f"mv_note_{emp_id}")
+        if valid and st.button("✅ تسجيل الإجازة", key=f"mv_go_{emp_id}", type="primary"):
+            ok, rep_ = apply_leave(emp_id, d_from, d_to, unpaid, open_ended)
+            if ok:
+                _log_emp_move({'م': emp_id, 'الاسم': emp['الاسم'],
+                               'النوع': 'إجازة مفتوحة' if open_ended else ('إجازة بدون راتب' if unpaid else 'إجازة بمرتب'),
+                               'من': str(d_from), 'إلى': (str(d_to) if d_to else 'مفتوحة'), 'ملاحظة': note})
+                miss = [r[0] for r in rep_ if r[2] is None]
+                msg = f"اتسجلت إجازة {emp['الاسم']}."
+                if unpaid:
+                    msg += " الخصم: " + "، ".join(f"{r[0]} = {r[2]:,.0f}" for r in rep_ if r[2] is not None)
+                if miss:
+                    msg += " (شهور لسه ما اتفتحتش: " + "، ".join(miss) + " - اخصمها يدوي لما تتفتح)"
+                flash('warning' if miss else 'success', msg)
+            else:
+                flash('error', "ما اتسجلتش الإجازة: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
+            st.rerun()
 
     elif kind == "إيقاف عن العمل":
         fm = st.selectbox("من شهر:", months[start_idx:], key=f"mv_fm_{emp_id}")
@@ -2259,16 +2348,29 @@ def employee_move_dialog(emp_idx, month_name):
             st.rerun()
 
     else:  # رجوع للعمل
-        fm = st.selectbox("الرجوع من شهر:", months[start_idx:], key=f"mv_fm_{emp_id}")
-        note = st.text_input("ملاحظة:", key=f"mv_note_{emp_id}")
-        if st.button("✅ تأكيد الرجوع", key=f"mv_go_{emp_id}", type="primary"):
-            ok, n = reinstate_employee(emp_id, fm)
-            if ok:
-                _log_emp_move({'م': emp_id, 'الاسم': emp['الاسم'], 'النوع': 'رجوع للعمل', 'من شهر': fm, 'ملاحظة': note})
-                flash('success', f"رجع {emp['الاسم']} للعمل من شهر {fm} ({n} شهر).")
-            else:
-                flash('error', "ما اترجعش: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
-            st.rerun()
+        if cur_status == 'إجازة مفتوحة':
+            rd = st.date_input("تاريخ الرجوع للعمل:", get_ksa_now().date(), key=f"mv_rd_{emp_id}")
+            st.caption("الخصم بيتحسب لحد اليوم اللي قبل الرجوع، ولو في شهور بعد كده اتفتحت بيتشال منها الخصم.")
+            note = st.text_input("ملاحظة:", key=f"mv_note_{emp_id}")
+            if st.button("✅ تأكيد الرجوع", key=f"mv_go_{emp_id}", type="primary"):
+                ok, res = end_open_leave(emp_id, rd)
+                if ok:
+                    _log_emp_move({'م': emp_id, 'الاسم': emp['الاسم'], 'النوع': 'رجوع من إجازة مفتوحة', 'من': str(rd), 'ملاحظة': note})
+                    flash('success', f"رجع {emp['الاسم']} للعمل. " + "، ".join(f"{r[0]}: الخصم {r[1]:,.0f} ← {r[2]:,.0f}" for r in res))
+                else:
+                    flash('error', "ما اترجعش: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
+                st.rerun()
+        else:
+            fm = st.selectbox("الرجوع من شهر:", months[start_idx:], key=f"mv_fm_{emp_id}")
+            note = st.text_input("ملاحظة:", key=f"mv_note_{emp_id}")
+            if st.button("✅ تأكيد الرجوع", key=f"mv_go_{emp_id}", type="primary"):
+                ok, n = reinstate_employee(emp_id, fm)
+                if ok:
+                    _log_emp_move({'م': emp_id, 'الاسم': emp['الاسم'], 'النوع': 'رجوع للعمل', 'من شهر': fm, 'ملاحظة': note})
+                    flash('success', f"رجع {emp['الاسم']} للعمل من شهر {fm} ({n} شهر).")
+                else:
+                    flash('error', "ما اترجعش: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
+                st.rerun()
 
 # الشاشة الافتتاحية وواجهة المستخدم الموحدة
 if not st.session_state.get('app_started', False):
@@ -4180,14 +4282,14 @@ else:
 
     elif selected_option == 'دليل الموظفين' and st.session_state.user_role == "admin":
         st.subheader('👤 دليل الموظفين والملفات الإدارية')
-        _EMP_ICON = {'على رأس العمل': '', 'إجازة': '🏖️ إجازة', 'موقوف': '⏸️ موقوف', 'منتهي خدمته': '⛔ منتهي خدمته'}
+        _EMP_ICON = {'على رأس العمل': '', 'إجازة': '🏖️ إجازة', 'إجازة مفتوحة': '🏖️ إجازة مفتوحة', 'موقوف': '⏸️ موقوف', 'منتهي خدمته': '⛔ منتهي خدمته'}
         def _st_badge(_r):
             _s = _r.get('حالة الموظف', 'على رأس العمل')
             return f"`{_EMP_ICON.get(_s, _s)}`" if _EMP_ICON.get(_s, _s) else ""
         _sc = st.session_state.payroll_df['حالة الموظف'].value_counts() if 'حالة الموظف' in st.session_state.payroll_df.columns else {}
         _k1, _k2, _k3, _k4 = st.columns(4)
         _k1.metric("على رأس العمل", int(_sc.get('على رأس العمل', 0)))
-        _k2.metric("🏖️ إجازة", int(_sc.get('إجازة', 0)))
+        _k2.metric("🏖️ إجازة", int(_sc.get('إجازة', 0)) + int(_sc.get('إجازة مفتوحة', 0)))
         _k3.metric("⏸️ موقوف", int(_sc.get('موقوف', 0)))
         _k4.metric("⛔ منتهي خدمته", int(_sc.get('منتهي خدمته', 0)))
         with st.expander("📜 سجل حركات الموظفين (تعيين / نقل / إجازة / إيقاف / إنهاء خدمة)"):
@@ -4257,14 +4359,19 @@ else:
 
     elif selected_option == 'مسير الرواتب' and st.session_state.user_role == "admin":
         st.subheader(f'📋 كشف مسير الرواتب الشهري الموحد - ({month_selected})')
+        _cmi = st.session_state.months_list.index(month_selected)
+        _prev_lbl = st.session_state.months_list[_cmi - 1] if _cmi > 0 else 'أغسطس 2026'
+        # رواتب سبتمبر بتتصرف في أكتوبر: نختار شهر الرواتب اللي عايزين نطبع كشفه
+        sheet_pm = st.radio("📅 كشف رواتب أي شهر؟", [_prev_lbl, month_selected], horizontal=True, key=f"sheet_pm_{sheet_pm}")
+        _sheet_src = st.session_state.payroll_df if sheet_pm == month_selected else get_payroll_for_month(sheet_pm)
         filter_sheet = st.selectbox('اختر الفرع للكشف:', ['جميع الفروع (الكشف الموحد)', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'])
-        df_sheet = st.session_state.payroll_df if 'جميع الفروع' in filter_sheet else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == filter_sheet]
+        df_sheet = _sheet_src if 'جميع الفروع' in filter_sheet else _sheet_src[_sheet_src['الفرع'] == filter_sheet]
         
         csv_payroll_bytes = df_sheet.to_csv(index=False).encode('utf-8-sig')
         st.download_button(
             label=f"📊 تصدير كشف المسير إلى Excel / CSV ({filter_sheet})",
             data=csv_payroll_bytes,
-            file_name=f"كشف_مسير_رواتب_{filter_sheet}_{month_selected}.csv",
+            file_name=f"كشف_مسير_رواتب_{filter_sheet}_{sheet_pm}.csv",
             mime="text/csv",
             use_container_width=True,
             key="btn_export_payroll_excel"
@@ -4293,7 +4400,7 @@ else:
         <body>
             <div class="header">
                 <h2>🏢 شركة ميم الخماسية للتصنيع</h2>
-                <h3>كشف مسير الرواتب - {filter_sheet} ({month_selected})</h3>
+                <h3>كشف مسير الرواتب - {filter_sheet} ({sheet_pm})</h3>
             </div>
             <table>
                 <thead>
@@ -4350,7 +4457,7 @@ else:
         st.download_button(
             label=f"📄 فتح وتحميل ملف كشف مسير {filter_sheet} (HTML / PDF) 🖨️",
             data=sheet_html.encode('utf-8'),
-            file_name=f"مسير_رواتب_{filter_sheet}_{month_selected}.html",
+            file_name=f"مسير_رواتب_{filter_sheet}_{sheet_pm}.html",
             mime="text/html",
             use_container_width=True
         )
