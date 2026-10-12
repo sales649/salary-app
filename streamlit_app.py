@@ -1214,37 +1214,65 @@ def load_monthly_payroll_store():
 def save_monthly_payroll_store(store_data):
     return save_cloud_store('monthly_payroll_store_v4', store_data)
 
+EMP_STATUSES = ['على رأس العمل', 'إجازة', 'موقوف', 'منتهي خدمته']
+EMP_BRANCHES = ['مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة']
+
+def _norm_status(df):
+    if 'حالة الموظف' not in df.columns:
+        df['حالة الموظف'] = 'على رأس العمل'
+    df['حالة الموظف'] = df['حالة الموظف'].fillna('على رأس العمل').replace('', 'على رأس العمل')
+    return df
+
+def _prev_store_month(store, month_name):
+    """آخر شهر فيه كشف رواتب قبل الشهر المطلوب (بالترتيب الزمني)."""
+    tgt = month_label_to_ym(month_name)
+    if not tgt:
+        return None
+    best = None
+    for k, v in store.items():
+        ym = month_label_to_ym(k)
+        if ym and ym < tgt and isinstance(v, list) and len(v) > 0:
+            if best is None or ym > best[0]:
+                best = (ym, k)
+    return best[1] if best else None
+
+def _fresh_row(r):
+    """نسخة صف موظف لشهر جديد: نفس البيانات الثابتة وبدون دفعات."""
+    n = dict(r)
+    sal = float(n.get('الراتب الأساسي', 0) or 0)
+    n.update({'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الخصومات': 0.0, 'الدفعة المدفوعة': 0.0,
+              'المتبقي': sal, 'نوع الإجراء': 'لم يُصرف', 'الملاحظات': ''})
+    if n.get('حالة الموظف') == 'إجازة':
+        n['حالة الموظف'] = 'على رأس العمل'
+    n.setdefault('حالة الموظف', 'على رأس العمل')
+    return n
+
 def get_payroll_for_month(month_name):
     ok, store = fetch_cloud_store_strict('monthly_payroll_store_v4')
     if not ok:
         flash('error', "تعذر قراءة جدول الرواتب من قاعدة البيانات دلوقتي. اعمل تحديث للصفحة - ولا تحفظ أي تعديل قبل ما الجدول يظهر صح.")
-        return pd.DataFrame(august_payroll_data).assign(**{'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الخصومات': 0.0, 'الدفعة المدفوعة': 0.0})
+        return _norm_status(pd.DataFrame(august_payroll_data).assign(**{'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الخصومات': 0.0, 'الدفعة المدفوعة': 0.0}))
     if not isinstance(store, dict):
         store = {}
-    new_emp_dict = {m['م']: m for m in august_payroll_data if m['م'] >= 56}
 
     if month_name in store and len(store[month_name]) > 0:
-        existing_list = list(store[month_name])
-        existing_ids = {item.get('م') for item in existing_list}
-        added = False
-        # الموظفين الموجودين بيتحفظوا زي ما هما (عشان الدفعات اللي اتصرفت ما تتمسحش)، والجداد بس بيتضافوا
-        for m_id, new_m in new_emp_dict.items():
-            if m_id not in existing_ids:
-                existing_list.append(dict(new_m))
-                added = True
-        if added:
-            store[month_name] = existing_list
-            save_monthly_payroll_store(store)
-        return pd.DataFrame(existing_list)
+        return _norm_status(pd.DataFrame(list(store[month_name])))
     else:
-        df_base = pd.DataFrame(august_payroll_data)
-        if month_name != 'أغسطس 2026':
-            df_base['الدفعة 1'] = 0.0
-            df_base['الدفعة 2'] = 0.0
-            df_base['الخصومات'] = 0.0
-            df_base['الدفعة المدفوعة'] = 0.0
-            df_base['المتبقي'] = df_base['الراتب الأساسي']
-            df_base['نوع الإجراء'] = 'لم يُصرف'
+        prev = _prev_store_month(store, month_name)
+        if month_name == 'أغسطس 2026' or not prev:
+            df_base = pd.DataFrame(august_payroll_data)
+            if month_name != 'أغسطس 2026':
+                df_base['الدفعة 1'] = 0.0
+                df_base['الدفعة 2'] = 0.0
+                df_base['الخصومات'] = 0.0
+                df_base['الدفعة المدفوعة'] = 0.0
+                df_base['المتبقي'] = df_base['الراتب الأساسي']
+                df_base['نوع الإجراء'] = 'لم يُصرف'
+        else:
+            # الشهر الجديد بيتبني من كشف الشهر اللي قبله: المنتهي خدمته بيطلع، والنقل والراتب بيتنقلوا معاه
+            rows = [_fresh_row(r) for r in store[prev] if r.get('حالة الموظف') != 'منتهي خدمته']
+            df_base = pd.DataFrame(rows)
+        df_base = _norm_status(df_base)
         store[month_name] = df_base.to_dict(orient='records')
         save_monthly_payroll_store(store)
         return df_base
@@ -1258,6 +1286,176 @@ def save_payroll_for_month(df, month_name):
         store = {}
     store[month_name] = df.to_dict(orient='records')
     return save_monthly_payroll_store(store)
+
+def load_emp_moves():
+    ok, v = fetch_cloud_store_strict('employee_moves_v1')
+    return (v if isinstance(v, list) else []) if ok else []
+
+def _log_emp_move(rec):
+    ok, v = fetch_cloud_store_strict('employee_moves_v1')
+    if not ok:
+        return False
+    v = v if isinstance(v, list) else []
+    rec = dict(rec)
+    rec['وقت التسجيل'] = get_ksa_now_str()
+    rec['بواسطة'] = {'admin': 'wahby', 'accountant': 'omar'}.get(st.session_state.get('user_role'), '')
+    v.append(rec)
+    return save_cloud_store('employee_moves_v1', v)
+
+def _store_months_from(store, from_label, to_label=None):
+    f = month_label_to_ym(from_label)
+    t = month_label_to_ym(to_label) if to_label else None
+    out = []
+    for k in store.keys():
+        ym = month_label_to_ym(k)
+        if ym and ym >= f and (t is None or ym <= t) and isinstance(store[k], list):
+            out.append((ym, k))
+    return [k for _, k in sorted(out)]
+
+def _next_emp_id(store):
+    ids = [int(m['م']) for m in august_payroll_data]
+    for rows in (store or {}).values():
+        if isinstance(rows, list):
+            ids += [int(r.get('م', 0) or 0) for r in rows]
+    return max(ids) + 1
+
+def _recalc_row(r):
+    sal = float(r.get('الراتب الأساسي', 0) or 0)
+    ded = float(r.get('الخصومات', 0) or 0)
+    p1 = float(r.get('الدفعة 1', 0) or 0)
+    p2 = float(r.get('الدفعة 2', 0) or 0)
+    r['الدفعة المدفوعة'] = p1 + p2
+    r['المتبقي'] = sal - ded - p1 - p2
+
+def _apply_to_store(mutator):
+    """بيقرا المخزن بشكل صارم، بيطبق الدالة عليه، وبيحفظ. بيرجع (نجح؟، نتيجة)."""
+    ok, store = fetch_cloud_store_strict('monthly_payroll_store_v4')
+    if not ok or not isinstance(store, dict):
+        return False, None
+    res = mutator(store)
+    if not save_monthly_payroll_store(store):
+        return False, None
+    return True, res
+
+def transfer_employee(emp_id, new_branch, from_month):
+    def mut(store):
+        n = 0
+        for mk in _store_months_from(store, from_month):
+            for r in store[mk]:
+                if r.get('م') == emp_id:
+                    r['الفرع'] = new_branch
+                    n += 1
+        return n
+    return _apply_to_store(mut)
+
+def set_employee_status(emp_id, status, from_month, to_month=None):
+    """إجازة/موقوف: بيتحط على الشهور من..إلى. رجوع للعمل: من الشهر وللآخر."""
+    def mut(store):
+        n = 0
+        for mk in _store_months_from(store, from_month, to_month):
+            for r in store[mk]:
+                if r.get('م') == emp_id:
+                    r['حالة الموظف'] = status
+                    n += 1
+        return n
+    return _apply_to_store(mut)
+
+def terminate_employee(emp_id, last_month):
+    """آخر شهر عمل بيفضل بالحالة (منتهي خدمته). الشهور بعده بتتشال لو ما فيهاش دفعات، وإلا بتتعلم منتهي."""
+    def mut(store):
+        removed = kept = 0
+        for mk in _store_months_from(store, last_month):
+            rows = store[mk]
+            if mk == last_month:
+                for r in rows:
+                    if r.get('م') == emp_id:
+                        r['حالة الموظف'] = 'منتهي خدمته'
+                continue
+            new_rows = []
+            for r in rows:
+                if r.get('م') == emp_id:
+                    paid = float(r.get('الدفعة 1', 0) or 0) + float(r.get('الدفعة 2', 0) or 0) + float(r.get('الخصومات', 0) or 0)
+                    if paid > 0:
+                        r['حالة الموظف'] = 'منتهي خدمته'
+                        new_rows.append(r)
+                        kept += 1
+                    else:
+                        removed += 1
+                else:
+                    new_rows.append(r)
+            store[mk] = new_rows
+        return removed, kept
+    return _apply_to_store(mut)
+
+def reinstate_employee(emp_id, from_month):
+    """رجوع للعمل: يرجع الحالة 'على رأس العمل' وبيضيفه في الشهور اللي اتشال منها."""
+    def mut(store):
+        months = _store_months_from(store, from_month)
+        # الصف المرجعي: أحدث صف له قبل أو في شهر الرجوع
+        src_row = None
+        for mk in sorted([k for k in store if isinstance(store[k], list) and month_label_to_ym(k)], key=month_label_to_ym):
+            if month_label_to_ym(mk) <= month_label_to_ym(from_month):
+                for r in store[mk]:
+                    if r.get('م') == emp_id:
+                        src_row = r
+        n = 0
+        for mk in months:
+            found = False
+            for r in store[mk]:
+                if r.get('م') == emp_id:
+                    r['حالة الموظف'] = 'على رأس العمل'
+                    found = True
+                    n += 1
+            if not found and src_row is not None:
+                store[mk].append(_fresh_row(src_row) | {'حالة الموظف': 'على رأس العمل'})
+                n += 1
+        return n
+    return _apply_to_store(mut)
+
+def add_employee_everywhere(row, from_month):
+    """موظف جديد: بيتضاف لشهر البداية والشهور الموجودة بعده."""
+    def mut(store):
+        n = 0
+        for mk in _store_months_from(store, from_month):
+            if not any(r.get('م') == row['م'] for r in store[mk]):
+                store[mk].append(dict(row) if mk == from_month else _fresh_row(row))
+                n += 1
+        if from_month not in store:
+            store[from_month] = [dict(row)]
+            n += 1
+        return n
+    return _apply_to_store(mut)
+
+def leave_days_by_month(d_from, d_to):
+    """يوزع أيام الإجازة (شامل الطرفين) على الشهور: {label: days}."""
+    out = {}
+    d = d_from
+    while d <= d_to:
+        lbl = f"{AR_MONTHS[d.month - 1]} {d.year}"
+        out[lbl] = out.get(lbl, 0) + 1
+        d += timedelta(days=1)
+    return out
+
+def apply_leave(emp_id, d_from, d_to, unpaid):
+    """يعلّم الشهور بحالة إجازة، ولو بدون راتب يخصم (الراتب ÷ 30 × الأيام) في كل شهر."""
+    per_month = leave_days_by_month(d_from, d_to)
+    def mut(store):
+        report = []
+        for lbl, days in per_month.items():
+            if lbl not in store:
+                report.append((lbl, days, None))
+                continue
+            for r in store[lbl]:
+                if r.get('م') == emp_id:
+                    r['حالة الموظف'] = 'إجازة'
+                    amt = 0.0
+                    if unpaid:
+                        amt = round(float(r.get('الراتب الأساسي', 0) or 0) / 30.0 * days, 2)
+                        r['الخصومات'] = float(r.get('الخصومات', 0) or 0) + amt
+                        _recalc_row(r)
+                    report.append((lbl, days, amt))
+        return report
+    return _apply_to_store(mut)
 
 def load_cash_data():
     return fetch_cloud_store('cashbox_data', {})
@@ -1912,7 +2110,9 @@ def print_t_account_dialog(trans_list, month_name, period_txt, box_title):
 @st.dialog("👤 إضافة موظف جديد للدليل")
 def add_employee_dialog(branch_name):
     payroll_df = st.session_state.payroll_df
-    new_id = int(payroll_df['م'].max() + 1) if not payroll_df.empty else 1
+    ok_s, _store = fetch_cloud_store_strict('monthly_payroll_store_v4')
+    new_id = _next_emp_id(_store if ok_s else {})
+    cur_month = st.session_state.get('current_active_month')
 
     with st.form("add_emp_modal_form"):
         st.write(f"إضافة موظف جديد لفرع **{branch_name}**:")
@@ -1920,30 +2120,21 @@ def add_employee_dialog(branch_name):
         e_job = st.text_input("الوظيفة:")
         e_salary = st.number_input("الراتب المستحق (ر.س):", min_value=0.0, value=2500.0)
         e_start = st.date_input("تاريخ بداية العمل:", datetime.now().date())
-        
+        st.caption(f"هيتضاف من شهر ({cur_month}) وللشهور اللي بعده.")
         sub_emp = st.form_submit_button("💾 حفظ الموظف")
         if sub_emp and e_name:
             new_emp = {
-                'م': new_id,
-                'الاسم': e_name,
-                'الوظيفة': e_job,
-                'الراتب الأساسي': e_salary,
-                'الفرع': branch_name,
-                'تاريخ بداية العمل': str(e_start),
-                'تاريخ انتهاء الإقامة': '2027-12-31',
-                'تاريخ انتهاء العقد': '2027-12-31',
-                'الخصومات': 0.0,
-                'الدفعة 1': 0.0,
-                'الدفعة 2': 0.0,
-                'الدفعة المدفوعة': 0.0,
-                'المتبقي': e_salary,
-                'نوع الإجراء': 'لم يُصرف',
-                'الملاحظات': ''
+                'م': new_id, 'الاسم': e_name, 'الوظيفة': e_job, 'الراتب الأساسي': e_salary, 'الفرع': branch_name,
+                'تاريخ بداية العمل': str(e_start), 'تاريخ انتهاء الإقامة': '2027-12-31', 'تاريخ انتهاء العقد': '2027-12-31',
+                'الخصومات': 0.0, 'الدفعة 1': 0.0, 'الدفعة 2': 0.0, 'الدفعة المدفوعة': 0.0, 'المتبقي': e_salary,
+                'نوع الإجراء': 'لم يُصرف', 'الملاحظات': '', 'حالة الموظف': 'على رأس العمل'
             }
-            updated_df = pd.concat([payroll_df, pd.DataFrame([new_emp])], ignore_index=True)
-            st.session_state.payroll_df = updated_df
-            save_payroll_for_month(updated_df, st.session_state.current_active_month)
-            st.success("تمت إضافة الموظف وسماع البيانات بالسحابة بنجاح!")
+            ok, n = add_employee_everywhere(new_emp, cur_month)
+            if ok:
+                _log_emp_move({'م': new_id, 'الاسم': e_name, 'النوع': 'تعيين', 'الفرع': branch_name, 'من شهر': cur_month, 'ملاحظة': e_job})
+                flash('success', f"تمت إضافة ({e_name}) في {n} شهر.")
+            else:
+                flash('error', "ما اتحفظش الموظف: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
             st.rerun()
 
 @st.dialog("✏️ تعديل بيانات موظف")
@@ -1952,20 +2143,132 @@ def edit_employee_dialog(emp_idx, month_name):
     if emp_idx in payroll_df.index:
         emp_row = payroll_df.loc[emp_idx]
         st.write(f"تعديل بيانات الموظف: **{emp_row['الاسم']}**")
-        
+
         with st.form(f"edit_emp_form_{emp_idx}"):
             e_name = st.text_input("الاسم:", value=emp_row['الاسم'])
             e_job = st.text_input("الوظيفة:", value=emp_row['الوظيفة'])
             e_salary = st.number_input("الراتب المستحق (ر.س):", min_value=0.0, value=float(emp_row['الراتب الأساسي']))
-            
+            fwd = st.checkbox("طبّق التعديل كمان على الشهور اللي بعده (اللي لسه ما اتصرفش فيها)", value=True)
             sub_e = st.form_submit_button("💾 حفظ التعديلات")
             if sub_e:
-                st.session_state.payroll_df.loc[emp_idx, 'الاسم'] = e_name
-                st.session_state.payroll_df.loc[emp_idx, 'الوظيفة'] = e_job
-                st.session_state.payroll_df.loc[emp_idx, 'الراتب الأساسي'] = e_salary
-                save_payroll_for_month(st.session_state.payroll_df, month_name)
-                st.success("تم حفظ التعديلات بنجاح!")
+                emp_id = emp_row['م']
+                old_sal = float(emp_row['الراتب الأساسي'])
+                def mut(store):
+                    for mk in _store_months_from(store, month_name):
+                        if mk != month_name and not fwd:
+                            continue
+                        for r in store[mk]:
+                            if r.get('م') != emp_id:
+                                continue
+                            r['الاسم'] = e_name
+                            r['الوظيفة'] = e_job
+                            if mk == month_name or (float(r.get('الدفعة 1', 0) or 0) + float(r.get('الدفعة 2', 0) or 0)) == 0:
+                                r['الراتب الأساسي'] = e_salary
+                                _recalc_row(r)
+                ok, _ = _apply_to_store(mut)
+                if ok:
+                    if abs(old_sal - e_salary) > 0.001:
+                        _log_emp_move({'م': emp_id, 'الاسم': e_name, 'النوع': 'تغيير راتب', 'من': old_sal, 'إلى': e_salary, 'من شهر': month_name})
+                    flash('success', "تم حفظ تعديل الموظف.")
+                else:
+                    flash('error', "ما اتحفظش التعديل: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
                 st.rerun()
+
+@st.dialog("🔄 حركة موظف")
+def employee_move_dialog(emp_idx, month_name):
+    payroll_df = st.session_state.payroll_df
+    if emp_idx not in payroll_df.index:
+        st.error("الموظف مش موجود في كشف الشهر ده.")
+        return
+    emp = payroll_df.loc[emp_idx]
+    emp_id = emp['م']
+    cur_status = emp.get('حالة الموظف', 'على رأس العمل')
+    st.write(f"**{emp['الاسم']}** | {emp['الفرع']} | الحالة الحالية: **{cur_status}**")
+    kind = st.radio("نوع الحركة:", ["نقل لفرع آخر", "إجازة", "إيقاف عن العمل", "إنهاء خدمة / استبعاد", "رجوع للعمل"], key=f"mv_kind_{emp_id}")
+    months = st.session_state.months_list
+    start_idx = months.index(month_name) if month_name in months else 0
+
+    if kind == "نقل لفرع آخر":
+        others = [b for b in EMP_BRANCHES if b != emp['الفرع']]
+        nb = st.selectbox("الفرع الجديد:", others, key=f"mv_nb_{emp_id}")
+        fm = st.selectbox("النقل من شهر:", months[start_idx:], key=f"mv_fm_{emp_id}")
+        st.caption("الشهور اللي قبل كده بتفضل بفرعها القديم، والتقارير ما بتتلخبطش.")
+        note = st.text_input("ملاحظة (اختياري):", key=f"mv_note_{emp_id}")
+        if st.button("✅ تأكيد النقل", key=f"mv_go_{emp_id}", type="primary"):
+            ok, n = transfer_employee(emp_id, nb, fm)
+            if ok:
+                _log_emp_move({'م': emp_id, 'الاسم': emp['الاسم'], 'النوع': 'نقل', 'من': emp['الفرع'], 'إلى': nb, 'من شهر': fm, 'ملاحظة': note})
+                flash('success', f"اتنقل {emp['الاسم']} إلى {nb} من شهر {fm} ({n} شهر).")
+            else:
+                flash('error', "ما اتنقلش: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
+            st.rerun()
+
+    elif kind == "إجازة":
+        today = get_ksa_now().date()
+        c1, c2 = st.columns(2)
+        d_from = c1.date_input("من تاريخ:", today, key=f"mv_lf_{emp_id}")
+        d_to = c2.date_input("إلى تاريخ:", today, key=f"mv_lt_{emp_id}")
+        unpaid = st.checkbox("بدون راتب (يتخصم من الراتب: الراتب ÷ 30 × الأيام)", value=False, key=f"mv_unpaid_{emp_id}")
+        if d_to < d_from:
+            st.error("تاريخ النهاية قبل البداية.")
+        else:
+            per = leave_days_by_month(d_from, d_to)
+            sal = float(emp['الراتب الأساسي'])
+            st.info("الأيام: " + "، ".join(f"{k}: {v} يوم" for k, v in per.items()) +
+                    (f" | الخصم المتوقع: {sum(per.values()) * sal / 30.0:,.0f} ر.س" if unpaid else " | بمرتب: بدون خصم"))
+            note = st.text_input("ملاحظة (نوع الإجازة مثلاً):", key=f"mv_note_{emp_id}")
+            if st.button("✅ تسجيل الإجازة", key=f"mv_go_{emp_id}", type="primary"):
+                ok, rep = apply_leave(emp_id, d_from, d_to, unpaid)
+                if ok:
+                    _log_emp_move({'م': emp_id, 'الاسم': emp['الاسم'], 'النوع': 'إجازة بدون راتب' if unpaid else 'إجازة بمرتب',
+                                   'من': str(d_from), 'إلى': str(d_to), 'ملاحظة': note})
+                    miss = [r[0] for r in rep if r[2] is None]
+                    msg = f"اتسجلت إجازة {emp['الاسم']}."
+                    if unpaid:
+                        msg += " الخصم: " + "، ".join(f"{r[0]} = {r[2]:,.0f}" for r in rep if r[2] is not None)
+                    if miss:
+                        msg += " (شهور لسه ما اتفتحتش: " + "، ".join(miss) + " - اخصمها يدوي لما تتفتح)"
+                    flash('warning' if miss else 'success', msg)
+                else:
+                    flash('error', "ما اتسجلتش الإجازة: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
+                st.rerun()
+
+    elif kind == "إيقاف عن العمل":
+        fm = st.selectbox("من شهر:", months[start_idx:], key=f"mv_fm_{emp_id}")
+        note = st.text_input("السبب:", key=f"mv_note_{emp_id}")
+        if st.button("✅ تأكيد الإيقاف", key=f"mv_go_{emp_id}", type="primary"):
+            ok, n = set_employee_status(emp_id, 'موقوف', fm)
+            if ok:
+                _log_emp_move({'م': emp_id, 'الاسم': emp['الاسم'], 'النوع': 'إيقاف', 'من شهر': fm, 'ملاحظة': note})
+                flash('success', f"اتوقف {emp['الاسم']} من شهر {fm}. الراتب بتتحكم فيه إنت من خانة الخصومات.")
+            else:
+                flash('error', "ما اتوقفش: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
+            st.rerun()
+
+    elif kind == "إنهاء خدمة / استبعاد":
+        lm = st.selectbox("آخر شهر عمل (بيفضل في كشفه وبيتشال من اللي بعده):", months[start_idx:], key=f"mv_lm_{emp_id}")
+        note = st.text_input("السبب:", key=f"mv_note_{emp_id}")
+        st.warning("الموظف ما بيتمسحش: بيفضل ظاهر في الشهور اللي اشتغلها، وبيتشال بس من الشهور اللي بعد آخر شهر وما فيهاش دفعات.")
+        if st.button("⛔ تأكيد إنهاء الخدمة", key=f"mv_go_{emp_id}", type="primary"):
+            ok, res = terminate_employee(emp_id, lm)
+            if ok:
+                _log_emp_move({'م': emp_id, 'الاسم': emp['الاسم'], 'النوع': 'إنهاء خدمة', 'من شهر': lm, 'ملاحظة': note})
+                flash('success', f"اتنهت خدمة {emp['الاسم']} (آخر شهر: {lm}). اتشال من {res[0]} شهر وفضل في {res[1]} شهر فيها دفعات.")
+            else:
+                flash('error', "ما اتنهتش الخدمة: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
+            st.rerun()
+
+    else:  # رجوع للعمل
+        fm = st.selectbox("الرجوع من شهر:", months[start_idx:], key=f"mv_fm_{emp_id}")
+        note = st.text_input("ملاحظة:", key=f"mv_note_{emp_id}")
+        if st.button("✅ تأكيد الرجوع", key=f"mv_go_{emp_id}", type="primary"):
+            ok, n = reinstate_employee(emp_id, fm)
+            if ok:
+                _log_emp_move({'م': emp_id, 'الاسم': emp['الاسم'], 'النوع': 'رجوع للعمل', 'من شهر': fm, 'ملاحظة': note})
+                flash('success', f"رجع {emp['الاسم']} للعمل من شهر {fm} ({n} شهر).")
+            else:
+                flash('error', "ما اترجعش: تعذر قراءة أو كتابة بيانات الرواتب. جرّب تاني.")
+            st.rerun()
 
 # الشاشة الافتتاحية وواجهة المستخدم الموحدة
 if not st.session_state.get('app_started', False):
@@ -2184,7 +2487,8 @@ else:
         st.selectbox("المظهر", _THEME_OPTS, index=_THEME_OPTS.index(_cur_opt), key="theme_sel",
                      label_visibility="collapsed", on_change=_on_theme_change)
 
-    def generate_pretty_html_pdf(df_subset, branch_name, payment_type="جميع الدفعات"):
+    def generate_pretty_html_pdf(df_subset, branch_name, payment_type="جميع الدفعات", pay_month=None):
+        _pm = pay_month or month_selected
         output = io.BytesIO()
         html = f"""
         <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
@@ -2215,15 +2519,15 @@ else:
             if payment_type == "الدفعة الأولى فقط":
                 amt_str = f"{v1.get('الدفعة 1', 0):,.0f} ر.س"
                 rem_str = f"{(v1['الراتب الأساسي'] - v1.get('الدفعة 1', 0)):,.0f} ر.س"
-                note_str = f"سداد الدفعة الأولى من راتب شهر ({month_selected})"
+                note_str = f"سداد الدفعة الأولى من راتب شهر ({_pm})"
             elif payment_type == "الدفعة الثانية فقط":
                 amt_str = f"{v1.get('الدفعة 2', 0):,.0f} ر.س"
                 rem_str = f"{(v1['الراتب الأساسي'] - (v1.get('الدفعة 1', 0) + v1.get('الدفعة 2', 0))):,.0f} ر.س"
-                note_str = f"سداد الدفعة الثانية والنهائية من راتب شهر ({month_selected})"
+                note_str = f"سداد الدفعة الثانية والنهائية من راتب شهر ({_pm})"
             else:
                 amt_str = f"{v1['الدفعة المدفوعة']:,.0f} ر.س"
                 rem_str = f"{v1['المتبقي']:,.0f} ر.س"
-                note_str = f"سداد إجمالي دفعات راتب شهر ({month_selected})"
+                note_str = f"سداد إجمالي دفعات راتب شهر ({_pm})"
 
             html += f"""
             <div class="voucher-box">
@@ -2232,7 +2536,7 @@ else:
                     <div class="header-logo">5M</div>
                     <div class="header-ar">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
                 </div>
-                <div class="voucher-title">سند صرف {payment_type} - شهر ({month_selected}) | رقم السند: #{v1['م']:03d}</div>
+                <div class="voucher-title">سند صرف {payment_type} - شهر ({_pm}) | رقم السند: #{v1['م']:03d}</div>
                 <table class="info-table">
                     <tr><th>اسم الموظف</th><td><strong>{v1['الاسم']}</strong></td><th>الفرع المحدد</th><td><strong>{v1['الفرع']}</strong></td></tr>
                     <tr><th>الراتب الأساسي</th><td>{v1['الراتب الأساسي']:,.0f} ر.س</td><th>تفاصيل الدفعات المسجلة</th><td>دفعة (1): {v1['الدفعة 1']:,.0f} ر.س | دفعة (2): {v1['الدفعة 2']:,.0f} ر.س</td></tr>
@@ -2260,15 +2564,15 @@ else:
                 if payment_type == "الدفعة الأولى فقط":
                     amt_str2 = f"{v2.get('الدفعة 1', 0):,.0f} ر.س"
                     rem_str2 = f"{(v2['الراتب الأساسي'] - v2.get('الدفعة 1', 0)):,.0f} ر.س"
-                    note_str2 = f"سداد الدفعة الأولى من راتب شهر ({month_selected})"
+                    note_str2 = f"سداد الدفعة الأولى من راتب شهر ({_pm})"
                 elif payment_type == "الدفعة الثانية فقط":
                     amt_str2 = f"{v2.get('الدفعة 2', 0):,.0f} ر.س"
                     rem_str2 = f"{(v2['الراتب الأساسي'] - (v2.get('الدفعة 1', 0) + v2.get('الدفعة 2', 0))):,.0f} ر.س"
-                    note_str2 = f"سداد الدفعة الثانية والنهائية من راتب شهر ({month_selected})"
+                    note_str2 = f"سداد الدفعة الثانية والنهائية من راتب شهر ({_pm})"
                 else:
                     amt_str2 = f"{v2['الدفعة المدفوعة']:,.0f} ر.س"
                     rem_str2 = f"{v2['المتبقي']:,.0f} ر.س"
-                    note_str2 = f"سداد إجمالي دفعات راتب شهر ({month_selected})"
+                    note_str2 = f"سداد إجمالي دفعات راتب شهر ({_pm})"
 
                 html += '<div class="cut-line"><span>✂️ خط القص المخصص بين السندين ✂️</span></div>'
                 html += f"""
@@ -2278,7 +2582,7 @@ else:
                         <div class="header-logo">5M</div>
                         <div class="header-ar">شركة ميم الخماسية للتصنيع<br>سجل تجاري : ١٠١١١٤٥٠٣٥</div>
                     </div>
-                    <div class="voucher-title">سند صرف {payment_type} - شهر ({month_selected}) | رقم السند: #{v2['م']:03d}</div>
+                    <div class="voucher-title">سند صرف {payment_type} - شهر ({_pm}) | رقم السند: #{v2['م']:03d}</div>
                     <table class="info-table">
                         <tr><th>اسم الموظف</th><td><strong>{v2['الاسم']}</strong></td><th>الفرع المحدد</th><td><strong>{v2['الفرع']}</strong></td></tr>
                         <tr><th>الراتب الأساسي</th><td>{v2['الراتب الأساسي']:,.0f} ر.س</td><th>تفاصيل الدفعات المسجلة</th><td>دفعة (1): {v2['الدفعة 1']:,.0f} ر.س | دفعة (2): {v2['الدفعة 2']:,.0f} ر.س</td></tr>
@@ -3876,18 +4180,38 @@ else:
 
     elif selected_option == 'دليل الموظفين' and st.session_state.user_role == "admin":
         st.subheader('👤 دليل الموظفين والملفات الإدارية')
+        _EMP_ICON = {'على رأس العمل': '', 'إجازة': '🏖️ إجازة', 'موقوف': '⏸️ موقوف', 'منتهي خدمته': '⛔ منتهي خدمته'}
+        def _st_badge(_r):
+            _s = _r.get('حالة الموظف', 'على رأس العمل')
+            return f"`{_EMP_ICON.get(_s, _s)}`" if _EMP_ICON.get(_s, _s) else ""
+        _sc = st.session_state.payroll_df['حالة الموظف'].value_counts() if 'حالة الموظف' in st.session_state.payroll_df.columns else {}
+        _k1, _k2, _k3, _k4 = st.columns(4)
+        _k1.metric("على رأس العمل", int(_sc.get('على رأس العمل', 0)))
+        _k2.metric("🏖️ إجازة", int(_sc.get('إجازة', 0)))
+        _k3.metric("⏸️ موقوف", int(_sc.get('موقوف', 0)))
+        _k4.metric("⛔ منتهي خدمته", int(_sc.get('منتهي خدمته', 0)))
+        with st.expander("📜 سجل حركات الموظفين (تعيين / نقل / إجازة / إيقاف / إنهاء خدمة)"):
+            _mv = load_emp_moves()
+            if _mv:
+                _mvdf = pd.DataFrame(_mv[::-1])
+                st.dataframe(_mvdf, use_container_width=True, hide_index=True)
+            else:
+                st.caption("لسه ما فيش حركات متسجلة.")
         
         search_kw = st.text_input("🔍 استعلام باسم الموظف أو الوظيفة:", placeholder="اكتب جزءاً من الاسم...")
         if search_kw:
             search_df = st.session_state.payroll_df[st.session_state.payroll_df['الاسم'].str.contains(search_kw, case=False, na=False) | st.session_state.payroll_df['الوظيفة'].str.contains(search_kw, case=False, na=False)]
             st.write(f"نتائج البحث عن (**{search_kw}**):")
             for e_idx, e_row in search_df.iterrows():
-                c_card1, c_card2, c_card3, c_card4 = st.columns([2, 1.5, 1.5, 1])
-                c_card1.write(f"👤 **{e_row['الاسم']}** ({e_row['الوظيفة']}) - {e_row['الفرع']}")
+                c_card1, c_card2, c_card3, c_card4 = st.columns([2.2, 1.4, 1.3, 1.2])
+                c_card1.write(f"👤 **{e_row['الاسم']}** ({e_row['الوظيفة']}) - {e_row['الفرع']} {_st_badge(e_row)}")
                 c_card2.write(f"💵 الراتب: **{e_row['الراتب الأساسي']:,.0f} ر.س**")
                 c_card3.write(f"📅 بداية العمل: {e_row.get('تاريخ بداية العمل', '2024-01-01')}")
-                if c_card4.button("تعديل", key=f"btn_s_edit_{e_row['م']}"):
+                _b1, _b2 = c_card4.columns(2)
+                if _b1.button("✏️", key=f"btn_s_edit_{e_row['م']}", help="تعديل البيانات"):
                     edit_employee_dialog(e_idx, month_selected)
+                if _b2.button("🔄", key=f"btn_s_mv_{e_row['م']}", help="حركة: نقل / إجازة / إيقاف / إنهاء خدمة"):
+                    employee_move_dialog(e_idx, month_selected)
                 st.divider()
         else:
             cnt_factory = len(st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == 'مصنع ميم الخماسية الخرج'])
@@ -3917,13 +4241,16 @@ else:
                     
                     if not branch_df_search.empty:
                         for e_idx, e_row in branch_df_search.iterrows():
-                            c_card1, c_card2, c_card3, c_card4 = st.columns([2, 1.5, 1.5, 1])
-                            c_card1.write(f"👤 **{e_row['الاسم']}** ({e_row['الوظيفة']})")
+                            c_card1, c_card2, c_card3, c_card4 = st.columns([2.2, 1.4, 1.3, 1.2])
+                            c_card1.write(f"👤 **{e_row['الاسم']}** ({e_row['الوظيفة']}) {_st_badge(e_row)}")
                             c_card2.write(f"💵 الراتب: **{e_row['الراتب الأساسي']:,.0f} ر.س**")
                             c_card3.write(f"📅 بداية العمل: {e_row.get('تاريخ بداية العمل', '2024-01-01')}")
                             
-                            if c_card4.button("تعديل", key=f"btn_edit_m_{e_row['م']}"):
+                            _b1, _b2 = c_card4.columns(2)
+                            if _b1.button("✏️", key=f"btn_edit_m_{e_row['م']}", help="تعديل البيانات"):
                                 edit_employee_dialog(e_idx, month_selected)
+                            if _b2.button("🔄", key=f"btn_mv_m_{e_row['م']}", help="حركة: نقل / إجازة / إيقاف / إنهاء خدمة"):
+                                employee_move_dialog(e_idx, month_selected)
                             st.divider()
                     else:
                         st.info(f"لا يوجد موظفين حالياً في {b_name}.")
@@ -4030,20 +4357,26 @@ else:
 
     elif selected_option == 'طباعة السندات' and st.session_state.user_role == "admin":
         st.subheader(f'🖨️ طباعة سندات القبض والصرف الرسمية A4 - ({month_selected})')
+        _cmi = st.session_state.months_list.index(month_selected)
+        _prev_lbl = st.session_state.months_list[_cmi - 1] if _cmi > 0 else 'أغسطس 2026'
+        # شهر الرواتب منفصل عن شهر الصندوق: رواتب سبتمبر بتتصرف في أكتوبر، فنقدر نطبع سندات الشهرين
+        print_pm = st.radio("📅 سندات رواتب أي شهر؟", [_prev_lbl, month_selected], horizontal=True, key=f"print_pm_{month_selected}")
+        st.caption(f"السندات هتتطبع على رواتب شهر ({print_pm}).")
         col_p1, col_p2 = st.columns(2)
         with col_p1:
             selected_b = st.selectbox('اختر الفرع:', ['جميع الفروع', 'مصنع ميم الخماسية الخرج', 'مستودع ميم الخماسية الخرج', 'مستودع ميم الخماسية الرياض', 'رواتب متنوعة'], key="sb_v_b")
         with col_p2:
             pay_type_select = st.selectbox('اختر نوع الدفعة:', ['جميع الدفعات (السند الشامل)', 'الدفعة الأولى فقط', 'الدفعة الثانية فقط'], key="sb_v_type")
             
-        df_print = st.session_state.payroll_df if selected_b == 'جميع الفروع' else st.session_state.payroll_df[st.session_state.payroll_df['الفرع'] == selected_b]
+        _pdf_src = st.session_state.payroll_df if print_pm == month_selected else get_payroll_for_month(print_pm)
+        df_print = _pdf_src if selected_b == 'جميع الفروع' else _pdf_src[_pdf_src['الفرع'] == selected_b]
         
-        pdf_bytes = generate_pretty_html_pdf(df_print, selected_b, pay_type_select)
+        pdf_bytes = generate_pretty_html_pdf(df_print, selected_b, pay_type_select, print_pm)
         st.components.v1.html(pdf_bytes.getvalue().decode('utf-8'), height=400, scrolling=True)
         st.download_button(
             label=f"📄 تنزيل ملف سندات ({pay_type_select}) - {selected_b} للطباعة 🖨️",
             data=pdf_bytes,
-            file_name=f"سندات_{pay_type_select}_{selected_b}_{month_selected}.html",
+            file_name=f"سندات_{pay_type_select}_{selected_b}_{print_pm}.html",
             mime="text/html",
             use_container_width=True
         )
