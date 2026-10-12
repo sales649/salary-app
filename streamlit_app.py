@@ -2336,9 +2336,14 @@ def employee_move_dialog(emp_idx, month_name):
             st.rerun()
 
     elif kind == "إنهاء خدمة / استبعاد":
-        lm = st.selectbox("آخر شهر عمل (بيفضل في كشفه وبيتشال من اللي بعده):", months[start_idx:], key=f"mv_lm_{emp_id}")
+        _opts = months[1:] if len(months) > 1 else months
+        _di = _opts.index(month_name) if month_name in _opts else 0
+        rm = st.selectbox("هيختفي من كشف شهر (وكل الشهور اللي بعده):", _opts, index=_di, key=f"mv_rm_{emp_id}")
+        _ri = months.index(rm)
+        lm = months[_ri - 1] if _ri > 0 else rm
+        st.caption(f"آخر شهر عمل له: ({lm}). بيفضل ظاهر فيه بعلامة ⛔ منتهي خدمته، ومش هيظهر من ({rm}) وبعده.")
         note = st.text_input("السبب:", key=f"mv_note_{emp_id}")
-        st.warning("الموظف ما بيتمسحش: بيفضل ظاهر في الشهور اللي اشتغلها، وبيتشال بس من الشهور اللي بعد آخر شهر وما فيهاش دفعات.")
+        st.warning("الموظف ما بيتمسحش من البرنامج: بيفضل ظاهر في الشهور اللي اشتغلها. وبيتشال بس من الشهور اللي بعد آخر شهر لو ما فيهاش دفعات.")
         if st.button("⛔ تأكيد إنهاء الخدمة", key=f"mv_go_{emp_id}", type="primary"):
             ok, res = terminate_employee(emp_id, lm)
             if ok:
@@ -3904,19 +3909,24 @@ else:
                 def _row_status(r):
                     _due = float(r.get('الراتب الأساسي', 0) or 0) - float(r.get('الخصومات', 0) or 0)
                     _paid = float(r.get('الدفعة 1', 0) or 0) + float(r.get('الدفعة 2', 0) or 0)
+                    _badge = {'إجازة': '🏖️ إجازة', 'إجازة مفتوحة': '🏖️ إجازة', 'موقوف': '⏸️ موقوف', 'منتهي خدمته': '⛔ منتهي'}.get(r.get('حالة الموظف', 'على رأس العمل'), '')
+                    if _badge and _due <= 0.01 and _paid == 0:
+                        return _badge + " (لا مستحق)"
                     if _paid > _due + 0.01:
-                        return "⚠️ زيادة"
-                    if _due > 0 and abs(_paid - _due) <= 0.01:
-                        return "✅ مكتمل"
-                    if _paid > 0:
-                        return "🟡 جزئي"
-                    return "⏳ لم يُصرف"
+                        _s = "⚠️ زيادة"
+                    elif _due > 0 and abs(_paid - _due) <= 0.01:
+                        _s = "✅ مكتمل"
+                    elif _paid > 0:
+                        _s = "🟡 جزئي"
+                    else:
+                        _s = "⏳ لم يُصرف"
+                    return (_badge + " | " + _s) if _badge else _s
                 df_b_curr['المتبقي'] = df_b_curr['الراتب الأساسي'] - df_b_curr['الخصومات'] - df_b_curr['الدفعة 1'] - df_b_curr['الدفعة 2']
                 df_b_curr['الحالة'] = [_row_status(_r) for _, _r in df_b_curr.iterrows()]
                 edited_b = st.data_editor(
                     df_b_curr[cols_rtl],
                     column_config={
-                        "الحالة": st.column_config.TextColumn("الحالة", disabled=True, width="small"),
+                        "الحالة": st.column_config.TextColumn("الحالة", disabled=True, width="medium"),
                         "م": st.column_config.NumberColumn("مسلسل", disabled=True, width="small"),
                         "الاسم": st.column_config.TextColumn("اسم الموظف"),
                         "الوظيفة": st.column_config.TextColumn("الوظيفة", width="small"),
