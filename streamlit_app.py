@@ -169,6 +169,145 @@ _orig_download_button = getattr(st.download_button, '_orig', st.download_button)
 _dl_with_stamp._orig = _orig_download_button
 st.download_button = _dl_with_stamp
 
+# =========================================================
+# ✍️ التوقيع الإلكتروني على السندات (إقرار استلام بالإصبع على الشاشة)
+# =========================================================
+import tempfile as _tempfile
+
+_SIGPAD_HTML = """<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font-family:Arial,sans-serif;direction:rtl}
+#w{border:2px dashed #64748b;border-radius:10px;background:#fff;overflow:hidden}
+canvas{display:block;width:100%;height:170px;touch-action:none;cursor:crosshair}
+.bar{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:13px;color:#475569}
+button{background:#fff;color:#111;border:1px solid #94a3b8;border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer}
+</style></head><body>
+<div id="w"><canvas id="c" width="500" height="170"></canvas></div>
+<div class="bar"><span>وقّع داخل المربع بإصبعك</span><button id="clr" type="button">🧹 مسح</button></div>
+<script>
+var S=function(t,o){window.parent.postMessage(Object.assign({isStreamlitMessage:true,type:t},o||{}),"*");};
+var c=document.getElementById("c"),x=c.getContext("2d"),down=false,dirty=false;
+x.lineWidth=3;x.lineCap="round";x.lineJoin="round";x.strokeStyle="#111";
+function pos(e){var r=c.getBoundingClientRect();return [(e.clientX-r.left)*c.width/r.width,(e.clientY-r.top)*c.height/r.height];}
+function send(){S("streamlit:setComponentValue",{value:dirty?c.toDataURL("image/png"):"",dataType:"json"});}
+c.addEventListener("pointerdown",function(e){down=true;c.setPointerCapture(e.pointerId);var p=pos(e);x.beginPath();x.moveTo(p[0],p[1]);x.lineTo(p[0]+0.1,p[1]+0.1);x.stroke();dirty=true;e.preventDefault();});
+c.addEventListener("pointermove",function(e){if(!down)return;var p=pos(e);x.lineTo(p[0],p[1]);x.stroke();e.preventDefault();});
+function up(e){if(!down)return;down=false;send();}
+c.addEventListener("pointerup",up);c.addEventListener("pointercancel",up);
+document.getElementById("clr").onclick=function(){x.clearRect(0,0,c.width,c.height);dirty=false;send();};
+S("streamlit:componentReady",{apiVersion:1});
+S("streamlit:setFrameHeight",{height:235});
+</script></body></html>"""
+
+try:
+    _SIGPAD_DIR = os.path.join(_tempfile.gettempdir(), "sigpad_5m_v1")
+    os.makedirs(_SIGPAD_DIR, exist_ok=True)
+    with open(os.path.join(_SIGPAD_DIR, "index.html"), "w", encoding="utf-8") as _f:
+        _f.write(_SIGPAD_HTML)
+    _sigpad_comp = components.declare_component("sigpad_5m", path=_SIGPAD_DIR)
+except Exception:
+    _sigpad_comp = None
+
+SIG_STORE_KEY = 'voucher_signatures_v1'
+
+def signature_pad(key):
+    """مربع التوقيع. بيرجع صورة PNG (data URL) أو فاضي لو لسه ما وقّعش."""
+    if _sigpad_comp is None:
+        st.error("مكوّن التوقيع مش متاح على الخادم ده.")
+        return ""
+    v = _sigpad_comp(key=key, default="")
+    return v if isinstance(v, str) else ""
+
+def _doc_hash(*parts):
+    return hashlib.sha256("|".join(str(p) for p in parts).encode("utf-8")).hexdigest()
+
+def load_signatures():
+    ok, store = fetch_cloud_store_strict(SIG_STORE_KEY)
+    return store if (ok and isinstance(store, dict)) else {}
+
+def _sig_modify(mutator):
+    ok, store = fetch_cloud_store_strict(SIG_STORE_KEY)
+    if not ok:
+        return False
+    store = store if isinstance(store, dict) else {}
+    mutator(store)
+    return save_cloud_store(SIG_STORE_KEY, store)
+
+def sig_html(rec, doc_hash, width=110, height=45):
+    """بيرجع HTML خانة توقيع المستلم: التوقيع لو موجود وسليم، وإلا خط فاضي."""
+    if rec and rec.get('hash') == doc_hash and str(rec.get('img', '')).startswith('data:image/png'):
+        return (f'<img src="{rec["img"]}" style="width:{width}px;height:{height}px;object-fit:contain;display:block;margin:0 auto;">'
+                f'<div style="font-size:9px;color:#475569;line-height:1.4;">إقرار استلام إلكتروني — {rec.get("name","")}<br>'
+                f'{rec.get("ts","")} &bull; #{doc_hash[:8]}</div>')
+    warn = ''
+    if rec and rec.get('hash') != doc_hash:
+        warn = '<div style="color:#b91c1c;font-size:10px;font-weight:700;">⚠️ تم تعديل السند بعد التوقيع</div>'
+    return '<br>__________________' + warn
+
+@st.dialog("✍️ توقيع استلام راتب")
+def sign_payroll_dialog(sig_key, doc_hash, emp_name, amount_txt, pay_month, payment_type):
+    st.markdown(f"**الموظف:** {emp_name}  \n**المبلغ:** {amount_txt}  \n**{payment_type}** — راتب شهر ({pay_month})")
+    signature_capture_ui(sig_key, doc_hash, emp_name, f"{emp_name} — {amount_txt} — {payment_type} — {pay_month}")
+
+def _payroll_amt_num(row, payment_type):
+    def f(c):
+        try:
+            return float(row.get(c, 0) or 0)
+        except Exception:
+            return 0.0
+    if "الأولى" in payment_type:
+        return f('الدفعة 1')
+    if "الثانية" in payment_type:
+        return f('الدفعة 2')
+    return f('الدفعة المدفوعة')
+
+def _payroll_sig_ident(row, payment_type, pay_month):
+    short = '1' if "الأولى" in payment_type else ('2' if "الثانية" in payment_type else 'all')
+    emp = int(row['م'])
+    key = f"pay|{pay_month}|{emp}|{short}"
+    h = _doc_hash('pay', pay_month, emp, short, row.get('الاسم'), round(_payroll_amt_num(row, payment_type), 2))
+    return key, h
+
+def signature_capture_ui(sig_key, doc_hash, name_default, summary_txt):
+    """واجهة التوقيع (من غير نافذة): الاسم + إقرار + مربع التوقيع + تأكيد."""
+    sigs = load_signatures()
+    rec = sigs.get(sig_key)
+    if rec and rec.get('hash') == doc_hash:
+        st.success(f"✅ السند موقّع إلكترونياً — {rec.get('name','')} — {rec.get('ts','')}")
+        if str(rec.get('img', '')).startswith('data:image/png'):
+            st.markdown(f'<div style="background:#fff;border:1px solid #cbd5e1;border-radius:8px;padding:6px;text-align:center;">'
+                        f'<img src="{rec["img"]}" style="height:70px;"></div>', unsafe_allow_html=True)
+        if st.button("🗑️ إلغاء التوقيع (عشان يوقّع من جديد)", key=f"sg_del_{sig_key}"):
+            if _sig_modify(lambda d: d.pop(sig_key, None)):
+                flash('success', 'اتلغى التوقيع.')
+            st.rerun()
+        return
+    if rec and rec.get('hash') != doc_hash:
+        st.warning("⚠️ السند اتعدّل بعد التوقيع القديم، فالتوقيع القديم مش سارى. لازم توقيع جديد.")
+    st.info(summary_txt)
+    name = st.text_input("اسم الموقّع (المستلم)", value=name_default, key=f"sg_name_{sig_key}")
+    idno = st.text_input("رقم الهوية / الإقامة (اختياري)", key=f"sg_id_{sig_key}")
+    ack = st.checkbox("أقرّ باستلام المبلغ المذكور أعلاه", key=f"sg_ack_{sig_key}")
+    img = signature_pad(f"sg_pad_{sig_key}")
+    if st.button("✅ تأكيد التوقيع وحفظه", key=f"sg_ok_{sig_key}", use_container_width=True):
+        if not ack:
+            st.error("لازم المستلم يوافق على الإقرار الأول.")
+        elif not name.strip():
+            st.error("اكتب اسم الموقّع.")
+        elif not (isinstance(img, str) and img.startswith("data:image/png;base64,") and len(img) > 800):
+            st.error("وقّع داخل المربع الأول.")
+        elif len(img) > 250000:
+            st.error("التوقيع كبير زيادة، امسحه ووقّع تاني.")
+        else:
+            try:
+                ua = str(st.context.headers.get("User-Agent", ""))[:160]
+            except Exception:
+                ua = ""
+            new_rec = {'img': img, 'name': name.strip(), 'id_no': idno.strip(), 'ts': get_ksa_now_str(),
+                       'hash': doc_hash, 'ua': ua}
+            if _sig_modify(lambda d: d.__setitem__(sig_key, new_rec)):
+                flash('success', 'تم حفظ التوقيع على السند ✍️')
+            st.rerun()
+
 def get_ksa_now_str():
     return get_ksa_now().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -1672,6 +1811,9 @@ def print_cash_voucher_dialog(v_item, month_name):
     
     is_rec = "قبض" in v_item.get('type', '')
     title_txt = "سند قبض نقدية" if is_rec else "سند صرف نقدية"
+    _sg_key = f"cash|{month_name}|{v_item.get('id', v_item.get('code'))}"
+    _sg_hash = _doc_hash('cash', month_name, v_item.get('id'), v_item.get('party'), v_item.get('amount'), v_item.get('date'), v_item.get('type'))
+    _sg_rec = load_signatures().get(_sg_key)
     color_accent = "#10B981" if is_rec else "#EF4444"
 
     voucher_html = f"""
@@ -1708,8 +1850,8 @@ def print_cash_voucher_dialog(v_item, month_name):
             <table class="sigs-table">
                 <tr>
                     <td>
-                        <div style="margin-bottom: 20px;">توقيع المستلم / الجهة</div>
-                        <div>__________________</div>
+                        <div style="margin-bottom: 8px;">توقيع المستلم / الجهة</div>
+                        {sig_html(_sg_rec, _sg_hash)}
                     </td>
                     <td>
                         <div style="margin-bottom: 5px;">توقيع المحاسب المسؤول</div>
@@ -1725,6 +1867,9 @@ def print_cash_voucher_dialog(v_item, month_name):
     </body></html>
     """
     st.components.v1.html(with_print_btn(voucher_html), height=420, scrolling=True)
+    with st.expander("✍️ توقيع المستلم من التليفون", expanded=False):
+        signature_capture_ui(_sg_key, _sg_hash, str(v_item.get('party', '')),
+                             f"سند رقم #{v_item.get('code', v_item.get('id'))} — المبلغ {float(v_item.get('amount', 0) or 0):,.2f} ر.س — {v_item.get('party', '')}")
     st.download_button(
         label="🖨️ تنزيل السند المباشر للطباعة (HTML / PDF)",
         data=voucher_html.encode('utf-8'),
@@ -2541,6 +2686,10 @@ else:
     def generate_pretty_html_pdf(df_subset, branch_name, payment_type="جميع الدفعات", pay_month=None):
         _pm = pay_month or month_selected
         output = io.BytesIO()
+        _sigs = load_signatures()
+        def _sg_for(row):
+            k, h = _payroll_sig_ident(row, payment_type, _pm)
+            return sig_html(_sigs.get(k), h)
         html = f"""
         <!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8">
         <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
@@ -2598,7 +2747,7 @@ else:
                 <div class="signatures">
                     <div style="text-align:center;">
                         <div>توقيع واستلام الموظف</div>
-                        <br>__________________
+                        {_sg_for(v1)}
                     </div>
                     <div style="text-align:center;">
                         <div>اعتماد المحاسب المسلم</div>
@@ -2644,7 +2793,7 @@ else:
                     <div class="signatures">
                         <div style="text-align:center;">
                             <div>توقيع واستلام الموظف</div>
-                            <br>__________________
+                            {_sg_for(v2)}
                         </div>
                         <div style="text-align:center;">
                             <div>اعتماد المحاسب المسلم</div>
@@ -4341,7 +4490,26 @@ else:
             if st.checkbox("اخفي اللي دفعته صفر (مفيش له سند)", value=True, key="print_hide_zero"):
                 df_print = df_print[pd.to_numeric(df_print[_pc], errors='coerce').fillna(0) > 0]
         st.caption(f"عدد السندات: {len(df_print)}")
-        
+
+        with st.expander("✍️ توقيع استلام الموظفين من التليفون", expanded=False):
+            _sg_all = load_signatures()
+            _sg_rows = [r for _, r in df_print.iterrows() if _payroll_amt_num(r, pay_type_select) > 0]
+            if not _sg_rows:
+                st.caption("مفيش سندات بمبلغ أكبر من صفر في الاختيار ده.")
+            _done = sum(1 for r in _sg_rows if (_sg_all.get(_payroll_sig_ident(r, pay_type_select, print_pm)[0]) or {}).get('hash') == _payroll_sig_ident(r, pay_type_select, print_pm)[1])
+            if _sg_rows:
+                st.caption(f"موقّع {_done} من {len(_sg_rows)}")
+            for r in _sg_rows:
+                _k, _h = _payroll_sig_ident(r, pay_type_select, print_pm)
+                _rec = _sg_all.get(_k)
+                _ok = bool(_rec and _rec.get('hash') == _h)
+                c1, c2, c3, c4 = st.columns([4, 2, 2, 2])
+                c1.markdown(f"**{r['الاسم']}**")
+                c2.markdown(f"{_payroll_amt_num(r, pay_type_select):,.0f} ر.س")
+                c3.markdown("✅ موقّع" if _ok else ("⚠️ عُدّل" if _rec else "⏳ لم يوقّع"))
+                if c4.button("عرض" if _ok else "✍️ وقّع", key=f"sg_open_{_k}"):
+                    sign_payroll_dialog(_k, _h, str(r['الاسم']), f"{_payroll_amt_num(r, pay_type_select):,.0f} ر.س", print_pm, pay_type_select)
+
         pdf_bytes = generate_pretty_html_pdf(df_print, selected_b, pay_type_select, print_pm)
         st.components.v1.html(with_print_btn(pdf_bytes.getvalue().decode('utf-8')), height=400, scrolling=True)
         st.download_button(
